@@ -1,0 +1,17 @@
+import com.google.inject.Inject
+import org.savantbuild.run.output.Level
+import org.savantbuild.run.output.Output
+
+@Inject Output output
+
+target("compile") << {
+  output.info("Compiling from Groovy plugin")
+}
+
+target("jar", dependsOn: ["compile"]) << {
+  output.info("Jaring from Groovy plugin")
+}
+
+target("int", dependsOn: ["test"]) << {
+  output.info("Integrating from Groovy plugin")
+}

@@ -1,0 +1,17 @@
+import com.google.inject.Inject
+import org.savantbuild.run.output.Level
+import org.savantbuild.run.output.Output
+
+@Inject Output output
+
+target("compile") << {
+  output.info("Compiling from Java plugin")
+}
+
+target("jar", dependsOn: ["compile"]) << {
+  output.info("Jaring from Java plugin")
+}
+
+target("int", dependsOn: ["test"]) << {
+  output.info("Integrating from Java plugin")
+}
