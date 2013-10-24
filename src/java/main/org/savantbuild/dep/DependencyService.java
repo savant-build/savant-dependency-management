@@ -42,14 +42,15 @@ public interface DependencyService {
   /**
    * Builds a dependency graph for the given dependencies of the given project.
    *
-   *
    * @param project      The artifact that represents the project.
    * @param dependencies The declared dependencies of the project.
    * @param workflow     The workflow to use for downloading and caching the AMD files.
    * @return The dependency graph.
-   * @throws ArtifactMetaDataMissingException If any artifacts AMD files could not be downloaded or found locally.
+   * @throws ArtifactMetaDataMissingException
+   *          If any artifacts AMD files could not be downloaded or found locally.
    */
-  DependencyGraph buildGraph(Artifact project, Dependencies dependencies, Workflow workflow) throws ArtifactMetaDataMissingException;
+  DependencyGraph buildGraph(Artifact project, Dependencies dependencies, Workflow workflow)
+      throws ArtifactMetaDataMissingException;
 
   /**
    * Resolves the graph by downloading the artifacts. This will use the Workflow to download the artifacts in the graph

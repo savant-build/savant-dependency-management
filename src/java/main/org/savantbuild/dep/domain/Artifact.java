@@ -17,12 +17,15 @@ package org.savantbuild.dep.domain;
 
 /**
  * This class defines an artifact as it exists across all projects, dependencies, etc. This class is the representation
- * of the artifact as a project, not necessarily as a dependency.
+ * of the artifact as a project, not necessarily as a dependency. The {@link Dependency} object models dependencies of a
+ * project.
+ * <p/>
+ * See the {@link #Artifact(String)} constructor for String formats of artifacts.
  *
  * @author Brian Pontarelli
  */
 public class Artifact {
-  public ArtifactID id = new ArtifactID();
+  public ArtifactID id;
 
   public Version version;
 
@@ -30,7 +33,21 @@ public class Artifact {
   }
 
   /**
-   * Parses the given specification to build an artifact.
+   * Parses the given specification to build an artifact. The currently supported spec formats are:
+   * <p/>
+   * <pre>
+   *   group:project:version
+   *   group:project:version:type
+   *   group:project:name:version:type
+   * </pre>
+   * <p/>
+   * Examples:
+   * <p/>
+   * <pre>
+   *   org.savantbuild.dep:savant-dependency-management:0.1
+   *   org.savantbuild.dep:savant-dependency-management:0.1:jar
+   *   org.savantbuild.dep:savant-dependency-management:some-other-artifact:0.1:jar
+   * </pre>
    *
    * @param spec The spec.
    */
@@ -41,23 +58,14 @@ public class Artifact {
     }
 
     if (parts.length == 3) {
-      id.group = parts[0];
-      id.project = parts[1];
-      id.name = parts[1];
-      id.type = "jar";
+      id = new ArtifactID(parts[0], parts[1], parts[1], "jar");
       version = new Version(parts[2]);
     } else if (parts.length == 4) {
-      id.group = parts[0];
-      id.project = parts[1];
-      id.name = parts[1];
+      id = new ArtifactID(parts[0], parts[1], parts[1], parts[3]);
       version = new Version(parts[2]);
-      id.type = parts[3];
     } else if (parts.length == 5) {
-      id.group = parts[0];
-      id.project = parts[1];
-      id.name = parts[2];
+      id = new ArtifactID(parts[0], parts[1], parts[2], parts[4]);
       version = new Version(parts[3]);
-      id.type = parts[4];
     }
   }
 

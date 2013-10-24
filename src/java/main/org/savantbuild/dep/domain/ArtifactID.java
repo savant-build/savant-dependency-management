@@ -23,16 +23,13 @@ package org.savantbuild.dep.domain;
  * @author Brian Pontarelli and James Humphrey
  */
 public class ArtifactID {
-  public String group;
+  public final String group;
 
-  public String name;
+  public final String name;
 
-  public String project;
+  public final String project;
 
-  public String type;
-
-  public ArtifactID() {
-  }
+  public final String type;
 
   /**
    * Constructs an artifact id, which is composed of a group, project, name, and type

@@ -55,7 +55,8 @@ public class FetchWorkflow {
    * @return A file that contains the item contents or null if the item was not found.
    * @throws ProcessFailureException If any of the processes failed while attempting to fetch the artifact.
    */
-  public Path fetchItem(Artifact artifact, String item, PublishWorkflow publishWorkflow) throws ProcessFailureException {
+  public Path fetchItem(Artifact artifact, String item, PublishWorkflow publishWorkflow)
+      throws ProcessFailureException {
     logger.fine("Running processes " + processes + " to fetch [" + item + "]");
     return processes.stream()
                     .map((process) -> process.fetch(artifact, item, publishWorkflow))

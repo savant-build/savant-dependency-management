@@ -26,12 +26,9 @@ import java.util.List;
 public class DependencyGroup {
   public final List<Dependency> dependencies = new ArrayList<>();
 
+  public final String type;
+
   public boolean export;
-
-  public String type;
-
-  public DependencyGroup() {
-  }
 
   public DependencyGroup(String type) {
     this.type = type;

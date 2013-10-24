@@ -20,26 +20,18 @@ import org.savantbuild.dep.domain.Artifact;
 import java.nio.file.Path;
 
 /**
- * This interface is a listener that is notified when the {@link DefaultDependencyResolver}, {@link
- * DefaultDependencyPublisher} or {@link DefaultDependencyDeleter} encounters, handles, cleans, stores, etc, artifacts.
+ * This interface is a listener that is notified when the {@link DependencyService} fetches and publishes artifacts.
  *
  * @author Brian Pontarelli
  */
 public interface DependencyListener {
   /**
-   * Handle when an artifact is removed by a mediator.
-   *
-   * @param artifact The artifact removed.
-   */
-  void artifactCleaned(Artifact artifact);
-
-  /**
-   * Handle when an artifact is found by a mediator.
+   * Handle when an artifact is fetched by a mediator.
    *
    * @param file     The file that references the artifact.
-   * @param artifact The artifact found.
+   * @param artifact The artifact fetched.
    */
-  void artifactFound(Path file, Artifact artifact);
+  void artifactFetched(Path file, Artifact artifact);
 
   /**
    * Handle when an artifact is published by a mediator.

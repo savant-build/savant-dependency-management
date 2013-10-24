@@ -77,7 +77,7 @@ public class SubVersion implements Closeable {
    * that have been cached by other clients or anonymous authentication.
    *
    * @param repository The SubVersion repository URL.
-   * @throws DependencyException If the creation of the SubVersion client failed for any reason.
+   * @throws SVNException If the creation of the SubVersion client failed for any reason.
    */
   public SubVersion(String repository) throws SVNException {
     this(repository, null, null);

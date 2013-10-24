@@ -27,8 +27,7 @@ import java.util.Objects;
 import java.util.logging.Logger;
 
 /**
- * This is an implementation of the Process that uses the JSCH to publish artifacts to a server using SSH and
- * SCP.
+ * This is an implementation of the Process that uses the JSCH to publish artifacts to a server using SSH and SCP.
  *
  * @author Brian Pontarelli
  */
@@ -42,7 +41,7 @@ public class SCPProcess implements Process {
   /**
    * Constructs the SSHProcess.
    *
-   * @param options The SSHOptions, which must have a server setting.
+   * @param options  The SSHOptions, which must have a server setting.
    * @param location The location to SCP to.
    * @throws NullPointerException If any of the required options are null.
    */

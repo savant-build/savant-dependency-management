@@ -26,17 +26,17 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 /**
- * <p>
- * This class is a simple holder for a MD5 checksum. It holds the sum and the file name.
- * It can also hold the MD5 sum bytes.
- * </p>
+ * This class is a simple holder for a MD5 checksum. It holds the sum and the file name. It can also hold the MD5 sum
+ * bytes.
  *
  * @author Brian Pontarelli
  */
 public class MD5 {
-  public final String sum;
   public final byte[] bytes;
+
   public final String fileName;
+
+  public final String sum;
 
   public MD5(String sum, byte[] bytes, String fileName) {
     this.sum = sum;
@@ -48,7 +48,7 @@ public class MD5 {
    * Calculates the MD5 for the given bytes. This optionally takes a file name, which isn't required, but can be useful
    * when calculating MD5s for files.
    *
-   * @param bytes The bytes.
+   * @param bytes    The bytes.
    * @param fileName (Optional) The file name.
    * @return The MD5 and never null.
    * @throws IOException If the MD5 fails for any reason.
@@ -68,7 +68,9 @@ public class MD5 {
     DigestInputStream dis = new DigestInputStream(bais, digest);
 
     byte[] ba = new byte[1024];
-    while (dis.read(ba, 0, 1024) != -1) ;
+    while (dis.read(ba, 0, 1024) != -1) {
+      // Gobble, gobble
+    }
 
     dis.close();
 
@@ -79,7 +81,7 @@ public class MD5 {
   /**
    * Writes the MD5 information out to the given Path file.
    *
-   * @param md5 The MD5.
+   * @param md5  The MD5.
    * @param path The path to write the MD5 to.
    * @throws IOException If the write fails.
    */

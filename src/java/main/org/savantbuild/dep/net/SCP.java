@@ -52,7 +52,7 @@ public class SCP {
    * @param from The file to upload.
    * @param to   The location on the remote server to upload to.
    * @throws JSchException If the SCP command failed or any errors were found.
-   * @throws IOException If there were IO errors writing to the SCP streams.
+   * @throws IOException   If there were IO errors writing to the SCP streams.
    */
   public void upload(Path from, String to) throws JSchException, IOException {
     JSch jsch = new JSch();
