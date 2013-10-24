@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, Inversoft, All Rights Reserved.
+ * Copyright (c) 2001-2013, Inversoft, All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,13 +13,15 @@
  * either express or implied. See the License for the specific
  * language governing permissions and limitations under the License.
  */
-package org.savantbuild.dep;
+package org.savantbuild.dep.domain;
 
 /**
- * This class denotes that a negative cache was stored for an artifact item of some sort and that it should not be
- * resolved again.
+ * An exception that is thrown when a Version string cannot be parsed.
  *
  * @author Brian Pontarelli
  */
-public class NegativeCacheException extends DependencyException {
+public class VersionException extends RuntimeException {
+  public VersionException(String message) {
+    super(message);
+  }
 }

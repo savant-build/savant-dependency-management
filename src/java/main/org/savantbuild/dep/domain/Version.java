@@ -61,7 +61,7 @@ public class Version implements Comparable<Version> {
    */
   public Version(int major, int minor, int patch, PreRelease preRelease, String metaData) {
     if (major < 0 || minor < 0 || patch < 0) {
-      throw new IllegalArgumentException("Major, minor and patch must be positive integers");
+      throw new VersionException("Major, minor and patch must be positive integers");
     }
 
     this.major = major;
@@ -75,14 +75,14 @@ public class Version implements Comparable<Version> {
    * Constructs a version by parsing the given String.
    *
    * @param version The version String to parse.
-   * @throws IllegalArgumentException If the string starts or ends with a delimiter (. or -) or contains two delimiters
-   *                                  in a row.
+   * @throws VersionException If the string starts or ends with a delimiter (. or -) or contains two delimiters in a
+   *                          row.
    */
   public Version(String version) {
     char start = version.charAt(0);
     char end = version.charAt(version.length() - 1);
     if (start == '.' || start == '-' || start == '+' || end == '.' || end == '-' || end == '+') {
-      throw new IllegalArgumentException("Invalid Semantic Version string [" + version + "]. Version strings should not begin or end with . - or +");
+      throw new VersionException("Invalid Semantic Version string [" + version + "]. Version strings should not begin or end with . - or +");
     }
 
     StringBuilder num = new StringBuilder();
@@ -96,7 +96,7 @@ public class Version implements Comparable<Version> {
       char c = version.charAt(i);
       if (c == '.') {
         if (num.length() == 0) {
-          throw new IllegalArgumentException("Invalid Semantic Version string [" + version + "]. Two version delimiters should not be next to each other.");
+          throw new VersionException("Invalid Semantic Version string [" + version + "]. Two version delimiters should not be next to each other.");
         }
 
         if (major == null) {
@@ -113,7 +113,7 @@ public class Version implements Comparable<Version> {
       } else if (Character.isDigit(c)) {
         num.append(c);
       } else {
-        throw new IllegalArgumentException("Invalid Semantic Version string [" + version + "]. Alphabetic characters are not allowed in the initial version string.");
+        throw new VersionException("Invalid Semantic Version string [" + version + "]. Alphabetic characters are not allowed in the initial version string.");
       }
     }
 
@@ -144,7 +144,6 @@ public class Version implements Comparable<Version> {
    * @param other The other Object to compare against.
    * @return A positive integer if this Version is larger than the given version. Zero if the given Version is the exact
    *         same as this Version. A negative integer is this Version is smaller that the given Version.
-   * @throws IllegalArgumentException If the given Object is not a Version.
    */
   public int compareTo(Version other) {
     int result = major - other.major;
@@ -206,6 +205,22 @@ public class Version implements Comparable<Version> {
   }
 
   /**
+   * Performs semantic version compatibility checking. If this version is on the 0.x line, than the other version has to
+   * be on the same minor line (e.g. 0.3 is not compatible with 0.4). Otherwise, the two versions have to be on the same
+   * major line (e.g. 1.0 is not compatible with 2.0).
+   *
+   * @param other The other version to check against.
+   * @return True if the versions are compatible, false if they aren't.
+   */
+  public boolean isCompatibleWith(Version other) {
+    if (major == 0) {
+      return minor == other.minor;
+    }
+
+    return major == other.major;
+  }
+
+  /**
    * @return True if this Version is an integration, false for all other types of versions.
    */
   public boolean isIntegration() {
@@ -263,7 +278,7 @@ public class Version implements Comparable<Version> {
       char start = spec.charAt(0);
       char end = spec.charAt(spec.length() - 1);
       if (start == '.' || start == '-' || start == '+' || end == '.' || end == '-' || end == '+') {
-        throw new IllegalArgumentException("Invalid Semantic Version PreRelease string [" + spec + "]. PreRelease Version strings should not begin or end with . - or +");
+        throw new VersionException("Invalid Semantic Version PreRelease string [" + spec + "]. PreRelease Version strings should not begin or end with . - or +");
       }
 
       StringBuilder part = new StringBuilder();
@@ -272,7 +287,7 @@ public class Version implements Comparable<Version> {
         char c = spec.charAt(i);
         if (c == '.') {
           if (part.length() == 0) {
-            throw new IllegalArgumentException("Invalid Semantic Version PreRelease string [" + spec + "]. Two version (.)should not be next to each other.");
+            throw new VersionException("Invalid Semantic Version PreRelease string [" + spec + "]. Two version (.)should not be next to each other.");
           }
 
           String partStr = part.toString();
@@ -362,11 +377,6 @@ public class Version implements Comparable<Version> {
         }
 
         @Override
-        public boolean isNumber() {
-          return true;
-        }
-
-        @Override
         public boolean equals(Object o) {
           if (this == o) {
             return true;
@@ -382,6 +392,11 @@ public class Version implements Comparable<Version> {
         @Override
         public int hashCode() {
           return value;
+        }
+
+        @Override
+        public boolean isNumber() {
+          return true;
         }
       }
 

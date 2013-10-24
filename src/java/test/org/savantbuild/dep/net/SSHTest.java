@@ -15,7 +15,6 @@
  */
 package org.savantbuild.dep.net;
 
-import org.savantbuild.dep.DependencyException;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 

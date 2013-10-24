@@ -15,7 +15,6 @@
  */
 package org.savantbuild.dep.net;
 
-import org.savantbuild.dep.DependencyException;
 import org.tmatesoft.svn.core.SVNCommitInfo;
 import org.tmatesoft.svn.core.SVNDepth;
 import org.tmatesoft.svn.core.SVNException;
@@ -80,7 +79,7 @@ public class SubVersion implements Closeable {
    * @param repository The SubVersion repository URL.
    * @throws DependencyException If the creation of the SubVersion client failed for any reason.
    */
-  public SubVersion(String repository) throws DependencyException {
+  public SubVersion(String repository) throws SVNException {
     this(repository, null, null);
   }
 
@@ -91,25 +90,17 @@ public class SubVersion implements Closeable {
    * @param repository The SubVersion repository URL.
    * @param username   (Optional) The username used to connect to the repository.
    * @param password   (Optional) The password used to connect to the repository.
-   * @throws DependencyException If the creation of the SubVersion client failed for any reason.
+   * @throws SVNException If the creation of the SubVersion client failed for any reason.
    */
-  public SubVersion(String repository, String username, String password) throws DependencyException {
-    try {
-      DefaultSVNOptions options = SVNWCUtil.createDefaultOptions(true);
-      options.setAuthStorageEnabled(false);
-      this.svnURL = SVNURL.parseURIEncoded(repository);
-      this.clientManager = SVNClientManager.newInstance(options, username, password);
-    } catch (SVNException e) {
-      throw new DependencyException("Invalid SubVersion repository URL [" + repository + "]", e);
-    }
+  public SubVersion(String repository, String username, String password) throws SVNException {
+    DefaultSVNOptions options = SVNWCUtil.createDefaultOptions(true);
+    options.setAuthStorageEnabled(false);
+    this.svnURL = SVNURL.parseURIEncoded(repository);
+    this.clientManager = SVNClientManager.newInstance(options, username, password);
 
     // Check the URL is correct
-    try {
-      this.repository = clientManager.createRepository(svnURL, false);
-      this.nodeKind = this.repository.checkPath("", -1);
-    } catch (SVNException e) {
-      throw new DependencyException("Enocuntered a SubVersion error while trying to verify the repository URL given", e);
-    }
+    this.repository = clientManager.createRepository(svnURL, false);
+    this.nodeKind = this.repository.checkPath("", -1);
   }
 
   /**
@@ -118,14 +109,10 @@ public class SubVersion implements Closeable {
    * @param path the path to the repository
    * @return SVNURL
    */
-  public static SVNURL createRepository(Path path) {
+  public static SVNURL createRepository(Path path) throws SVNException {
     SVNClientManager clientManager = SVNClientManager.newInstance();
     SVNAdminClient adminClient = clientManager.getAdminClient();
-    try {
-      return adminClient.doCreateRepository(path.toFile(), null, true, true);
-    } catch (SVNException e) {
-      throw new DependencyException(e);
-    }
+    return adminClient.doCreateRepository(path.toFile(), null, true, true);
   }
 
   /**
@@ -146,36 +133,24 @@ public class SubVersion implements Closeable {
    * @param path The path must be relative to the repository location given in the constructor. This path must reference
    *             a valid repository file or directory.
    * @param file The file or directory where the checkout is placed.
-   * @return True if the path was checked out, false if it doesn't exist.
-   * @throws DependencyException If the path is not a file or directory or there is a mismatch between the path and file
-   *                             given.
+   * @throws SVNException If the checkout fails or the SVN URL doesn't exist and could not be checked out.
+   * @throws IOException  If the file is not a directory or there were problems writing to the file system.
    */
-  public boolean doCheckout(String path, Path file) {
+  public void doCheckout(String path, Path file) throws SVNException, IOException {
     if (Files.isRegularFile(file)) {
-      throw new DependencyException("Unable to checkout path [" + path + "] in repository [" + this.svnURL.toString() +
+      throw new IOException("Unable to checkout path [" + path + "] in repository [" + this.svnURL.toString() +
           "] to the location [" + file.toAbsolutePath() + "] because the file given is a plain file and should be a directory.");
     }
 
     // Create the directories if necessary
     Path parent = file.getParent();
     if (!Files.isDirectory(parent)) {
-      try {
-        Files.createDirectories(parent);
-      } catch (IOException e) {
-        throw new DependencyException("Unable to create the directory [" + parent.toAbsolutePath() + "] to perform a SubVersion export into.", e);
-      }
+      Files.createDirectories(parent);
     }
 
-    try {
-      // Get the file
-      SVNUpdateClient client = clientManager.getUpdateClient();
-      client.doCheckout(svnURL.appendPath(path, true), file.toFile(), SVNRevision.HEAD, SVNRevision.HEAD, SVNDepth.INFINITY, false);
-    } catch (Exception e) {
-      throw new DependencyException("Unable to export path [" + path + "] in repository [" + this.svnURL.toString() +
-          "] to file [" + file.toAbsolutePath() + "]", e);
-    }
-
-    return true;
+    // Get the file
+    SVNUpdateClient client = clientManager.getUpdateClient();
+    client.doCheckout(svnURL.appendPath(path, true), file.toFile(), SVNRevision.HEAD, SVNRevision.HEAD, SVNDepth.INFINITY, false);
   }
 
   /**
@@ -187,16 +162,12 @@ public class SubVersion implements Closeable {
    * @param dest    The destination path in the repository.
    * @param message A commit message.
    */
-  public void doCopy(String src, String dest, String message) {
+  public void doCopy(String src, String dest, String message) throws SVNException {
     SVNCopyClient copyClient = clientManager.getCopyClient();
-    try {
-      SVNURL srcURL = svnURL.appendPath(src, true);
-      SVNURL destURL = svnURL.appendPath(dest, true);
-      copyClient.doCopy(new SVNCopySource[]{new SVNCopySource(SVNRevision.UNDEFINED, SVNRevision.UNDEFINED, srcURL)},
-          destURL, false, true, true, message, null);
-    } catch (SVNException e) {
-      throw new DependencyException("Unable to copy from [" + src + "] to [" + dest + "]", e);
-    }
+    SVNURL srcURL = svnURL.appendPath(src, true);
+    SVNURL destURL = svnURL.appendPath(dest, true);
+    copyClient.doCopy(new SVNCopySource[]{new SVNCopySource(SVNRevision.UNDEFINED, SVNRevision.UNDEFINED, srcURL)},
+        destURL, false, true, true, message, null);
   }
 
   /**
@@ -209,77 +180,47 @@ public class SubVersion implements Closeable {
    * @param path The path must be relative to the repository location given in the constructor. This path must reference
    *             a valid repository file or directory.
    * @param file The file or directory where the export is placed.
-   * @return True if the path was exported, false if it doesn't exist.
-   * @throws DependencyException If the path is not a file or directory or there is a mismatch between the path and file
-   *                             given.
+   * @throws SVNException If the path is not a file or directory or there is a mismatch between the path and file
+   *                      given.
+   * @throws IOException  If there was an error writing to the file system.
    */
-  public boolean doExport(String path, Path file) {
-    SVNNodeKind nodeKind;
-    try {
-      nodeKind = this.repository.checkPath(path, -1);
-    } catch (SVNException e) {
-      throw new DependencyException("Unable to export path [" + path + "] in repository [" +
-          this.svnURL.toString() + "] to the location [" + file.toAbsolutePath() + "]", e);
-    }
+  public void doExport(String path, Path file) throws SVNException, IOException {
+    SVNNodeKind nodeKind = this.repository.checkPath(path, -1);
 
-    try {
-      if (nodeKind == SVNNodeKind.FILE) {
-        if (Files.isDirectory(file)) {
-          throw new DependencyException("Unable to export path [" + path + "] in repository [" +
-              this.svnURL.toString() + "] to the location [" + file.toAbsolutePath() +
-              "] because the file given is a directory and should be a plain file.");
-        }
-
-        // Create the directories if necessary
-        if (Files.isDirectory(file.getParent())) {
-          try {
-            Files.createDirectories(file.getParent());
-          } catch (IOException e) {
-            throw new DependencyException("Unable to create the directory [" + file.getParent().toAbsolutePath() +
-                "] to perform a SubVersion export into.");
-          }
-        }
-
-        // Create the export target file
-        if (!Files.isRegularFile(file)) {
-          try {
-            Files.createFile(file);
-          } catch (IOException e) {
-            throw new DependencyException("Unable to create the file [" + file.toAbsolutePath() + "] that is the " +
-                "target for a SubVersion export.");
-          }
-        }
-
-        // Get the file
-        SVNUpdateClient client = clientManager.getUpdateClient();
-        client.doExport(svnURL.appendPath(path, true), file.toFile(), SVNRevision.HEAD, SVNRevision.HEAD, "\n", true, SVNDepth.INFINITY);
-      } else {
-        if (Files.isRegularFile(file)) {
-          throw new DependencyException("Unable to export path [" + path + "] in repository [" +
-              this.svnURL.toString() + "] to the location [" + file.toAbsolutePath() +
-              "] because the file given is a plain file and should be a directory.");
-        }
-
-        // Create the directories if necessary
-        if (!Files.isDirectory(file.getParent())) {
-          try {
-            Files.createDirectories(file.getParent());
-          } catch (IOException e) {
-            throw new DependencyException("Unable to create the directory [" + file.getParent().toAbsolutePath() +
-                "] to perform a SubVersion export into.");
-          }
-        }
-
-        // Get the file
-        SVNUpdateClient client = clientManager.getUpdateClient();
-        client.doExport(svnURL.appendPath(path, true), file.toFile(), SVNRevision.HEAD, SVNRevision.HEAD, "\n", true, SVNDepth.INFINITY);
+    if (nodeKind == SVNNodeKind.FILE) {
+      if (Files.isDirectory(file)) {
+        throw new IOException("Unable to export path [" + path + "] in repository [" + this.svnURL.toString() +
+            "] to the location [" + file.toAbsolutePath() + "] because the file given is a directory and should be a plain file.");
       }
-    } catch (Exception e) {
-      throw new DependencyException("Unable to export path [" + path + "] in repository [" + this.svnURL.toString() +
-          "] to file [" + file.toAbsolutePath() + "]", e);
-    }
 
-    return true;
+      // Create the directories if necessary
+      if (Files.isDirectory(file.getParent())) {
+        Files.createDirectories(file.getParent());
+      }
+
+      // Create the export target file
+      if (!Files.isRegularFile(file)) {
+        Files.createFile(file);
+      }
+
+      // Get the file
+      SVNUpdateClient client = clientManager.getUpdateClient();
+      client.doExport(svnURL.appendPath(path, true), file.toFile(), SVNRevision.HEAD, SVNRevision.HEAD, "\n", true, SVNDepth.INFINITY);
+    } else {
+      if (Files.isRegularFile(file)) {
+        throw new IOException("Unable to export path [" + path + "] in repository [" + this.svnURL.toString() +
+            "] to the location [" + file.toAbsolutePath() + "] because the file given is a plain file and should be a directory.");
+      }
+
+      // Create the directories if necessary
+      if (!Files.isDirectory(file.getParent())) {
+        Files.createDirectories(file.getParent());
+      }
+
+      // Get the file
+      SVNUpdateClient client = clientManager.getUpdateClient();
+      client.doExport(svnURL.appendPath(path, true), file.toFile(), SVNRevision.HEAD, SVNRevision.HEAD, "\n", true, SVNDepth.INFINITY);
+    }
   }
 
   /**
@@ -289,17 +230,10 @@ public class SubVersion implements Closeable {
    *             constructor.
    * @param file The file to import.
    */
-  public void doImport(String path, Path file) {
+  public void doImport(String path, Path file) throws SVNException {
     SVNCommitClient client = clientManager.getCommitClient();
-    SVNURL url = null;
-    try {
-      url = svnURL.appendPath(path, false);
-      client.doImport(file.toFile(), url, "Savant publish", null, true, true, SVNDepth.INFINITY);
-    } catch (SVNException e) {
-      throw new DependencyException("Unable to import file [" + file.toAbsolutePath() +
-          "] into SubVersion repository [" + (url == null ? svnURL.toString() + path : url) + "]",
-          e);
-    }
+    SVNURL url = svnURL.appendPath(path, false);
+    client.doImport(file.toFile(), url, "Savant publish", null, true, true, SVNDepth.INFINITY);
   }
 
   /**
@@ -329,14 +263,10 @@ public class SubVersion implements Closeable {
    * @param repositoryPath the repository path
    * @return SVNCommitInfo
    */
-  public SVNCommitInfo mkdir(File repositoryPath) {
+  public SVNCommitInfo mkdir(File repositoryPath) throws SVNException {
     SVNClientManager clientManager = SVNClientManager.newInstance();
     SVNCommitClient commitClient = clientManager.getCommitClient();
-    try {
-      SVNURL[] svnurl = new SVNURL[]{SVNURL.fromFile(repositoryPath)};
-      return commitClient.doMkDir(svnurl, "Creating svn directory: " + repositoryPath.getAbsolutePath());
-    } catch (SVNException e) {
-      throw new DependencyException(e);
-    }
+    SVNURL[] svnurl = new SVNURL[]{SVNURL.fromFile(repositoryPath)};
+    return commitClient.doMkDir(svnurl, "Creating svn directory: " + repositoryPath.getAbsolutePath());
   }
 }

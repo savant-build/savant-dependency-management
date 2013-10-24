@@ -46,9 +46,9 @@ public class FileTools {
   }
 
   /**
-   * Prunes the given path. If the path is a directory, this deletes everything underneath it, but does not traverse across
-   * symbolic links, it simply deletes the link. If the path is a file, it is deleted. If the path is a symbolic link,
-   * it is unlinked.
+   * Prunes the given path. If the path is a directory, this deletes everything underneath it, but does not traverse
+   * across symbolic links, it simply deletes the link. If the path is a file, it is deleted. If the path is a symbolic
+   * link, it is unlinked.
    *
    * @param path The path to delete.
    */
@@ -59,19 +59,19 @@ public class FileTools {
 
     if (Files.isSymbolicLink(path)) {
       Files.delete(path);
-       return;
+      return;
     }
 
     Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
       @Override
-      public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-        Files.delete(file);
+      public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+        Files.delete(dir);
         return FileVisitResult.CONTINUE;
       }
 
       @Override
-      public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-        Files.delete(dir);
+      public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+        Files.delete(file);
         return FileVisitResult.CONTINUE;
       }
     });

@@ -15,22 +15,15 @@
  */
 package org.savantbuild.dep.workflow.process;
 
-import org.savantbuild.dep.DependencyException;
-import org.savantbuild.dep.NegativeCacheException;
 import org.savantbuild.dep.domain.Artifact;
-import org.savantbuild.dep.io.DoesNotExistException;
 import org.savantbuild.dep.io.FileTools;
-import org.savantbuild.dep.version.ArtifactVersionTools;
 import org.savantbuild.dep.workflow.PublishWorkflow;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.logging.Logger;
 
 /**
@@ -51,32 +44,13 @@ public class CacheProcess implements Process {
   }
 
   /**
-   * Deletes the artifact item.
-   *
-   * @param artifact The artifact if needed.
-   * @param item     The item to delete.
-   * @return True if the item was deleted, false otherwise.
-   * @throws DependencyException If the delete failed.
-   */
-  @Override
-  public boolean delete(Artifact artifact, String item) throws DependencyException {
-    String path = String.join("/", dir, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version, item);
-    File file = new File(path);
-    boolean deleted = false;
-    if (file.isFile()) {
-      deleted = file.delete();
-    }
-
-    return deleted;
-  }
-
-  /**
    * Deletes the integration builds from the cache.
    *
    * @param artifact The artifact. This artifacts version is the next integration build version.
+   * @throws ProcessFailureException If the integration builds could not be deleted.
    */
   @Override
-  public void deleteIntegrationBuilds(Artifact artifact) {
+  public void deleteIntegrationBuilds(Artifact artifact) throws ProcessFailureException {
     String path = String.join("/", dir, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version + "-{integration}");
     Path dir = Paths.get(path);
     if (!Files.isDirectory(dir)) {
@@ -86,55 +60,28 @@ public class CacheProcess implements Process {
     try {
       FileTools.prune(dir);
     } catch (IOException e) {
-      throw new DependencyException("Unable to delete integration builds from [" + dir.toAbsolutePath() + "]", e);
+      throw new ProcessFailureException("Unable to delete integration builds from [" + dir.toAbsolutePath() + "]", e);
     }
   }
 
   /**
-   * Finds the latest or integration build of the artifact inside the cache.
+   * Checks the cache directory for the item. If it exists it is returned. If not, null is returned.
    *
-   * @param artifact The artifact to get the version for.
-   * @return The version or null if it couldn't be found.
-   */
-  @Override
-  public String determineVersion(Artifact artifact) {
-    String version = artifact.version;
-    if (version.equals(ArtifactVersionTools.LATEST)) {
-      File dir = new File(String.join("/", this.dir, artifact.id.group.replace('.', '/'), artifact.id.project));
-      Set<String> names = listFiles(dir);
-      version = ArtifactVersionTools.latest(names);
-    } else if (version.endsWith(ArtifactVersionTools.INTEGRATION)) {
-      File dir = new File(String.join("/", this.dir, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version));
-      Set<String> names = listFiles(dir);
-      version = ArtifactVersionTools.bestIntegration(artifact, names);
-    }
-
-    return version;
-  }
-
-  /**
-   * Checks the cache directory for the item. If it exists it is returned. If not, either a NegativeCacheException or a
-   * DoesNotExistException is thrown (depending on if there is a negative cache record or not).
-   *
-   * @param artifact               The artifact that the item is associated with.
-   * @param item                   The name of the item being fetched.
+   * @param artifact        The artifact that the item is associated with.
+   * @param item            The name of the item being fetched.
    * @param publishWorkflow The PublishWorkflow that is used to store the item if it can be found.
-   * @return The File from the cache.
-   * @throws DoesNotExistException  If the file doesn't exist.
+   * @return The File from the cache or null if it doesn't exist.
    * @throws NegativeCacheException If there is a negative cache record of the file, meaning it doesn't exist anywhere
    *                                in the world.
    */
   @Override
-  public Path fetch(Artifact artifact, String item, PublishWorkflow publishWorkflow)
-      throws DoesNotExistException, NegativeCacheException {
-    String path = String.join("/", dir, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version, item);
+  public Path fetch(Artifact artifact, String item, PublishWorkflow publishWorkflow) throws NegativeCacheException {
+    String path = String.join("/", dir, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString(), item);
     Path file = Paths.get(path);
     if (!Files.isRegularFile(file)) {
       file = Paths.get(path + ".neg");
       if (Files.isRegularFile(file)) {
         throw new NegativeCacheException();
-      } else {
-        throw new DoesNotExistException();
       }
     }
 
@@ -144,31 +91,31 @@ public class CacheProcess implements Process {
   /**
    * Publishes the given artifact item into the cache.
    *
-   * @param artifact The artifact that the item might be associated with.
-   * @param item     The name of the item to publish.
-   * @param artifactFile     The path to the artifact.
+   * @param artifact     The artifact that the item might be associated with.
+   * @param item         The name of the item to publish.
+   * @param artifactFile The path to the artifact.
    * @return Always null.
-   * @throws DependencyException If the publish fails.
+   * @throws ProcessFailureException If the publish fails.
    */
   @Override
-  public Path publish(Artifact artifact, String item, Path artifactFile) throws DependencyException {
-    String cachePath = String.join("/", dir, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version, item);
+  public Path publish(Artifact artifact, String item, Path artifactFile) throws ProcessFailureException {
+    String cachePath = String.join("/", dir, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString(), item);
     Path cacheFile = Paths.get(cachePath);
     if (Files.isDirectory(cacheFile)) {
-      throw new DependencyException("Cache location is for an artifact to be stored is a directory [" + cacheFile.toAbsolutePath() + "]");
+      throw new ProcessFailureException("An Artifact cache location is a directory [" + cacheFile.toAbsolutePath() + "]");
     }
 
     if (Files.isRegularFile(cacheFile)) {
       try {
         Files.delete(cacheFile);
       } catch (IOException e) {
-        throw new DependencyException("Unable to clean out old file to replace [" + cacheFile.toAbsolutePath() + "]", e);
+        throw new ProcessFailureException("Unable to clean out old file to replace [" + cacheFile.toAbsolutePath() + "]", e);
       }
     } else if (!Files.exists(cacheFile)) {
       try {
         Files.createDirectories(cacheFile.getParent());
       } catch (IOException e) {
-        throw new DependencyException("Unable to create cache directory [" + cacheFile.getParent().toAbsolutePath() + "]");
+        throw new ProcessFailureException("Unable to create cache directory [" + cacheFile.getParent().toAbsolutePath() + "]");
       }
     }
 
@@ -184,7 +131,7 @@ public class CacheProcess implements Process {
         }
       }
 
-      throw new DependencyException(e);
+      throw new ProcessFailureException(e);
     }
 
     if (!item.endsWith("md5")) {
@@ -192,20 +139,5 @@ public class CacheProcess implements Process {
     }
 
     return cacheFile;
-  }
-
-  private Set<String> listFiles(File dir) {
-    Set<String> names = new HashSet<>();
-    File[] files = dir.listFiles();
-    if (files == null || files.length == 0) {
-      return names;
-    }
-
-    for (File file : files) {
-      String fileName = file.getName();
-      names.add(fileName);
-    }
-
-    return names;
   }
 }

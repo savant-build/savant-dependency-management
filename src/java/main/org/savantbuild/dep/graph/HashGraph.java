@@ -116,7 +116,7 @@ public class HashGraph<T, U> implements Graph<T, U> {
   /**
    * @return Returns all the nodes in the graph.
    */
-  public Set<GraphNode<T, U>> nodes() {
+  public Set<GraphNode<T, U>> getNodes() {
     return new HashSet<>(nodes.values());
   }
 
@@ -133,25 +133,25 @@ public class HashGraph<T, U> implements Graph<T, U> {
     return nodes.get(value);
   }
 
-  public List<GraphLink<T, U>> inboundLinks(T value) {
+  public List<GraphLink<T, U>> getInboundLinks(T value) {
     GraphNode<T, U> node = getNode(value);
     if (node == null) {
       return null;
     }
 
-    return node.getInboundLinksList();
+    return node.getInboundLinks();
   }
 
-  public List<GraphLink<T, U>> outboundLinks(T value) {
+  public List<GraphLink<T, U>> getOutboundLinks(T value) {
     GraphNode<T, U> node = getNode(value);
     if (node == null) {
       return null;
     }
 
-    return node.getOutboundLinksList();
+    return node.getOutboundLinks();
   }
 
-  public List<GraphPath<T>> paths(T origin, T destination) {
+  public List<GraphPath<T>> getPaths(T origin, T destination) {
     GraphNode<T, U> originNode = getNode(origin);
     if (originNode == null) {
       return null;
@@ -162,7 +162,7 @@ public class HashGraph<T, U> implements Graph<T, U> {
       return null;
     }
 
-    List<GraphLink<T, U>> originLinks = originNode.getOutboundLinksList();
+    List<GraphLink<T, U>> originLinks = originNode.getOutboundLinks();
     List<GraphPath<T>> list = new ArrayList<>();
     for (GraphLink<T, U> link : originLinks) {
       if (link.destination.value.equals(destination)) {
@@ -171,7 +171,7 @@ public class HashGraph<T, U> implements Graph<T, U> {
         path.addToPath(destination);
         list.add(path);
       } else {
-        List<GraphPath<T>> paths = paths(link.destination.value, destination);
+        List<GraphPath<T>> paths = getPaths(link.destination.value, destination);
         for (GraphPath<T> path : paths) {
           path.addToPathHead(origin);
           list.add(path);
@@ -209,7 +209,7 @@ public class HashGraph<T, U> implements Graph<T, U> {
     // are marked.
     nodeLoop:
     for (GraphNode<T, U> graphNode : subGraph) {
-      List<GraphLink<T, U>> links = graphNode.getInboundLinksList();
+      List<GraphLink<T, U>> links = graphNode.getInboundLinks();
       for (GraphLink<T, U> link : links) {
 
         // If the node has a connection from the outside world, don't clear it out
@@ -244,14 +244,14 @@ public class HashGraph<T, U> implements Graph<T, U> {
   }
 
   private void clearLinks(GraphNode<T, U> node) {
-    List<GraphLink<T, U>> links = node.getOutboundLinksList();
+    List<GraphLink<T, U>> links = node.getOutboundLinks();
     for (GraphLink<T, U> link : links) {
       node.removeLink(link);
       GraphLink<T, U> inbound = link.destination.getInboundLink(link.origin);
       link.destination.removeLink(inbound);
     }
 
-    links = node.getInboundLinksList();
+    links = node.getInboundLinks();
     for (GraphLink<T, U> link : links) {
       node.removeLink(link);
       GraphLink<T, U> outbound = link.origin.getOutboundLink(link.destination);
@@ -267,7 +267,7 @@ public class HashGraph<T, U> implements Graph<T, U> {
     }
 
     // Depth first
-    List<GraphLink<T, U>> links = node.getOutboundLinksList();
+    List<GraphLink<T, U>> links = node.getOutboundLinks();
     for (GraphLink<T, U> link : links) {
       result.add(link.destination);
       try {

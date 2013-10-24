@@ -13,22 +13,21 @@
  * either express or implied. See the License for the specific
  * language governing permissions and limitations under the License.
  */
-package org.savantbuild.dep;
-
-import org.savantbuild.dep.domain.Artifact;
+package org.savantbuild.dep.domain;
 
 /**
- * Thrown when an artifact is missing.
- * <p/>
- * This exception is not permanent and usually is fixed by changing to a different server. This exception should not
- * cause a negative cache file to be written and should repeat itself if nothing else changes.
+ * An exception that is thrown when a Version string cannot be parsed.
  *
  * @author Brian Pontarelli
  */
-public class ArtifactMissingException extends RuntimeException {
-  public final Artifact artifact;
+public class CompatibilityException extends RuntimeException {
+  public final ArtifactID artifactID;
+  public final Version min;
+  public final Version max;
 
-  public ArtifactMissingException(Artifact artifact) {
-    this.artifact = artifact;
+  public CompatibilityException(ArtifactID artifactID, Version min, Version max) {
+    this.artifactID = artifactID;
+    this.min = min;
+    this.max = max;
   }
 }

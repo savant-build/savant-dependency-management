@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2001-2010, Inversoft, All Rights Reserved
+ * Copyright (c) 2008, Inversoft, All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -13,20 +13,13 @@
  * either express or implied. See the License for the specific
  * language governing permissions and limitations under the License.
  */
-package org.savantbuild.dep.io;
+package org.savantbuild.dep.workflow.process;
 
 /**
- * This exception denotes a temporary failure that will cease to occur when performing the same IO operation multiple
- * times.
+ * This class denotes that a negative cache was stored for an artifact item of some sort and that it should not be
+ * resolved again.
  *
  * @author Brian Pontarelli
  */
-public class TemporaryIOException extends RuntimeException {
-  public TemporaryIOException(String message) {
-    super(message);
-  }
-
-  public TemporaryIOException(Throwable cause) {
-    super(cause);
-  }
+public class NegativeCacheException extends ProcessFailureException {
 }

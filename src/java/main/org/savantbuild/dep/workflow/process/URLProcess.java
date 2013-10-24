@@ -15,28 +15,19 @@
  */
 package org.savantbuild.dep.workflow.process;
 
-import org.savantbuild.dep.DependencyException;
 import org.savantbuild.dep.domain.Artifact;
-import org.savantbuild.dep.io.DoesNotExistException;
 import org.savantbuild.dep.io.IOTools;
 import org.savantbuild.dep.io.MD5;
-import org.savantbuild.dep.io.PermanentIOException;
-import org.savantbuild.dep.io.TemporaryIOException;
 import org.savantbuild.dep.net.NetTools;
-import org.savantbuild.dep.util.ErrorList;
 import org.savantbuild.dep.workflow.PublishWorkflow;
 
-import java.io.UnsupportedEncodingException;
+import java.io.IOException;
 import java.net.URI;
-import java.net.URLDecoder;
+import java.net.URISyntaxException;
+import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.Objects;
 import java.util.logging.Logger;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import static java.util.Arrays.asList;
 
 /**
  * This class is a workflow process that attempts to download artifacts from the internet using the Savant scheme via
@@ -49,8 +40,6 @@ import static java.util.Arrays.asList;
  * @author Brian Pontarelli
  */
 public class URLProcess implements Process {
-  private final static Pattern HTML = Pattern.compile("a href=\"([^/]+?)/?\"");
-
   private final static Logger logger = Logger.getLogger(URLProcess.class.getName());
 
   private final String password;
@@ -60,31 +49,23 @@ public class URLProcess implements Process {
   private final String username;
 
   public URLProcess(String url, String username, String password) {
+    Objects.requireNonNull(url, "The [url] attribute is required for the [url] workflow process");
+    if (username != null || password != null) {
+      Objects.requireNonNull(username, "You must specify both the [username] and [password] attributes to turn on authentication for the [url] workflow process.");
+      Objects.requireNonNull(password, "You must specify both the [username] and [password] attributes to turn on authentication for the [url] workflow process.");
+    }
+
     this.url = url;
     this.username = username;
     this.password = password;
-
-    ErrorList errors = new ErrorList();
-    if (url == null) {
-      errors.addError("The [url] attribute is required for the [url] workflow process");
-    }
-
-    if ((username != null && password == null) || (username == null && password != null)) {
-      errors.addError("You must specify both the [username] and [password] attributes to turn on authentication " +
-          "for the [url] workflow process.");
-    }
-
-    if (!errors.isEmpty()) {
-      throw new DependencyException(errors);
-    }
   }
 
   /**
    * Throws an exception. This isn't supported yet.
    */
   @Override
-  public void deleteIntegrationBuilds(Artifact artifact) {
-    throw new DependencyException("The [url] process doesn't allow publishing yet.");
+  public void deleteIntegrationBuilds(Artifact artifact) throws ProcessFailureException {
+    throw new ProcessFailureException("The [url] process doesn't support deleting integration builds.");
   }
 
   /**
@@ -97,58 +78,47 @@ public class URLProcess implements Process {
    * @return The File of the artifact after it has been published.
    */
   @Override
-  public Path fetch(Artifact artifact, String item, PublishWorkflow publishWorkflow)
-      throws ProcessFailureException {
+  public Path fetch(Artifact artifact, String item, PublishWorkflow publishWorkflow) throws ProcessFailureException {
+    try {
+      URI md5URI = NetTools.build(url, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString(), item + ".md5");
+      Path md5File = NetTools.downloadToPath(md5URI, username, password, null);
+      if (md5File == null) {
+        throw new ProcessFailureException("Missing MD5 file for artifact [" + artifact + "]");
+      }
 
-    URI md5URI = NetTools.build(url, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString(), item + ".md5");
-    Path md5File = NetTools.downloadToPath(md5URI, username, password, null);
-    MD5 md5 = IOTools.parseMD5(md5File);
+      MD5 md5;
+      try {
+        md5 = IOTools.parseMD5(md5File);
+      } catch (IOException e) {
+        Files.delete(md5File);
+        throw new ProcessFailureException(e);
+      }
 
-    URI itemURI = NetTools.build(url, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString(), item);
-    Path itemFile = NetTools.downloadToPath(itemURI, username, password, md5);
-    if (itemFile == null) {
-      throw new DoesNotExistException("Artifact item doesn't exist [" + itemURI + "]");
+      URI itemURI = NetTools.build(url, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString(), item);
+      Path itemFile = NetTools.downloadToPath(itemURI, username, password, md5);
+
+      if (itemFile != null) {
+        logger.info("Downloaded from [" + itemURI + "]");
+        md5File = publishWorkflow.publish(artifact, item + ".md5", md5File);
+        try {
+          itemFile = publishWorkflow.publish(artifact, item, itemFile);
+        } catch (ProcessFailureException e) {
+          Files.delete(md5File);
+          throw new ProcessFailureException(e);
+        }
+      }
+
+      return itemFile;
+    } catch (IOException | URISyntaxException e) {
+      throw new ProcessFailureException(e);
     }
-
-    logger.info("Downloaded from [" + itemURI + "]");
-
-    publishWorkflow.publish(artifact, item + ".md5", md5File);
-    return publishWorkflow.publish(artifact, item, itemFile);
   }
 
   /**
    * Throws an exception. This isn't supported yet.
    */
   @Override
-  public Path publish(Artifact artifact, String item, Path file) throws DependencyException {
-    throw new DependencyException("The [url] process doesn't allow publishing yet.");
-  }
-
-  private Set<String> parseNames(URI uri) {
-    try {
-      String result = NetTools.downloadToString(uri, username, password);
-      Set<String> names = new HashSet<>();
-      if (result.contains("<html")) {
-        Matcher matcher = HTML.matcher(result);
-        while (matcher.find()) {
-          try {
-            names.add(URLDecoder.decode(matcher.group(1), "UTF-8"));
-          } catch (UnsupportedEncodingException e) {
-            throw new DependencyException("Unable to decode version URLs inside the HTML returned from the remote " +
-                "Savant repository [" + uri.toString() + "]", e);
-          }
-        }
-      } else {
-        names.addAll(asList(result.split("\n")));
-      }
-
-      return names;
-    } catch (DoesNotExistException e) {
-      return null;
-    } catch (TemporaryIOException e) {
-      return null;
-    } catch (PermanentIOException e) {
-      throw new DependencyException(e);
-    }
+  public Path publish(Artifact artifact, String item, Path file) throws ProcessFailureException {
+    throw new ProcessFailureException("The [url] process doesn't allow publishing.");
   }
 }

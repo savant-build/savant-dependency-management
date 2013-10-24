@@ -31,7 +31,7 @@ public interface Process {
    *
    * @param artifact The artifact. This artifacts version is the next integration build version.
    */
-  void deleteIntegrationBuilds(Artifact artifact);
+  void deleteIntegrationBuilds(Artifact artifact) throws ProcessFailureException;
 
   /**
    * Attempts to fetch the given item. The item is normally associated with the artifact, but might be associated with a

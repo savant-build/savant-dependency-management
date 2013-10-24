@@ -13,26 +13,22 @@
  * either express or implied. See the License for the specific
  * language governing permissions and limitations under the License.
  */
-package org.savantbuild.dep.workflow.process;
+package org.savantbuild.dep.workflow;
+
+import org.savantbuild.dep.domain.Artifact;
 
 /**
- * Thrown when a process encounters a failure (network failure, IO exception, etc.).
+ * Thrown when an artifact is missing.
+ * <p/>
+ * This exception is not permanent and usually is fixed by changing to a different server. This exception should not
+ * cause a negative cache file to be written and should repeat itself if nothing else changes.
  *
  * @author Brian Pontarelli
  */
-public class ProcessFailureException extends RuntimeException {
-  public ProcessFailureException() {
-  }
+public class ArtifactMissingException extends RuntimeException {
+  public final Artifact artifact;
 
-  public ProcessFailureException(Throwable cause) {
-    super(cause);
-  }
-
-  public ProcessFailureException(String message) {
-    super(message);
-  }
-
-  public ProcessFailureException(String message, Throwable cause) {
-    super(message, cause);
+  public ArtifactMissingException(Artifact artifact) {
+    this.artifact = artifact;
   }
 }

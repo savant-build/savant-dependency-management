@@ -16,16 +16,12 @@
 package org.savantbuild.dep.workflow.process;
 
 import org.savantbuild.dep.domain.Artifact;
-import org.savantbuild.run.output.DefaultOutput;
 import org.testng.annotations.Test;
 
-import static org.savantbuild.IntegrationTestTools.*;
 import static org.testng.Assert.*;
 
 /**
- * <p>
  * This tests the HTTP index listing parsing for integration and latest version handling.
- * </p>
  *
  * @author Brian Pontarelli
  */

@@ -78,7 +78,7 @@ public class GraphNode<T, U> {
     return null;
   }
 
-  public List<GraphLink<T, U>> getInboundLinksList() {
+  public List<GraphLink<T, U>> getInboundLinks() {
     return new ArrayList<>(inbound);
   }
 
@@ -92,7 +92,7 @@ public class GraphNode<T, U> {
     return null;
   }
 
-  public List<GraphLink<T, U>> getOutboundLinksList() {
+  public List<GraphLink<T, U>> getOutboundLinks() {
     return new ArrayList<>(outbound);
   }
 

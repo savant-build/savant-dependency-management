@@ -35,7 +35,7 @@ public class HashGraphTest {
     graph.addNode("foo");
     assertNotNull(graph.getNode("foo"));
     assertNotNull(graph.contains("foo"));
-    assertEquals(1, graph.nodes().size());
+    assertEquals(1, graph.getNodes().size());
     assertEquals(1, graph.values().size());
   }
 
@@ -77,7 +77,7 @@ public class HashGraphTest {
     graph.addLink("one", "four", "link");
     graph.addLink("two", "four", "link");
 
-    List<GraphPath<String>> paths = graph.paths("one", "four");
+    List<GraphPath<String>> paths = graph.getPaths("one", "four");
     assertEquals(3, paths.size());
     assertEquals(4, paths.get(0).getPath().size());
     assertEquals(3, paths.get(1).getPath().size());
@@ -110,21 +110,21 @@ public class HashGraphTest {
     graph.addLink("four", "one-three", "link");
 
     graph.remove("two");
-    assertEquals(4, graph.nodes().size());
+    assertEquals(4, graph.getNodes().size());
     assertEquals(4, graph.values().size());
     assertNotNull(graph.getNode("one"));
     assertNotNull(graph.getNode("three"));
     assertNotNull(graph.getNode("one-two"));
     assertNotNull(graph.getNode("one-three"));
 
-    assertEquals(2, graph.getNode("one").getOutboundLinksList().size());
-    assertEquals(0, graph.getNode("one").getInboundLinksList().size());
-    assertEquals(1, graph.getNode("one-two").getInboundLinksList().size());
-    assertEquals(1, graph.getNode("one-two").getOutboundLinksList().size());
-    assertEquals(1, graph.getNode("one-three").getInboundLinksList().size());
-    assertEquals(0, graph.getNode("one-three").getOutboundLinksList().size());
-    assertEquals(1, graph.getNode("three").getInboundLinksList().size());
-    assertEquals(0, graph.getNode("three").getOutboundLinksList().size());
+    assertEquals(2, graph.getNode("one").getOutboundLinks().size());
+    assertEquals(0, graph.getNode("one").getInboundLinks().size());
+    assertEquals(1, graph.getNode("one-two").getInboundLinks().size());
+    assertEquals(1, graph.getNode("one-two").getOutboundLinks().size());
+    assertEquals(1, graph.getNode("one-three").getInboundLinks().size());
+    assertEquals(0, graph.getNode("one-three").getOutboundLinks().size());
+    assertEquals(1, graph.getNode("three").getInboundLinks().size());
+    assertEquals(0, graph.getNode("three").getOutboundLinks().size());
 
     assertEquals("one", graph.getNode("one").getOutboundLink(graph.getNode("one-two")).origin.getValue());
     assertEquals("one-two", graph.getNode("one").getOutboundLink(graph.getNode("one-two")).destination.getValue());

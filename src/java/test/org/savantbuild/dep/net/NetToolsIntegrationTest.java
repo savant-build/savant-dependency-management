@@ -21,7 +21,6 @@ import java.net.URI;
 import org.savantbuild.dep.io.FileTools;
 import org.savantbuild.dep.io.MD5;
 import org.savantbuild.dep.io.MD5Exception;
-import org.savantbuild.dep.io.PermanentIOException;
 import org.savantbuild.dep.util.StringTools;
 import org.testng.annotations.Test;
 

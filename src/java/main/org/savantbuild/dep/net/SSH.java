@@ -17,8 +17,8 @@ package org.savantbuild.dep.net;
 
 import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
-import org.savantbuild.dep.DependencyException;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -48,75 +48,75 @@ public class SSH {
    *
    * @param command The command to execute.
    * @return The result from the remote server.
-   * @throws DependencyException If the SSH command failed or any errors were found.
    */
-  public String execute(String command) throws DependencyException {
-    try {
-      JSch jsch = new JSch();
+  public String execute(String command) throws JSchException {
+    JSch jsch = new JSch();
 
-      // Add the identity if it exists
-      if (options.identity != null && new File(options.identity).isFile()) {
-        jsch.addIdentity(options.identity);
-      }
+    // Add the identity if it exists
+    if (options.identity != null && new File(options.identity).isFile()) {
+      jsch.addIdentity(options.identity);
+    }
 
-      // Add the known hosts if it exists
-      if (options.knownHosts != null && new File(options.knownHosts).isFile()) {
-        jsch.setKnownHosts(options.knownHosts);
-      }
+    // Add the known hosts if it exists
+    if (options.knownHosts != null && new File(options.knownHosts).isFile()) {
+      jsch.setKnownHosts(options.knownHosts);
+    }
 
-      Session session = jsch.getSession(options.username, options.server, options.port);
-      session.setUserInfo(new BaseUserInfo(options.password, options.passphrase, options.trustUnknownHosts));
-      session.connect();
+    Session session = jsch.getSession(options.username, options.server, options.port);
+    session.setUserInfo(new BaseUserInfo(options.password, options.passphrase, options.trustUnknownHosts));
+    session.connect();
 
-      final ChannelExec exec = (ChannelExec) session.openChannel("exec");
-      exec.setCommand(command);
+    final ChannelExec exec = (ChannelExec) session.openChannel("exec");
+    exec.setCommand(command);
 
-      ByteArrayOutputStream output = new ByteArrayOutputStream();
-      exec.setOutputStream(output);
-      exec.setExtOutputStream(output);
+    ByteArrayOutputStream output = new ByteArrayOutputStream();
+    exec.setOutputStream(output);
+    exec.setExtOutputStream(output);
 
-      // Setup the error stream
-      ByteArrayOutputStream error = new ByteArrayOutputStream();
-      exec.setErrStream(error);
+    // Setup the error stream
+    ByteArrayOutputStream error = new ByteArrayOutputStream();
+    exec.setErrStream(error);
 
-      exec.connect();
+    exec.connect();
 
-      // wait for it to finish
-      final AtomicBoolean finished = new AtomicBoolean(false);
-      Thread thread =
-          new Thread() {
-            public void run() {
-              while (!exec.isEOF()) {
-                try {
-                  if (finished.get()) {
-                    return;
-                  }
-
-                  sleep(500);
-                } catch (Exception e) {
-                  // ignored
+    // wait for it to finish
+    final AtomicBoolean finished = new AtomicBoolean(false);
+    Thread thread =
+        new Thread() {
+          public void run() {
+            while (!exec.isEOF()) {
+              try {
+                if (finished.get()) {
+                  return;
                 }
+
+                sleep(500);
+              } catch (Exception e) {
+                // ignored
               }
             }
-          };
+          }
+        };
 
-      thread.start();
+    thread.start();
+    try {
       thread.join(0);
-      finished.set(true);
-
-      if (thread.isAlive()) {
-        // ran out of time
-        throw new DependencyException("SSH command [" + command + "] timed out.");
-      }
-
-      int code = exec.getExitStatus();
-      if (code != 0) {
-        throw new DependencyException("Unable to execute SSH command [" + command + "] due to [ " + error.toString() + "]");
-      }
-
-      return output.toString();
-    } catch (Exception e) {
-      throw new DependencyException(e);
+    } catch (InterruptedException e) {
+      throw new JSchException("Thread was interrupted", e);
     }
+
+    finished.set(true);
+
+    if (thread.isAlive()) {
+      // ran out of time
+      throw new JSchException("SSH command [" + command + "] timed out.");
+    }
+
+    int code = exec.getExitStatus();
+    if (code != 0) {
+      throw new JSchException("Unable to execute SSH command [" + command + "] due to [ " + error.toString() + "]");
+    }
+
+    return output.toString();
   }
 }

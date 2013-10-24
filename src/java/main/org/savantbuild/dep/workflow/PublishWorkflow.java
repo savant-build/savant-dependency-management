@@ -15,9 +15,9 @@
  */
 package org.savantbuild.dep.workflow;
 
-import org.savantbuild.dep.DependencyException;
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.workflow.process.Process;
+import org.savantbuild.dep.workflow.process.ProcessFailureException;
 
 import java.io.File;
 import java.io.IOException;
@@ -41,26 +41,6 @@ public class PublishWorkflow {
   }
 
   /**
-   * Deletes the item by removing it from all of the published locations. This is handled by calling each of the publish
-   * processes in turn to remove the item. This method relies on the {@link PublishWorkflow} to setup any
-   * dependencies that the artifact might have. This is done because it is assumed that the publish workflow will have
-   * access to the .deps file and can parse it out.
-   *
-   * @param artifact The artifact information used to publish.
-   * @param item     The name of the item being deleted.
-   * @return True if the artifact was deleted, false if not. This is only true if a single process deleted the artifact.
-   *         Therefore, all others might have failed, but this will still return true.
-   */
-  public boolean delete(Artifact artifact, String item) {
-    boolean deleted = false;
-    for (Process process : processes) {
-      deleted |= process.delete(artifact, item);
-    }
-
-    return deleted;
-  }
-
-  /**
    * Deletes all of the files that contain integration build versions.
    *
    * @param artifact The artifact information used to publish.
@@ -74,7 +54,7 @@ public class PublishWorkflow {
   /**
    * @return The process list.
    */
-  public List<org.savantbuild.dep.workflow.process.Process> getProcesses() {
+  public List<Process> getProcesses() {
     return processes;
   }
 
@@ -85,9 +65,9 @@ public class PublishWorkflow {
    * @param item     The name of the item being published.
    * @param file     The file that is the artifact contents.
    * @return A file that can be used to reference the artifact for paths and other constructs.
-   * @throws DependencyException If the artifact could not be published for any reason.
+   * @throws ProcessFailureException If the artifact could not be published for any reason.
    */
-  public Path publish(Artifact artifact, String item, Path file) {
+  public Path publish(Artifact artifact, String item, Path file) throws ProcessFailureException {
     Path result = null;
     for (Process process : processes) {
       Path temp = process.publish(artifact, item, file);
@@ -109,7 +89,7 @@ public class PublishWorkflow {
   public void publishNegative(Artifact artifact, String item) {
     Path itemFile;
     try {
-      File tempFile = File.createTempFile("item", "item");
+      File tempFile = File.createTempFile("savant-item", "neg");
       tempFile.deleteOnExit();
       itemFile = tempFile.toPath();
     } catch (IOException e) {
@@ -121,34 +101,7 @@ public class PublishWorkflow {
     for (Process process : processes) {
       try {
         process.publish(artifact, item + ".neg", itemFile);
-      } catch (DependencyException e) {
-        // Continue since this is okay.
-      }
-    }
-  }
-
-  /**
-   * Publishes a negative file for the artifact MetaData. This file is empty, but signals Savant not to attempt to fetch
-   * that specific AMD file again, since it doesn't exist.
-   *
-   * @param artifact The artifact information used to publish.
-   */
-  public void publishNegativeMetaData(Artifact artifact) {
-    Path amdFile;
-    try {
-      File tempFile = File.createTempFile("amd", "amd");
-      tempFile.deleteOnExit();
-      amdFile = tempFile.toPath();
-    } catch (IOException e) {
-      // This is okay, because negatives are only for performance and if we can't create one, we'll just
-      // head out and try and fetch it again next time.
-      return;
-    }
-
-    for (Process process : processes) {
-      try {
-        process.publish(artifact, artifact.getArtifactNegativeMetaDataFile(), amdFile);
-      } catch (DependencyException e) {
+      } catch (ProcessFailureException e) {
         // Continue since this is okay.
       }
     }

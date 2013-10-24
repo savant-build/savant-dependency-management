@@ -109,7 +109,7 @@ public interface Graph<T, U> {
    * @param value The value to find the links for.
    * @return The links or an empty list if the node exists and has no links or null if the node does not exist.
    */
-  List<GraphLink<T, U>> inboundLinks(T value);
+  List<GraphLink<T, U>> getInboundLinks(T value);
 
   /**
    * Returns a list of all the outbound links for the node whose value is given. This locates the first node with the
@@ -118,7 +118,7 @@ public interface Graph<T, U> {
    * @param value The value to find the links for.
    * @return The links or an empty list if the node exists and has no links or null if the node does not exist.
    */
-  List<GraphLink<T, U>> outboundLinks(T value);
+  List<GraphLink<T, U>> getOutboundLinks(T value);
 
   /**
    * Determines the path from the given origin value to given destination value.
@@ -128,5 +128,5 @@ public interface Graph<T, U> {
    * @return A list of all the paths between the two nodes or an empty list if there are none or null if either of the
    *         nodes don't exist.
    */
-  List<GraphPath<T>> paths(T origin, T destination);
+  List<GraphPath<T>> getPaths(T origin, T destination);
 }

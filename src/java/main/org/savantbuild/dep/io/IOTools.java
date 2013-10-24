@@ -19,12 +19,10 @@ import org.savantbuild.dep.util.StringTools;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
@@ -42,79 +40,48 @@ public class IOTools {
    *
    * @param path The path to parse the MD5 sum from.
    * @return The MD5.
+   * @throws IOException If the MD5 file is not a valid MD5 file or was unreadable.
    */
-  public static MD5 parseMD5(Path path) {
+  public static MD5 parseMD5(Path path) throws IOException {
     if (path == null || !Files.isRegularFile(path)) {
       return null;
     }
 
-    return protectIO(() -> {
-      String str = new String(Files.readAllBytes(path), "UTF-8");
-      String name = null;
-      String sum = null;
-      if (str.length() > 0) {
-        // Validate format (should be either only the md5sum or the sum plus the file name)
-        if (str.length() < 32) {
-          throw new MD5Exception("Invalid md5sum [" + str + "]");
-        }
+    String str = new String(Files.readAllBytes(path), "UTF-8");
+    String name = null;
+    String sum = null;
+    if (str.length() > 0) {
+      // Validate format (should be either only the md5sum or the sum plus the file name)
+      if (str.length() < 32) {
+        throw new MD5Exception("Invalid md5sum [" + str + "]");
+      }
 
-        if (str.length() == 32) {
-          sum = str;
-        } else if (str.length() > 33) {
-          int index = str.indexOf(" ");
-          if (index == 32) {
-            sum = str.substring(0, 32);
+      if (str.length() == 32) {
+        sum = str;
+      } else if (str.length() > 33) {
+        int index = str.indexOf(" ");
+        if (index == 32) {
+          sum = str.substring(0, 32);
 
-            // Find file name and verify
-            while (str.charAt(index) == ' ') {
-              index++;
-            }
+          // Find file name and verify
+          while (str.charAt(index) == ' ') {
+            index++;
+          }
 
-            if (index == str.length()) {
-              throw new MD5Exception("Invalid md5sum [" + str + "]");
-            }
-
-            name = str.substring(index);
-          } else {
+          if (index == str.length()) {
             throw new MD5Exception("Invalid md5sum [" + str + "]");
           }
+
+          name = str.substring(index);
         } else {
           throw new MD5Exception("Invalid md5sum [" + str + "]");
         }
+      } else {
+        throw new MD5Exception("Invalid md5sum [" + str + "]");
       }
-
-      return new MD5(sum, StringTools.fromHex(sum), name);
-    });
-  }
-
-  /**
-   * Runs the {@link IOCallable} in a protected state. This method handles many of the IOException subclasses and
-   * translates them into either a {@link TemporaryIOException}, {@link PermanentIOException} or {@link
-   * DoesNotExistException}. This does not handle any of the RMI exceptions.
-   * <p/>
-   * Most of the IOExceptions are translated into TemporaryIOExceptions because they are transient and will likely not
-   * occur under different conditions. However, there are a couple of IOExceptions that are permanent. These are
-   * MD5Exception and MalformedURLException. There are also two DoesNotExistExceptions: FileNotFoundException and
-   * NoSuchFileException.
-   *
-   * @param callable The IO callable to execute.
-   * @return The result of the Callable.
-   * @throws PermanentIOException  If the IO caused an exception and it was not recoverable. This means that calling
-   *                               this method with the same Callable will always cause the error and it will never
-   *                               succeed.
-   * @throws TemporaryIOException  If the IO caused an exception and it was only temporary due to environmental
-   *                               conditions or other causes that will eventually be remedied.
-   * @throws DoesNotExistException If the IO is doing file IO and the file does not exist.
-   */
-  public static <T> T protectIO(IOCallable<T> callable)
-      throws PermanentIOException, TemporaryIOException, DoesNotExistException {
-    try {
-      return callable.call();
-    } catch (FileNotFoundException | NoSuchFileException e) {
-      throw new DoesNotExistException(e);
-    } catch (IOException e) {
-      throw new TemporaryIOException(e);
     }
+
+    return new MD5(sum, StringTools.fromHex(sum), name);
   }
 
   /**
@@ -161,9 +128,5 @@ public class IOTools {
 
     byte[] bytes = inputStream.getMessageDigest().digest();
     return new MD5(StringTools.toHex(bytes), bytes, null);
-  }
-
-  public static interface IOCallable<T> {
-    T call() throws IOException;
   }
 }

@@ -15,15 +15,15 @@
  */
 package org.savantbuild.dep.workflow.process;
 
-import org.savantbuild.dep.DependencyException;
+import com.jcraft.jsch.JSchException;
 import org.savantbuild.dep.domain.Artifact;
-import org.savantbuild.dep.io.IOTools;
 import org.savantbuild.dep.net.SCP;
 import org.savantbuild.dep.net.SSHOptions;
-import org.savantbuild.dep.util.ErrorList;
 import org.savantbuild.dep.workflow.PublishWorkflow;
 
+import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Objects;
 import java.util.logging.Logger;
 
 /**
@@ -39,58 +39,42 @@ public class SCPProcess implements Process {
 
   private final SSHOptions options;
 
-  public SCPProcess(SSHOptions options, String location) {
+  /**
+   * Constructs the SSHProcess.
+   *
+   * @param options The SSHOptions, which must have a server setting.
+   * @param location The location to SCP to.
+   * @throws NullPointerException If any of the required options are null.
+   */
+  public SCPProcess(SSHOptions options, String location) throws NullPointerException {
+    Objects.requireNonNull(location, "The [location] attribute is required for the [scp] workflow process");
+    Objects.requireNonNull(options, "The [server] attribute is required for the [scp] workflow process");
+    if (options != null) {
+      Objects.requireNonNull(options.server, "The [server] attribute is required for the [scp] workflow process");
+      if (options.username != null || options.password != null) {
+        Objects.requireNonNull(options.username, "You must specify both the [username] and [password] attributes to turn on authentication for the [scp] workflow process.");
+        Objects.requireNonNull(options.password, "You must specify both the [username] and [password] attributes to turn on authentication for the [scp] workflow process.");
+      }
+    }
+
     this.options = options;
     this.location = location;
-
-    ErrorList errors = new ErrorList();
-    if (this.options.server == null) {
-      errors.addError("The [server] attribute is required for the [scp] workflow process");
-    }
-
-    if (location == null) {
-      errors.addError("The [location] attribute is required for the [scp] workflow process");
-    }
-
-    if ((this.options.username != null && this.options.password == null) || (this.options.username == null && this.options.password != null)) {
-      errors.addError("You must specify both the [username] and [password] attributes to turn on authentication " +
-          "for the [scp] workflow process.");
-    }
-
-    if (!errors.isEmpty()) {
-      throw new DependencyException(errors);
-    }
   }
 
   /**
    * Not implemented yet.
    */
   @Override
-  public boolean delete(Artifact artifact, String item) throws DependencyException {
-    throw new DependencyException("The [scp] process doesn't allow deleting yet.");
-  }
-
-  /**
-   * Not implemented yet.
-   */
-  @Override
-  public void deleteIntegrationBuilds(Artifact artifact) {
-    throw new DependencyException("The [scp] process doesn't allow deleting of integration builds yet.");
-  }
-
-  /**
-   * Not supported right now.
-   */
-  public String determineVersion(Artifact artifact) {
-    throw new DependencyException("The [scp] workflow process doesn't support fetching at this time.");
+  public void deleteIntegrationBuilds(Artifact artifact) throws ProcessFailureException {
+    throw new ProcessFailureException("The [scp] process doesn't allow deleting of integration builds.");
   }
 
   /**
    * Not supported right now.
    */
   @Override
-  public Path fetch(Artifact artifact, String item, PublishWorkflow publishWorkflow) {
-    throw new DependencyException("The [scp] workflow process doesn't support fetching at this time.");
+  public Path fetch(Artifact artifact, String item, PublishWorkflow publishWorkflow) throws ProcessFailureException {
+    throw new ProcessFailureException("The [scp] workflow process doesn't support fetching.");
   }
 
   /**
@@ -100,21 +84,19 @@ public class SCPProcess implements Process {
    * @param item         The name of the item to publish.
    * @param artifactFile The artifact file.
    * @return Always null.
-   * @throws DependencyException If the publish fails.
+   * @throws ProcessFailureException If the publish fails.
    */
   @Override
-  public Path publish(Artifact artifact, String item, Path artifactFile) throws DependencyException {
-    String path = String.join("/", location, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version, item);
-    upload(path, artifactFile);
+  public Path publish(Artifact artifact, String item, Path artifactFile) throws ProcessFailureException {
+    String path = String.join("/", location, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString(), item);
+    SCP scp = new SCP(options);
+    try {
+      scp.upload(artifactFile, path);
+    } catch (JSchException | IOException e) {
+      throw new ProcessFailureException(e);
+    }
+
     logger.info("Published via SCP to [" + options.server + ":" + options.port + location + "/" + path + "]");
     return null;
-  }
-
-  private void upload(String path, Path file) {
-    IOTools.protectIO(() -> {
-      SCP scp = new SCP(options);
-      scp.upload(file, path);
-      return null;
-    });
   }
 }

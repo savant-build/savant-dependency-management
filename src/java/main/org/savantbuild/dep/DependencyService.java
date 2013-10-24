@@ -16,9 +16,11 @@
 package org.savantbuild.dep;
 
 import org.savantbuild.dep.domain.Artifact;
+import org.savantbuild.dep.domain.CompatibilityException;
 import org.savantbuild.dep.domain.Dependencies;
 import org.savantbuild.dep.graph.DependencyGraph;
 import org.savantbuild.dep.graph.ResolvedArtifactGraph;
+import org.savantbuild.dep.workflow.ArtifactMetaDataMissingException;
 import org.savantbuild.dep.workflow.Workflow;
 
 import java.util.HashMap;
@@ -68,6 +70,7 @@ public interface DependencyService {
    * way.
    *
    * @param graph The graph.
+   * @throws CompatibilityException If an dependency has incompatible versions.
    */
   void verifyCompatibility(DependencyGraph graph);
 

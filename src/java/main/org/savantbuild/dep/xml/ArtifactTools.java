@@ -15,17 +15,18 @@
  */
 package org.savantbuild.dep.xml;
 
-import org.savantbuild.dep.DependencyException;
 import org.savantbuild.dep.domain.ArtifactID;
 import org.savantbuild.dep.domain.ArtifactMetaData;
 import org.savantbuild.dep.domain.Dependencies;
 import org.savantbuild.dep.domain.Dependency;
 import org.savantbuild.dep.domain.DependencyGroup;
 import org.savantbuild.dep.domain.Version;
+import org.savantbuild.dep.domain.VersionException;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
+import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 import java.io.File;
@@ -48,41 +49,37 @@ public class ArtifactTools {
    *
    * @param artifactMetaData The MetaData object to serialize to XML.
    * @return The temp file and never null.
-   * @throws DependencyException If the temp could not be created, or the XML could not be written.
+   * @throws IOException If the temp could not be created or the XML could not be written.
    */
-  public static Path generateXML(ArtifactMetaData artifactMetaData) throws DependencyException {
-    try {
-      File tmp = File.createTempFile("savant", "amd");
-      tmp.deleteOnExit();
+  public static Path generateXML(ArtifactMetaData artifactMetaData) throws IOException {
+    File tmp = File.createTempFile("savant", "amd");
+    tmp.deleteOnExit();
 
-      try (PrintWriter pw = new PrintWriter(new FileWriter(tmp))) {
-        pw.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-        pw.printf("<artifact-meta-data>\n");
+    try (PrintWriter pw = new PrintWriter(new FileWriter(tmp))) {
+      pw.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+      pw.printf("<artifact-meta-data>\n");
 
-        Dependencies dependencies = artifactMetaData.dependencies;
-        if (dependencies != null) {
-          pw.println("  <dependencies>");
-          Map<String, DependencyGroup> groups = dependencies.groups;
-          Set<String> keys = groups.keySet();
-          for (String key : keys) {
-            DependencyGroup group = groups.get(key);
-            pw.printf("    <dependency-group type=\"%s\">\n", group.type);
+      Dependencies dependencies = artifactMetaData.dependencies;
+      if (dependencies != null) {
+        pw.println("  <dependencies>");
+        Map<String, DependencyGroup> groups = dependencies.groups;
+        Set<String> keys = groups.keySet();
+        for (String key : keys) {
+          DependencyGroup group = groups.get(key);
+          pw.printf("    <dependency-group type=\"%s\">\n", group.type);
 
-            for (Dependency dependency : group.dependencies) {
-              pw.printf("      <dependency group=\"%s\" project=\"%s\" name=\"%s\" version=\"%s\" type=\"%s\" optional=\"%b\"/>\n",
-                  dependency.id.group, dependency.id.project, dependency.id.name, dependency.version, dependency.id.type, dependency.optional);
-            }
-            pw.println("    </dependency-group>");
+          for (Dependency dependency : group.dependencies) {
+            pw.printf("      <dependency group=\"%s\" project=\"%s\" name=\"%s\" version=\"%s\" type=\"%s\" optional=\"%b\"/>\n",
+                dependency.id.group, dependency.id.project, dependency.id.name, dependency.version, dependency.id.type, dependency.optional);
           }
-          pw.println("  </dependencies>");
+          pw.println("    </dependency-group>");
         }
-        pw.println("</artifact-meta-data>");
+        pw.println("  </dependencies>");
       }
-
-      return tmp.toPath();
-    } catch (IOException ioe) {
-      throw new DependencyException(ioe);
+      pw.println("</artifact-meta-data>");
     }
+
+    return tmp.toPath();
   }
 
   /**
@@ -90,17 +87,17 @@ public class ArtifactTools {
    *
    * @param file The File to read the XML MetaData information from.
    * @return The MetaData parsed.
-   * @throws DependencyException If the parsing failed.
+   * @throws SAXException                 If the SAX parsing failed.
+   * @throws VersionException             If any of the version strings could not be parsed.
+   * @throws ParserConfigurationException If the parser configuration in the JDK is invalid.
+   * @throws IOException                  If the parse operation failed because of an IO error.
    */
-  public static ArtifactMetaData parseArtifactMetaData(Path file) {
-    try {
-      SAXParser parser = SAXParserFactory.newInstance().newSAXParser();
-      ArtifactMetaDataHandler handler = new ArtifactMetaDataHandler();
-      parser.parse(file.toFile(), handler);
-      return new ArtifactMetaData(handler.dependencies);
-    } catch (Exception e) {
-      throw new DependencyException(e);
-    }
+  public static ArtifactMetaData parseArtifactMetaData(Path file)
+      throws SAXException, VersionException, ParserConfigurationException, IOException {
+    SAXParser parser = SAXParserFactory.newInstance().newSAXParser();
+    ArtifactMetaDataHandler handler = new ArtifactMetaDataHandler();
+    parser.parse(file.toFile(), handler);
+    return new ArtifactMetaData(handler.dependencies);
   }
 
   public static class ArtifactMetaDataHandler extends DefaultHandler {
@@ -120,14 +117,9 @@ public class ArtifactTools {
           dependencies.groups.put(type, group);
           break;
         case "artifact":
-          Dependency dependency;
-          try {
-            dependency = new Dependency(new ArtifactID(attributes.getValue("group"), attributes.getValue("project"),
-                attributes.getValue("name"), attributes.getValue("type")), new Version(attributes.getValue("version")),
-                Boolean.parseBoolean(attributes.getValue("optional")));
-          } catch (IllegalArgumentException e) {
-            throw new DependencyException(e);
-          }
+          Dependency dependency = new Dependency(new ArtifactID(attributes.getValue("group"), attributes.getValue("project"),
+              attributes.getValue("name"), attributes.getValue("type")), new Version(attributes.getValue("version")),
+              Boolean.parseBoolean(attributes.getValue("optional")));
 
           group.dependencies.add(dependency);
           break;

@@ -37,7 +37,7 @@ public class DependencyGraph extends HashGraph<ArtifactID, DependencyLinkValue> 
   }
 
   public Dependencies getDependencies(Artifact artifact) {
-    List<GraphLink<ArtifactID, DependencyLinkValue>> links = outboundLinks(artifact.id);
+    List<GraphLink<ArtifactID, DependencyLinkValue>> links = getOutboundLinks(artifact.id);
 
     Dependencies deps = new Dependencies();
     if (links == null || links.isEmpty()) {

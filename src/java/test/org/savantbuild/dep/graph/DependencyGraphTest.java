@@ -15,25 +15,49 @@
  */
 package org.savantbuild.dep.graph;
 
-import java.util.List;
-
 import org.savantbuild.dep.domain.Artifact;
-import org.savantbuild.dep.domain.DependencyGroup;
 import org.savantbuild.dep.domain.ArtifactID;
 import org.savantbuild.dep.domain.Dependencies;
+import org.savantbuild.dep.domain.DependencyGroup;
 import org.testng.annotations.Test;
 
-import static org.testng.Assert.*;
+import java.util.List;
+
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertSame;
+import static org.testng.Assert.assertTrue;
 
 /**
- * <p>
- * This class is a test case for the artifact graph data
- * structure.
- * </p>
+ * This class is a test case for the artifact graph data structure.
  *
  * @author Brian Pontarelli
  */
 public class DependencyGraphTest {
+  @Test
+  public void artifactGraphPaths() {
+    Artifact a1 = new Artifact("group", "project", "artifact1", "1.0", "jar");
+    Artifact a2 = new Artifact("group", "project", "artifact2", "1.0", "jar");
+    Artifact a3 = new Artifact("group", "project", "artifact3", "1.0", "jar");
+    Artifact a4 = new Artifact("group", "project", "artifact4", "1.0", "jar");
+
+    DependencyGraph ag = new DependencyGraph(a1);
+    ag.addLink(a1.getId(), a2.getId(), new DependencyLinkValue(a1.getVersion(), a2.getVersion(), "compile", null));
+    ag.addLink(a1.getId(), a3.getId(), new DependencyLinkValue(a1.getVersion(), a3.getVersion(), "compile", null));
+    ag.addLink(a2.getId(), a4.getId(), new DependencyLinkValue(a2.getVersion(), a4.getVersion(), "compile", null));
+    ag.addLink(a3.getId(), a4.getId(), new DependencyLinkValue(a3.getVersion(), a4.getVersion(), "compile", null));
+
+    List<GraphPath<ArtifactID>> paths = ag.getPaths(a1.getId(), a4.getId());
+    assertEquals(2, paths.size());
+    assertEquals(3, paths.get(0).getPath().size());
+    assertEquals(3, paths.get(1).getPath().size());
+    assertSame(a1.getId(), paths.get(0).getPath().get(0));
+    assertSame(a2.getId(), paths.get(0).getPath().get(1));
+    assertSame(a4.getId(), paths.get(0).getPath().get(2));
+    assertSame(a1.getId(), paths.get(1).getPath().get(0));
+    assertSame(a3.getId(), paths.get(1).getPath().get(1));
+    assertSame(a4.getId(), paths.get(1).getPath().get(2));
+  }
+
   @Test
   public void graphDeps() {
     Artifact a1 = new Artifact("group", "project", "artifact1", "1.0", "jar");
@@ -50,30 +74,5 @@ public class DependencyGraphTest {
     DependencyGroup group = deps.getArtifactGroups().get("compile");
     assertTrue(group.getArtifacts().contains(a2));
     assertTrue(group.getArtifacts().contains(a3));
-  }
-
-  @Test
-  public void artifactGraphPaths() {
-    Artifact a1 = new Artifact("group", "project", "artifact1", "1.0", "jar");
-    Artifact a2 = new Artifact("group", "project", "artifact2", "1.0", "jar");
-    Artifact a3 = new Artifact("group", "project", "artifact3", "1.0", "jar");
-    Artifact a4 = new Artifact("group", "project", "artifact4", "1.0", "jar");
-
-    DependencyGraph ag = new DependencyGraph(a1);
-    ag.addLink(a1.getId(), a2.getId(), new DependencyLinkValue(a1.getVersion(), a2.getVersion(), "compile", null));
-    ag.addLink(a1.getId(), a3.getId(), new DependencyLinkValue(a1.getVersion(), a3.getVersion(), "compile", null));
-    ag.addLink(a2.getId(), a4.getId(), new DependencyLinkValue(a2.getVersion(), a4.getVersion(), "compile", null));
-    ag.addLink(a3.getId(), a4.getId(), new DependencyLinkValue(a3.getVersion(), a4.getVersion(), "compile", null));
-
-    List<GraphPath<ArtifactID>> paths = ag.paths(a1.getId(), a4.getId());
-    assertEquals(2, paths.size());
-    assertEquals(3, paths.get(0).getPath().size());
-    assertEquals(3, paths.get(1).getPath().size());
-    assertSame(a1.getId(), paths.get(0).getPath().get(0));
-    assertSame(a2.getId(), paths.get(0).getPath().get(1));
-    assertSame(a4.getId(), paths.get(0).getPath().get(2));
-    assertSame(a1.getId(), paths.get(1).getPath().get(0));
-    assertSame(a3.getId(), paths.get(1).getPath().get(1));
-    assertSame(a4.getId(), paths.get(1).getPath().get(2));
   }
 }

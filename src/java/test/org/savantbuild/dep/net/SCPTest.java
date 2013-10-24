@@ -17,7 +17,6 @@ package org.savantbuild.dep.net;
 
 import java.io.File;
 
-import org.savantbuild.dep.DependencyException;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.*;

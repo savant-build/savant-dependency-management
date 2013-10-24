@@ -48,31 +48,6 @@ public class StringTools {
   }
 
   /**
-   * Determines if the given String is empty or null.
-   *
-   * @param s The String.
-   * @return True if the String is empty, contains only whitespace or is null.
-   */
-  public static boolean isTrimmedEmpty(String s) {
-    return s == null || s.trim().length() == 0;
-  }
-
-  /**
-   * Parses the String for a boolean.
-   *
-   * @param str The String to parse.
-   * @param def The default value if the string is empty or null.
-   * @return The parsed value or the default.
-   */
-  public static boolean toBoolean(String str, boolean def) {
-    if (isTrimmedEmpty(str)) {
-      return def;
-    }
-
-    return Boolean.parseBoolean(str);
-  }
-
-  /**
    * Converts the contents of the given byte array from hexadecimal to a hex String. Each character of the String is a
    * single hex value. Therefore, the the pair of characters equals a single byte.
    *
@@ -91,20 +66,5 @@ public class StringTools {
     }
 
     return build.toString();
-  }
-
-  /**
-   * Parses the String for an int.
-   *
-   * @param str The String to parse.
-   * @param def The default value if the string is empty or null.
-   * @return The parsed value or the default.
-   */
-  public static int toInt(String str, int def) {
-    if (isTrimmedEmpty(str)) {
-      return def;
-    }
-
-    return Integer.parseInt(str);
   }
 }

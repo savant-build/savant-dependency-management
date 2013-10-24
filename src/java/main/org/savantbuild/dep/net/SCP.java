@@ -19,7 +19,6 @@ import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
-import org.savantbuild.dep.DependencyException;
 
 import java.io.File;
 import java.io.IOException;
@@ -52,31 +51,30 @@ public class SCP {
    *
    * @param from The file to upload.
    * @param to   The location on the remote server to upload to.
-   * @throws DependencyException If the SCP command failed or any errors were found.
+   * @throws JSchException If the SCP command failed or any errors were found.
+   * @throws IOException If there were IO errors writing to the SCP streams.
    */
-  public void upload(Path from, String to) throws DependencyException {
-    try {
-      JSch jsch = new JSch();
+  public void upload(Path from, String to) throws JSchException, IOException {
+    JSch jsch = new JSch();
 
-      // Add the identity if it exists
-      if (options.identity != null && new File(options.identity).isFile()) {
-        jsch.addIdentity(options.identity);
-      }
+    // Add the identity if it exists
+    if (options.identity != null && new File(options.identity).isFile()) {
+      jsch.addIdentity(options.identity);
+    }
 
-      // Add the known hosts if it exists
-      if (options.knownHosts != null && new File(options.knownHosts).isFile()) {
-        jsch.setKnownHosts(options.knownHosts);
-      }
+    // Add the known hosts if it exists
+    if (options.knownHosts != null && new File(options.knownHosts).isFile()) {
+      jsch.setKnownHosts(options.knownHosts);
+    }
 
-      Session session = jsch.getSession(options.username, options.server, options.port);
-      session.setUserInfo(new BaseUserInfo(options.password, options.passphrase, options.trustUnknownHosts));
-      session.connect();
+    Session session = jsch.getSession(options.username, options.server, options.port);
+    session.setUserInfo(new BaseUserInfo(options.password, options.passphrase, options.trustUnknownHosts));
+    session.connect();
 
-      ChannelExec exec = (ChannelExec) session.openChannel("exec");
-      exec.setCommand("scp -p -t " + to);
+    ChannelExec exec = (ChannelExec) session.openChannel("exec");
+    exec.setCommand("scp -p -t " + to);
 
-      InputStream is = exec.getInputStream();
-      OutputStream os = exec.getOutputStream();
+    try (InputStream is = exec.getInputStream(); OutputStream os = exec.getOutputStream()) {
       exec.connect();
 
       checkAck(is);
@@ -94,12 +92,10 @@ public class SCP {
       os.write(0);
       os.flush();
       checkAck(is);
-      os.close();
 
+    } finally {
       exec.disconnect();
       session.disconnect();
-    } catch (JSchException | IOException e) {
-      throw new DependencyException(e);
     }
   }
 

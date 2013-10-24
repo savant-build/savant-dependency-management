@@ -16,13 +16,17 @@
 package org.savantbuild.dep;
 
 import org.savantbuild.dep.domain.Artifact;
+import org.savantbuild.dep.domain.ArtifactID;
 import org.savantbuild.dep.domain.ArtifactMetaData;
+import org.savantbuild.dep.domain.CompatibilityException;
 import org.savantbuild.dep.domain.Dependencies;
 import org.savantbuild.dep.domain.Dependency;
+import org.savantbuild.dep.domain.Version;
 import org.savantbuild.dep.graph.DependencyGraph;
 import org.savantbuild.dep.graph.DependencyLinkValue;
-import org.savantbuild.dep.graph.Graph;
+import org.savantbuild.dep.graph.GraphNode;
 import org.savantbuild.dep.graph.ResolvedArtifactGraph;
+import org.savantbuild.dep.workflow.ArtifactMetaDataMissingException;
 import org.savantbuild.dep.workflow.Workflow;
 
 import java.util.HashSet;
@@ -41,7 +45,8 @@ public class DefaultDependencyService implements DependencyService {
    * {@inheritDoc}
    */
   @Override
-  public DependencyGraph buildGraph(Artifact project, Dependencies dependencies, Workflow workflow) throws ArtifactMetaDataMissingException {
+  public DependencyGraph buildGraph(Artifact project, Dependencies dependencies, Workflow workflow)
+      throws ArtifactMetaDataMissingException {
     logger.fine("Building DependencyGraph");
     DependencyGraph graph = new DependencyGraph(project);
     populateGraph(graph, new Dependency(project.id, project.version, false), dependencies, workflow, new HashSet<>());
@@ -51,16 +56,40 @@ public class DefaultDependencyService implements DependencyService {
   @Override
   public ResolvedArtifactGraph resolve(DependencyGraph graph, Workflow workflow, ResolveConfiguration configuration,
                                        DependencyListener... listeners) {
+
     return null;
   }
 
+  /**
+   * Checks the entire graph to ensure that all of the versions of all dependencies have compatible versions.
+   *
+   * @param graph The graph.
+   * @throws CompatibilityException If an dependency has incompatible versions.
+   */
   @Override
-  public void verifyCompatibility(DependencyGraph graph) {
+  public void verifyCompatibility(DependencyGraph graph) throws CompatibilityException {
+    for (GraphNode<ArtifactID, DependencyLinkValue> node : graph.getNodes()) {
+      Version min = node.getInboundLinks()
+                        .stream()
+                        .map((link) -> link.value.dependencyVersion)
+                        .min(Version::compareTo)
+                        .get();
+      Version max = node.getInboundLinks()
+                        .stream()
+                        .map((link) -> link.value.dependencyVersion)
+                        .max(Version::compareTo)
+                        .get();
+      if (!min.isCompatibleWith(max)) {
+        throw new CompatibilityException(node.value, min, max);
+      }
+    }
   }
 
   /**
-   * Adds the artifact dependencies to the {@link Graph} if the origin artifact is given. Otherwise, this simply adds
-   * the artifacts to the graph without any links (edges).
+   * Recursively populates the DependencyGraph starting with the given origin and its dependencies. This fetches the
+   * ArtifactMetaData for all of the dependencies and performs a breadth first traversal of the graph. If an dependency
+   * has already been encountered and traversed, this does not traverse it again. The Set is used to track the
+   * dependencies that have already been encountered.
    *
    * @param graph             The Graph to populate.
    * @param origin            The origin artifact that is dependent on the Dependencies given.

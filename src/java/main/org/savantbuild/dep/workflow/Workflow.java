@@ -15,13 +15,16 @@
  */
 package org.savantbuild.dep.workflow;
 
-import org.savantbuild.dep.ArtifactMetaDataMissingException;
-import org.savantbuild.dep.ArtifactMissingException;
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.ArtifactMetaData;
+import org.savantbuild.dep.domain.VersionException;
+import org.savantbuild.dep.workflow.process.NegativeCacheException;
 import org.savantbuild.dep.workflow.process.ProcessFailureException;
 import org.savantbuild.dep.xml.ArtifactTools;
+import org.xml.sax.SAXException;
 
+import javax.xml.parsers.ParserConfigurationException;
+import java.io.IOException;
 import java.nio.file.Path;
 
 /**
@@ -50,7 +53,7 @@ public class Workflow {
    * @throws ProcessFailureException  If any of the processes encountered a failure while attempting to fetch the
    *                                  artifact.
    */
-  public Path fetchArtifact(Artifact artifact) throws ArtifactMetaDataMissingException, ProcessFailureException {
+  public Path fetchArtifact(Artifact artifact) throws ArtifactMissingException, ProcessFailureException {
     Path file = fetchWorkflow.fetchItem(artifact, artifact.getArtifactFile(), publishWorkflow);
     if (file == null) {
       throw new ArtifactMissingException(artifact);
@@ -78,7 +81,11 @@ public class Workflow {
       throw new ArtifactMetaDataMissingException(artifact);
     }
 
-    return ArtifactTools.parseArtifactMetaData(file);
+    try {
+      return ArtifactTools.parseArtifactMetaData(file);
+    } catch (SAXException | ParserConfigurationException | IOException | VersionException e) {
+      throw new ProcessFailureException(e);
+    }
   }
 
   /**
@@ -92,12 +99,18 @@ public class Workflow {
    *                                 file.
    */
   public Path fetchSource(Artifact artifact) throws ProcessFailureException {
-    Path file = fetchWorkflow.fetchItem(artifact, artifact.getArtifactSourceFile(), publishWorkflow);
-    if (file == null) {
-      publishWorkflow.publishNegative(artifact, artifact.getArtifactSourceFile());
-    }
+    try {
+      Path file = fetchWorkflow.fetchItem(artifact, artifact.getArtifactSourceFile(), publishWorkflow);
+      if (file == null) {
+        publishWorkflow.publishNegative(artifact, artifact.getArtifactSourceFile());
+      }
 
-    return file;
+      return file;
+    } catch (NegativeCacheException e) {
+      // This is a short-circuit exit from the workflow. It is only thrown by the CacheProcess and indicates that the
+      // search for the source JAR should stop immediately.
+      return null;
+    }
   }
 
   public FetchWorkflow getFetchWorkflow() {
