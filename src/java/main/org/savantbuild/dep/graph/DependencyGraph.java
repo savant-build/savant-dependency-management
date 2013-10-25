@@ -20,6 +20,7 @@ import org.savantbuild.dep.domain.ArtifactID;
 import org.savantbuild.dep.domain.Dependencies;
 import org.savantbuild.dep.domain.Dependency;
 import org.savantbuild.dep.domain.DependencyGroup;
+import org.savantbuild.dep.domain.Version;
 
 import java.util.List;
 
@@ -45,6 +46,11 @@ public class DependencyGraph extends HashGraph<ArtifactID, DependencyLinkValue> 
     }
 
     for (GraphLink<ArtifactID, DependencyLinkValue> link : links) {
+      // If this link is for a different version of the artifact, skip it
+      if (!link.value.dependentVersion.equals(artifact.version)) {
+        continue;
+      }
+
       // Create the artifact for this link
       Dependency dep = link.value.toDependency(link.destination.value);
 
@@ -59,5 +65,20 @@ public class DependencyGraph extends HashGraph<ArtifactID, DependencyLinkValue> 
     }
 
     return deps;
+  }
+
+  /**
+   * Finds the latest version of the given ArtifactID in the graph.
+   *
+   * @param id The artifact id.
+   * @return THe latest version.
+   */
+  public Version getLatestVersion(ArtifactID id) {
+    GraphNode<ArtifactID, DependencyLinkValue> node = getNode(id);
+    return node.getInboundLinks()
+               .stream()
+               .map((link) -> link.value.dependencyVersion)
+               .max(Version::compareTo)
+               .get();
   }
 }

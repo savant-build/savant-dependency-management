@@ -76,9 +76,11 @@ public interface DependencyService {
   void verifyCompatibility(DependencyGraph graph);
 
   public static class ResolveConfiguration {
-    Map<String, TypeResolveConfiguration> configurations = new HashMap<>();
+    Map<String, TypeResolveConfiguration> groupConfigurations = new HashMap<>();
 
     public static class TypeResolveConfiguration {
+      public boolean fetchSource;
+
       public boolean transitive;
     }
   }

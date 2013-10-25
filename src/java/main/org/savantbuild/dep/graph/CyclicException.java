@@ -20,7 +20,7 @@ package org.savantbuild.dep.graph;
  *
  * @author Brian Pontarelli
  */
-public class CyclicException extends Exception {
+public class CyclicException extends RuntimeException {
   public CyclicException(String msg) {
     super(msg);
   }

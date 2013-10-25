@@ -26,11 +26,8 @@ import java.nio.file.Path;
 public class ResolvedArtifact extends Artifact {
   public Path file;
 
-  public ResolvedArtifact() {
-  }
-
-  public ResolvedArtifact(ArtifactID id, Version version, Path file) {
-    super(id, version);
-    this.file = file;
+  public ResolvedArtifact(ArtifactID id, Version version) {
+    this.id = id;
+    this.version = version;
   }
 }

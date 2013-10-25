@@ -16,8 +16,7 @@
 package org.savantbuild.dep;
 
 import org.savantbuild.dep.domain.Artifact;
-
-import java.nio.file.Path;
+import org.savantbuild.dep.domain.ResolvedArtifact;
 
 /**
  * This interface is a listener that is notified when the {@link DependencyService} fetches and publishes artifacts.
@@ -28,10 +27,9 @@ public interface DependencyListener {
   /**
    * Handle when an artifact is fetched by a mediator.
    *
-   * @param file     The file that references the artifact.
    * @param artifact The artifact fetched.
    */
-  void artifactFetched(Path file, Artifact artifact);
+  void artifactFetched(ResolvedArtifact artifact);
 
   /**
    * Handle when an artifact is published by a mediator.
