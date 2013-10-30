@@ -28,17 +28,15 @@ import static org.testng.Assert.assertEquals;
 public class ArtifactTest {
   @Test
   public void construct() {
-    assertEquals(new Artifact("group:name:2.0"), new Artifact("group", "name", "name", "2.0", "jar"));
-    assertEquals(new Artifact("group:name:2.0:zip"), new Artifact("group", "name", "name", "2.0", "zip"));
-    assertEquals(new Artifact("group:project:name:2.0:zip"), new Artifact("group", "project", "name", "2.0", "zip"));
-    assertEquals(new Artifact("group:project:name:2.0:zip:minor"), new Artifact("group", "project", "name", "2.0", "zip", "minor"));
+    assertEquals(new Artifact("group:name:2.0"), new Artifact(new ArtifactID("group", "name", "name", "jar"), new Version("2.0")));
+    assertEquals(new Artifact("group:name:2.0:zip"), new Artifact(new ArtifactID("group", "name", "name", "zip"), new Version("2.0")));
+    assertEquals(new Artifact("group:project:name:2.0:zip"), new Artifact(new ArtifactID("group", "project", "name", "zip"), new Version("2.0")));
   }
 
   @Test
   public void syntheticMethods() {
     assertEquals(new Artifact("group:name:2.0").getArtifactFile(), "name-2.0.jar");
     assertEquals(new Artifact("group:name:2.0").getArtifactMetaDataFile(), "name-2.0.jar.amd");
-    assertEquals(new Artifact("group:name:2.0").getArtifactNegativeMetaDataFile(), "name-2.0.jar.amd.neg");
     assertEquals(new Artifact("group:name:2.0").getArtifactSourceFile(), "name-2.0-src.jar");
   }
 }

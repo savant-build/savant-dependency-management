@@ -15,7 +15,7 @@
  */
 package org.savantbuild.dep.net;
 
-import org.testng.Assert;
+import com.jcraft.jsch.JSchException;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertNotNull;
@@ -26,68 +26,48 @@ import static org.testng.Assert.assertTrue;
  *
  * @author Brian Pontarelli
  */
+@Test(groups = "functional")
 public class SSHTest {
-
-  String exceptionMsg = "You must create a 'savant-test' user, make a .ssh directory and add the " +
-    "src/java/test/integration/org/savantbuild/net/test_id_dsa.pub to the authorized keys file. " +
-    "You must also create a ~/tmp directory for conducting a 'ls' test.";
-
   @Test
-  public void testUserPasswordWithKnownHosts() {
-    try {
-      SSHOptions options = new SSHOptions();
-      options.identity = null;
-      options.username = "savant-test";
-      options.password = "savant-password";
-      options.server = "localhost";
+  public void userPasswordWithKnownHosts() throws JSchException {
+    SSHOptions options = new SSHOptions();
+    options.identity = null;
+    options.username = "savant-test";
+    options.password = "savant-password";
+    options.server = "localhost";
 
-      SSH ssh = new SSH(options);
-      String result = ssh.execute("ls /");
-      assertNotNull(result);
-      assertTrue(result.contains("tmp"));
-    } catch (DependencyException e) {
-      System.out.println("*****FIX THIS*****\n\tI couldn't figure out how to fix this unit test.  " +
-        "Something to do with ${user.home}/known_hosts I think\n*****FIX THIS*****");
-      e.printStackTrace();
-    }
+    SSH ssh = new SSH(options);
+    String result = ssh.execute("ls /");
+    assertNotNull(result);
+    assertTrue(result.contains("tmp"));
   }
 
   @Test
-  public void testUserIdentity() {
-    try {
-      SSHOptions options = new SSHOptions();
-      options.identity = null;
-      options.username = "savant-test";
-      options.identity = "src/java/test/integration/org/savantbuild/net/test_id_dsa";
-      options.server = "localhost";
+  public void testUserIdentity() throws JSchException {
+    SSHOptions options = new SSHOptions();
+    options.identity = null;
+    options.username = "savant-test";
+    options.identity = "src/java/test/integration/org/savantbuild/net/test_id_dsa";
+    options.server = "localhost";
 
-      SSH ssh = new SSH(options);
-      String result = ssh.execute("ls /");
-      assertNotNull(result);
-      assertTrue(result.contains("tmp"));
-    } catch (DependencyException e) {
-      e.printStackTrace();
-      Assert.fail(exceptionMsg);
-    }
+    SSH ssh = new SSH(options);
+    String result = ssh.execute("ls /");
+    assertNotNull(result);
+    assertTrue(result.contains("tmp"));
   }
 
   @Test
-  public void testTrust() {
-    try {
-      SSHOptions options = new SSHOptions();
-      options.username = "savant-test";
-      options.identity = "src/java/test/integration/org/savantbuild/net/test_id_dsa";
-      options.server = "localhost";
-      options.knownHosts = null;
-      options.trustUnknownHosts = true;
+  public void testTrust() throws JSchException {
+    SSHOptions options = new SSHOptions();
+    options.username = "savant-test";
+    options.identity = "src/java/test/integration/org/savantbuild/net/test_id_dsa";
+    options.server = "localhost";
+    options.knownHosts = null;
+    options.trustUnknownHosts = true;
 
-      SSH ssh = new SSH(options);
-      String result = ssh.execute("ls /");
-      assertNotNull(result);
-      assertTrue(result.contains("tmp"));
-    } catch (DependencyException e) {
-      e.printStackTrace();
-      Assert.fail(exceptionMsg);
-    }
+    SSH ssh = new SSH(options);
+    String result = ssh.execute("ls /");
+    assertNotNull(result);
+    assertTrue(result.contains("tmp"));
   }
 }

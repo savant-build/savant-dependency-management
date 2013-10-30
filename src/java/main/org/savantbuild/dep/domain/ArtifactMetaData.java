@@ -26,4 +26,22 @@ public class ArtifactMetaData {
   public ArtifactMetaData(Dependencies dependencies) {
     this.dependencies = dependencies;
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    final ArtifactMetaData that = (ArtifactMetaData) o;
+    return dependencies.equals(that.dependencies);
+  }
+
+  @Override
+  public int hashCode() {
+    return dependencies.hashCode();
+  }
 }

@@ -17,24 +17,23 @@ package org.savantbuild.dep.io;
 
 import org.testng.annotations.Test;
 
-import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertTrue;
-import static org.testng.Assert.fail;
 
 /**
  * This class tests the FileTools.
  *
  * @author Brian Pontarelli
  */
+@Test(groups = "unit")
 public class FileToolsTest {
   @Test
   public void md5() throws IOException {
-    File f = new File("src/java/test/unit/org/savantbuild/io/FileToolsTest.txt");
+    Path f = Paths.get("src/java/test/org/savantbuild/dep/io/FileToolsTest.txt");
     MD5 md5 = FileTools.md5(f);
     assertNotNull(md5);
     assertEquals(md5.fileName, "FileToolsTest.txt");

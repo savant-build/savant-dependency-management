@@ -18,10 +18,13 @@ package org.savantbuild.dep;
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.CompatibilityException;
 import org.savantbuild.dep.domain.Dependencies;
+import org.savantbuild.dep.graph.CyclicException;
 import org.savantbuild.dep.graph.DependencyGraph;
 import org.savantbuild.dep.graph.ResolvedArtifactGraph;
 import org.savantbuild.dep.workflow.ArtifactMetaDataMissingException;
+import org.savantbuild.dep.workflow.ArtifactMissingException;
 import org.savantbuild.dep.workflow.Workflow;
+import org.savantbuild.dep.workflow.process.ProcessFailureException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -47,7 +50,8 @@ public interface DependencyService {
    * @param workflow     The workflow to use for downloading and caching the AMD files.
    * @return The dependency graph.
    * @throws ArtifactMetaDataMissingException
-   *          If any artifacts AMD files could not be downloaded or found locally.
+   *                                 If any artifacts AMD files could not be downloaded or found locally.
+   * @throws ProcessFailureException If a workflow process failed while fetching the meta-data.
    */
   DependencyGraph buildGraph(Artifact project, Dependencies dependencies, Workflow workflow)
       throws ArtifactMetaDataMissingException;
@@ -62,9 +66,13 @@ public interface DependencyService {
    *                      resolved.
    * @param listeners     Any listeners that want to receive callbacks when artifacts are resolved.
    * @return The resolved graph.
+   * @throws ProcessFailureException  If a workflow process failed while fetching an artifact or its source.
+   * @throws ArtifactMissingException If any of the required artifacts are missing.
+   * @throws CyclicException If any of the artifact graph has any cycles in it.
    */
   ResolvedArtifactGraph resolve(DependencyGraph graph, Workflow workflow, ResolveConfiguration configuration,
-                                DependencyListener... listeners);
+                                DependencyListener... listeners)
+      throws CyclicException, ArtifactMissingException, ProcessFailureException;
 
   /**
    * Verifies that the given graph contains compatible versions of each artifact. This does not modify the graph in any
@@ -73,7 +81,7 @@ public interface DependencyService {
    * @param graph The graph.
    * @throws CompatibilityException If an dependency has incompatible versions.
    */
-  void verifyCompatibility(DependencyGraph graph);
+  void verifyCompatibility(DependencyGraph graph) throws CompatibilityException;
 
   public static class ResolveConfiguration {
     Map<String, TypeResolveConfiguration> groupConfigurations = new HashMap<>();

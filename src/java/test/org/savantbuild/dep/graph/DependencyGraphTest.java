@@ -15,9 +15,9 @@
  */
 package org.savantbuild.dep.graph;
 
-import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.ArtifactID;
 import org.savantbuild.dep.domain.Dependencies;
+import org.savantbuild.dep.domain.Dependency;
 import org.savantbuild.dep.domain.DependencyGroup;
 import org.testng.annotations.Test;
 
@@ -25,54 +25,53 @@ import java.util.List;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertSame;
-import static org.testng.Assert.assertTrue;
 
 /**
  * This class is a test case for the artifact graph data structure.
  *
  * @author Brian Pontarelli
  */
+@Test(groups = "unit")
 public class DependencyGraphTest {
   @Test
   public void artifactGraphPaths() {
-    Artifact a1 = new Artifact("group", "project", "artifact1", "1.0", "jar");
-    Artifact a2 = new Artifact("group", "project", "artifact2", "1.0", "jar");
-    Artifact a3 = new Artifact("group", "project", "artifact3", "1.0", "jar");
-    Artifact a4 = new Artifact("group", "project", "artifact4", "1.0", "jar");
+    Dependency d1 = new Dependency("group:project:artifact1:1.0:jar", false);
+    Dependency d2 = new Dependency("group:project:artifact2:1.0:jar", false);
+    Dependency d3 = new Dependency("group:project:artifact3:1.0:jar", false);
+    Dependency d4 = new Dependency("group:project:artifact4:1.0:jar", false);
 
-    DependencyGraph ag = new DependencyGraph(a1);
-    ag.addLink(a1.getId(), a2.getId(), new DependencyLinkValue(a1.getVersion(), a2.getVersion(), "compile", null));
-    ag.addLink(a1.getId(), a3.getId(), new DependencyLinkValue(a1.getVersion(), a3.getVersion(), "compile", null));
-    ag.addLink(a2.getId(), a4.getId(), new DependencyLinkValue(a2.getVersion(), a4.getVersion(), "compile", null));
-    ag.addLink(a3.getId(), a4.getId(), new DependencyLinkValue(a3.getVersion(), a4.getVersion(), "compile", null));
+    DependencyGraph ag = new DependencyGraph(d1);
+    ag.addLink(d1.id, d2.id, new DependencyLinkValue(d1.version, d2.version, "compile", false));
+    ag.addLink(d1.id, d3.id, new DependencyLinkValue(d1.version, d3.version, "compile", false));
+    ag.addLink(d2.id, d4.id, new DependencyLinkValue(d2.version, d4.version, "compile", false));
+    ag.addLink(d3.id, d4.id, new DependencyLinkValue(d3.version, d4.version, "compile", false));
 
-    List<GraphPath<ArtifactID>> paths = ag.getPaths(a1.getId(), a4.getId());
+    List<GraphPath<ArtifactID>> paths = ag.getPaths(d1.id, d4.id);
     assertEquals(2, paths.size());
     assertEquals(3, paths.get(0).getPath().size());
     assertEquals(3, paths.get(1).getPath().size());
-    assertSame(a1.getId(), paths.get(0).getPath().get(0));
-    assertSame(a2.getId(), paths.get(0).getPath().get(1));
-    assertSame(a4.getId(), paths.get(0).getPath().get(2));
-    assertSame(a1.getId(), paths.get(1).getPath().get(0));
-    assertSame(a3.getId(), paths.get(1).getPath().get(1));
-    assertSame(a4.getId(), paths.get(1).getPath().get(2));
+    assertSame(d1.id, paths.get(0).getPath().get(0));
+    assertSame(d2.id, paths.get(0).getPath().get(1));
+    assertSame(d4.id, paths.get(0).getPath().get(2));
+    assertSame(d1.id, paths.get(1).getPath().get(0));
+    assertSame(d3.id, paths.get(1).getPath().get(1));
+    assertSame(d4.id, paths.get(1).getPath().get(2));
   }
 
   @Test
-  public void graphDeps() {
-    Artifact a1 = new Artifact("group", "project", "artifact1", "1.0", "jar");
-    Artifact a2 = new Artifact("group", "project", "artifact2", "1.0", "jar");
-    Artifact a3 = new Artifact("group", "project", "artifact3", "1.0", "jar");
-    Artifact a4 = new Artifact("group", "project", "artifact4", "1.0", "jar");
+  public void graphToDependenciesObject() {
+    Dependency d1 = new Dependency("group:project:artifact1:1.0:jar", false);
+    Dependency d2 = new Dependency("group:project:artifact2:1.0:jar", false);
+    Dependency d3 = new Dependency("group:project:artifact3:1.0:jar", true);
+    Dependency d4 = new Dependency("group:project:artifact4:1.0:jar", false);
 
-    DependencyGraph ag = new DependencyGraph(a1);
-    ag.addLink(a1.getId(), a2.getId(), new DependencyLinkValue(a1.getVersion(), a2.getVersion(), "compile", null));
-    ag.addLink(a1.getId(), a3.getId(), new DependencyLinkValue(a1.getVersion(), a3.getVersion(), "compile", null));
-    ag.addLink(a3.getId(), a4.getId(), new DependencyLinkValue(a3.getVersion(), a4.getVersion(), "compile", null));
+    DependencyGraph ag = new DependencyGraph(d1);
+    ag.addLink(d1.id, d2.id, new DependencyLinkValue(d1.version, d2.version, "compile", false));
+    ag.addLink(d1.id, d3.id, new DependencyLinkValue(d1.version, d3.version, "compile", true));
+    ag.addLink(d3.id, d4.id, new DependencyLinkValue(d3.version, d4.version, "compile", false));
 
-    Dependencies deps = ag.getDependencies(a1);
-    DependencyGroup group = deps.getArtifactGroups().get("compile");
-    assertTrue(group.getArtifacts().contains(a2));
-    assertTrue(group.getArtifacts().contains(a3));
+    Dependencies actual = ag.getDependencies(d1);
+    Dependencies expected = new Dependencies(new DependencyGroup("compile", d2, d3));
+    assertEquals(actual, expected);
   }
 }

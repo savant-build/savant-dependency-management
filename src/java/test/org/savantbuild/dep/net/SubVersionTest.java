@@ -15,10 +15,6 @@
  */
 package org.savantbuild.dep.net;
 
-import java.io.File;
-import java.io.IOException;
-
-import org.apache.commons.io.FileUtils;
 import org.savantbuild.dep.io.FileTools;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
@@ -26,84 +22,71 @@ import org.testng.annotations.Test;
 import org.tmatesoft.svn.core.SVNException;
 import org.tmatesoft.svn.core.SVNURL;
 
-import static org.testng.Assert.*;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
 
 /**
- * <p>
  * Modified from previous version to use a mock subversion repository
- * </p>
  *
  * @author Brian Pontarelli and James Humphrey
  */
+@Test(groups = "unit")
 public class SubVersionTest {
+  public static Path mockSvnRepositoryRoot = Paths.get("build/mock-svn-repository");
 
+  public static Path mockSvnProject = Paths.get("build/mock-svn-project");
 
-  public static File mockSvnRepositoryRoot = new File("target/mock-svn-repository");
-  public static File mockSvnRepositoryTrunk = new File(mockSvnRepositoryRoot, "trunk");
-  public static File mockSvnRepositoryBranches = new File(mockSvnRepositoryRoot, "branches");
-  public static File mockSvnRepositoryBranch_1_0 = new File(mockSvnRepositoryBranches, "1.0");
-  public static File mockSvnRepositoryTags = new File(mockSvnRepositoryRoot, "tags");
-  public static File mockSvnRepositoryTag_1_0_1 = new File(mockSvnRepositoryTags, "1.0.1");
-  public static File mockSvnProject = new File("target/mock-svn-project");
+  public static Path mockSvnRepositoryBranches = mockSvnRepositoryRoot.resolve("branches");
 
-  @BeforeClass
-  public void initMockRepository() {
-    try {
-      FileUtils.deleteDirectory(mockSvnRepositoryRoot);
-      FileUtils.deleteDirectory(mockSvnProject);
-      SubVersion.createRepository(mockSvnRepositoryRoot);
-      SubVersion subVersion = new SubVersion(repositoryPathToString(mockSvnRepositoryRoot));
-      subVersion.mkdir(mockSvnRepositoryTrunk);
-      subVersion.mkdir(mockSvnRepositoryBranches);
-      subVersion.mkdir(mockSvnRepositoryBranch_1_0);
-      subVersion.mkdir(mockSvnRepositoryTags);
-      subVersion.mkdir(mockSvnRepositoryTag_1_0_1);
-      subVersion.doCheckout("trunk", mockSvnProject);
-    } catch (Exception e) {
-      e.printStackTrace();
-      Assert.fail("You must have subversion installed on your system to execute this unit test");
-    }
+  public static Path mockSvnRepositoryBranch_1_0 = mockSvnRepositoryBranches.resolve("1.0");
 
-  }
+  public static Path mockSvnRepositoryTags = mockSvnRepositoryRoot.resolve("tags");
 
-  /**
-   * Helper method to convert a file path to a SVNURL.toString()
-   *
-   * @param repositoryPath the repository path
-   * @return string representing the svn url
-   */
-  public String repositoryPathToString(File repositoryPath) {
-    try {
-      return SVNURL.fromFile(repositoryPath).toString();
-    } catch (SVNException e) {
-      Assert.fail();
-    }
-    return null;
-  }
+  public static Path mockSvnRepositoryTag_1_0_1 = mockSvnRepositoryTags.resolve("1.0.1");
+
+  public static Path mockSvnRepositoryTrunk = mockSvnRepositoryRoot.resolve("trunk");
 
   @Test(enabled = true)
-  public void badRepository() {
-    File badRepositoryPath = new File(mockSvnRepositoryRoot, "bad");
-    String badSvnUrl = repositoryPathToString(badRepositoryPath);
+  public void badRepository() throws SVNException {
+    String badSvnUrl = repositoryPathToString(mockSvnRepositoryRoot.resolve("bad"));
     SubVersion svn = new SubVersion(badSvnUrl);
     assertFalse(svn.isExists());
   }
 
   @Test(enabled = true)
-  public void importFile() throws IOException {
-    SubVersion svn = new SubVersion(repositoryPathToString(mockSvnRepositoryTrunk));
+  public void checkoutDir() throws IOException, SVNException {
+    SubVersion svn = new SubVersion(repositoryPathToString(mockSvnRepositoryRoot));
     assertTrue(svn.isExists());
     assertTrue(svn.isDirectory());
     assertFalse(svn.isFile());
 
-    // Make a temp file
-    File temp = File.createTempFile("foo", "bar");
-    temp.deleteOnExit();
-    FileTools.write(temp, "Hello world");
+    // Export it
+    Path dir = Paths.get("build/test/svn/checkout");
+    FileTools.prune(dir);
+    svn.doCheckout("trunk", dir);
+    assertTrue(Files.isDirectory(dir));
+    assertTrue(Files.isDirectory(dir.resolve(".svn")));
+    FileTools.prune(dir);
+  }
 
-    // Import it
-    long now = System.currentTimeMillis();
-    svn.doImport("/svn-test/import" + now + "/file" + now, temp);
+  @Test(enabled = true)
+  public void exportDir() throws IOException, SVNException {
+    SubVersion svn = new SubVersion(repositoryPathToString(mockSvnRepositoryRoot));
+    assertTrue(svn.isExists());
+    assertTrue(svn.isDirectory());
+    assertFalse(svn.isFile());
+
+    // Export it
+    Path dir = Paths.get("build/test/svn-export");
+    FileTools.prune(dir);
+    svn.doExport("trunk", dir);
+    assertTrue(Files.isDirectory(dir));
   }
 
   /**
@@ -117,7 +100,7 @@ public class SubVersionTest {
       throw new RuntimeException();
     } catch (RuntimeException e) {
       System.out.println("*****RE-ENABLE THIS*****\n\tSubVersionTest.exportNested needs fixing.  " +
-        "Because we're using mock repositories, we'll have to use SVNKit to add files to test nested exports\n*****RE-ENABLE THIS*****");
+          "Because we're using mock repositories, we'll have to use SVNKit to add files to test nested exports\n*****RE-ENABLE THIS*****");
     }
 //    SubVersion svn = new SubVersion(repositoryPathToString(mockSvnRepositoryTrunk));
 //    assertTrue(svn.isExists());
@@ -136,32 +119,53 @@ public class SubVersionTest {
   }
 
   @Test(enabled = true)
-  public void exportDir() throws IOException {
-    SubVersion svn = new SubVersion(repositoryPathToString(mockSvnRepositoryRoot));
+  public void importFile() throws IOException, SVNException {
+    SubVersion svn = new SubVersion(repositoryPathToString(mockSvnRepositoryTrunk));
     assertTrue(svn.isExists());
     assertTrue(svn.isDirectory());
     assertFalse(svn.isFile());
 
-    // Export it
-    File dir = new File("target/test/svn-export");
-    FileTools.prune(dir);
-    svn.doExport("trunk", dir);
-    assertTrue(dir.isDirectory());
+    // Make a temp file
+    File temp = File.createTempFile("foo", "bar");
+    temp.deleteOnExit();
+    Files.write(temp.toPath(), "Hello world".getBytes());
+
+    // Import it
+    long now = System.currentTimeMillis();
+    svn.doImport("/svn-test/import" + now + "/file" + now, temp.toPath());
   }
 
-  @Test(enabled = true)
-  public void checkoutDir() throws IOException {
-    SubVersion svn = new SubVersion(repositoryPathToString(mockSvnRepositoryRoot));
-    assertTrue(svn.isExists());
-    assertTrue(svn.isDirectory());
-    assertFalse(svn.isFile());
+  @BeforeClass
+  public void initMockRepository() {
+    try {
+      FileTools.prune(mockSvnRepositoryRoot);
+      FileTools.prune(mockSvnProject);
+      SubVersion.createRepository(mockSvnRepositoryRoot);
+      SubVersion subVersion = new SubVersion(repositoryPathToString(mockSvnRepositoryRoot));
+      subVersion.mkdir(mockSvnRepositoryTrunk);
+      subVersion.mkdir(mockSvnRepositoryBranches);
+      subVersion.mkdir(mockSvnRepositoryBranch_1_0);
+      subVersion.mkdir(mockSvnRepositoryTags);
+      subVersion.mkdir(mockSvnRepositoryTag_1_0_1);
+      subVersion.doCheckout("trunk", mockSvnProject);
+    } catch (Exception e) {
+      e.printStackTrace();
+      Assert.fail("You must have subversion installed on your system to execute this unit test");
+    }
+  }
 
-    // Export it
-    File dir = new File("target/test/svn/checkout");
-    FileTools.prune(dir);
-    svn.doCheckout("trunk", dir);
-    assertTrue(dir.isDirectory());
-    assertTrue(new File(dir, ".svn").isDirectory());
-    FileTools.prune(dir);
+  /**
+   * Helper method to convert a file path to a SVNURL.toString()
+   *
+   * @param repositoryPath the repository path
+   * @return string representing the svn url
+   */
+  private String repositoryPathToString(Path repositoryPath) {
+    try {
+      return SVNURL.fromFile(repositoryPath.toFile()).toString();
+    } catch (SVNException e) {
+      Assert.fail();
+    }
+    return null;
   }
 }

@@ -13,15 +13,15 @@
   ~ either express or implied. See the License for the specific
   ~ language governing permissions and limitations under the License.
   -->
-<artifact-meta-data compatType="minor">
+<artifact-meta-data>
   <dependencies>
-    <artifact-group type="run">
-      <artifact group="org.example.test" project="test-project" name="test-project" version="1.0" type="jar"/>
-      <artifact group="org.example.test" project="test-project2" name="test-project2" version="2.0" type="jar"/>
-    </artifact-group>
-    <artifact-group type="compile">
-      <artifact group="org.example.test" project="test-project3" name="test-project3" version="3.0" type="jar"/>
-      <artifact group="org.example.test" project="test-project4" name="test-project4" version="4.0" type="jar"/>
-    </artifact-group>
+    <dependency-group type="run">
+      <dependency group="org.example.test" project="test-project" name="test-project" version="1.0" type="jar" optional="false"/>
+      <dependency group="org.example.test" project="test-project2" name="test-project2" version="2.0" type="jar" optional="true"/>
+    </dependency-group>
+    <dependency-group type="compile">
+      <dependency group="org.example.test" project="test-project3" name="test-project3" version="3.0" type="jar" optional="false"/>
+      <dependency group="org.example.test" project="test-project4" name="test-project4" version="4.0" type="jar" optional="true"/>
+    </dependency-group>
   </dependencies>
 </artifact-meta-data>

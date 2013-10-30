@@ -13,41 +13,22 @@
  * either express or implied. See the License for the specific
  * language governing permissions and limitations under the License.
  */
-package org.savantbuild.util;
-
-import java.util.Arrays;
+package org.savantbuild.dep.util;
 
 import org.testng.annotations.Test;
 
-import static org.testng.Assert.*;
+import java.util.Arrays;
+
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertTrue;
 
 /**
- * <p>
- * This
- * </p>
+ * Tests the StringTools.
  *
  * @author Brian Pontarelli
  */
+@Test(groups = "unit")
 public class StringToolsTest {
-  @Test
-  public void safe() {
-    assertNull(StringTools.safe(null));
-    assertEquals(StringTools.safe(""), "");
-    assertNotNull(StringTools.safe(new Object()));
-  }
-
-  @Test
-  public void isTrimmedEmpty() {
-    assertTrue(StringTools.isTrimmedEmpty(null));
-    assertTrue(StringTools.isTrimmedEmpty(""));
-    assertTrue(StringTools.isTrimmedEmpty("      "));
-  }
-
-  @Test
-  public void join() {
-    assertEquals(StringTools.join("/", "foo", "bar", "baz"), "foo/bar/baz");
-  }
-
   @Test
   public void toHex() {
     assertEquals(StringTools.toHex((byte) 0), "00");
@@ -76,21 +57,5 @@ public class StringToolsTest {
     assertTrue(Arrays.equals(StringTools.fromHex("00"), new byte[]{(byte) 0}));
     assertTrue(Arrays.equals(StringTools.fromHex("C8"), new byte[]{(byte) 200}));
     assertTrue(Arrays.equals(StringTools.fromHex("EA5D"), new byte[]{(byte) 234, (byte) 93}));
-  }
-
-  @Test
-  public void toInt() {
-    assertEquals(StringTools.toInt("0", 1), 0);
-    assertEquals(StringTools.toInt(null, 1), 1);
-    assertEquals(StringTools.toInt("", 1), 1);
-    assertEquals(StringTools.toInt("  ", 1), 1);
-  }
-
-  @Test
-  public void toBoolean() {
-    assertTrue(StringTools.toBoolean("true", false));
-    assertTrue(StringTools.toBoolean(null, true));
-    assertFalse(StringTools.toBoolean("", false));
-    assertFalse(StringTools.toBoolean("  ", false));
   }
 }

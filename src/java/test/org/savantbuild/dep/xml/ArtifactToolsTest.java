@@ -15,134 +15,128 @@
  */
 package org.savantbuild.dep.xml;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import java.io.File;
-
-import org.savantbuild.dep.domain.Artifact;
-import org.savantbuild.dep.domain.DependencyGroup;
 import org.savantbuild.dep.domain.ArtifactMetaData;
 import org.savantbuild.dep.domain.Dependencies;
-import org.testng.annotations.DataProvider;
+import org.savantbuild.dep.domain.Dependency;
+import org.savantbuild.dep.domain.DependencyGroup;
 import org.testng.annotations.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
-import static org.testng.Assert.*;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertTrue;
 
 /**
- * <p>
  * This class tests the artifact toolkit.
- * </p>
  *
  * @author Brian Pontarelli
  */
+@Test(groups = "unit")
 public class ArtifactToolsTest {
   /**
    * Tests that the XML generation works correctly.
    */
   @Test
   public void xml() throws Exception {
-    Artifact a1 = new Artifact("group_name", "project_name", "name", "version", "type");
-    Artifact a2 = new Artifact("group_name2", "project_name2", "name2", "version2", "type2");
-    Artifact a3 = new Artifact("group_name3", "project_name3", "name3", "version3", "type3");
+    Dependency d1 = new Dependency("group_name:project_name:name:1.0.0:type", false);
+    Dependency d2 = new Dependency("group_name2:project_name2:name2:2.0.0:type2", true);
+    Dependency d3 = new Dependency("group_name3:project_name3:name3:3.0.0:type3", false);
 
     DependencyGroup group = new DependencyGroup("compile");
-    group.getArtifacts().add(a1);
-    group.getArtifacts().add(a2);
+    group.dependencies.add(d1);
+    group.dependencies.add(d2);
 
     DependencyGroup group1 = new DependencyGroup("run");
-    group1.getArtifacts().add(a3);
+    group1.dependencies.add(d3);
 
-    Dependencies deps = new Dependencies(null);
-    deps.getArtifactGroups().put("compile", group);
-    deps.getArtifactGroups().put("run", group1);
+    Dependencies deps = new Dependencies();
+    deps.groups.put("compile", group);
+    deps.groups.put("run", group1);
 
-    ArtifactMetaData amd = new ArtifactMetaData(deps, null);
+    ArtifactMetaData amd = new ArtifactMetaData(deps);
 
-    File tmp = ArtifactTools.generateXML(amd);
+    Path tmp = ArtifactTools.generateXML(amd);
     assertNotNull(tmp);
-    assertTrue(tmp.exists());
-    assertTrue(tmp.isFile());
+    assertTrue(Files.isRegularFile(tmp));
 
     DocumentBuilder b = DocumentBuilderFactory.newInstance().newDocumentBuilder();
-    Document d = b.parse(tmp);
+    Document d = b.parse(tmp.toFile());
     Element root = d.getDocumentElement();
-    assertEquals(2, root.getElementsByTagName("artifact-group").getLength());
+    assertEquals(2, root.getElementsByTagName("dependency-group").getLength());
 
-    Element groupElem = (Element) root.getElementsByTagName("artifact-group").item(0);
-    assertEquals(2, groupElem.getElementsByTagName("artifact").getLength());
+    Element groupElem = (Element) root.getElementsByTagName("dependency-group").item(0);
+    assertEquals(2, groupElem.getElementsByTagName("dependency").getLength());
 
-    Element elem = (Element) groupElem.getElementsByTagName("artifact").item(0);
+    Element elem = (Element) groupElem.getElementsByTagName("dependency").item(0);
     assertEquals("group_name", elem.getAttribute("group"));
     assertEquals("project_name", elem.getAttribute("project"));
     assertEquals("name", elem.getAttribute("name"));
-    assertEquals("version", elem.getAttribute("version"));
+    assertEquals("1.0.0", elem.getAttribute("version"));
     assertEquals("type", elem.getAttribute("type"));
-    elem = (Element) groupElem.getElementsByTagName("artifact").item(1);
+    assertEquals("false", elem.getAttribute("optional"));
+
+    elem = (Element) groupElem.getElementsByTagName("dependency").item(1);
     assertEquals("group_name2", elem.getAttribute("group"));
     assertEquals("project_name2", elem.getAttribute("project"));
     assertEquals("name2", elem.getAttribute("name"));
-    assertEquals("version2", elem.getAttribute("version"));
+    assertEquals("2.0.0", elem.getAttribute("version"));
     assertEquals("type2", elem.getAttribute("type"));
+    assertEquals("true", elem.getAttribute("optional"));
 
-    groupElem = (Element) root.getElementsByTagName("artifact-group").item(1);
-    assertEquals(1, groupElem.getElementsByTagName("artifact").getLength());
+    groupElem = (Element) root.getElementsByTagName("dependency-group").item(1);
+    assertEquals(1, groupElem.getElementsByTagName("dependency").getLength());
 
-    elem = (Element) groupElem.getElementsByTagName("artifact").item(0);
+    elem = (Element) groupElem.getElementsByTagName("dependency").item(0);
     assertEquals("group_name3", elem.getAttribute("group"));
     assertEquals("project_name3", elem.getAttribute("project"));
     assertEquals("name3", elem.getAttribute("name"));
-    assertEquals("version3", elem.getAttribute("version"));
+    assertEquals("3.0.0", elem.getAttribute("version"));
     assertEquals("type3", elem.getAttribute("type"));
+    assertEquals("false", elem.getAttribute("optional"));
 
     ArtifactMetaData amdOut = ArtifactTools.parseArtifactMetaData(tmp);
+    assertEquals(amdOut, amd);
 
-    assertEquals(amdOut.getDependencies().getAllArtifacts(), deps.getAllArtifacts());
-    assertEquals(amdOut.getDependencies().getArtifactGroups(), deps.getArtifactGroups());
-
-    tmp.delete();
+    Files.delete(tmp);
   }
 
-  @DataProvider(name = "parseData")
-  public Object[][] parseData() {
-    return new Object[][]{
-      {"src/java/test/unit/org/savantbuild/dep/xml/amd-old-format.xml", "minor"},
-      {"src/java/test/unit/org/savantbuild/dep/xml/amd-new-format.xml", "minor"}
-    };
-  }
+  @Test
+  public void parse() throws Exception {
+    ArtifactMetaData amd = ArtifactTools.parseArtifactMetaData(Paths.get("src/java/test/org/savantbuild/dep/xml/amd.xml"));
+    assertEquals(amd.dependencies.groups.size(), 2);
+    assertEquals(amd.dependencies.groups.get("run").dependencies.size(), 2);
+    assertEquals(amd.dependencies.groups.get("run").type, "run");
+    assertEquals(amd.dependencies.groups.get("run").dependencies.get(0).id.group, "org.example.test");
+    assertEquals(amd.dependencies.groups.get("run").dependencies.get(0).id.project, "test-project");
+    assertEquals(amd.dependencies.groups.get("run").dependencies.get(0).id.name, "test-project");
+    assertEquals(amd.dependencies.groups.get("run").dependencies.get(0).version, "1.0");
+    assertEquals(amd.dependencies.groups.get("run").dependencies.get(0).id.type, "jar");
 
-  @Test(dataProvider = "parseData")
-  public void parse(String file, String compat) {
-    ArtifactMetaData amd = ArtifactTools.parseArtifactMetaData(new File(file));
-    assertEquals(amd.getCompatibility(), compat);
-    assertEquals(amd.getDependencies().getArtifactGroups().size(), 2);
-    assertEquals(amd.getDependencies().getArtifactGroups().get("run").getArtifacts().size(), 2);
-    assertEquals(amd.getDependencies().getArtifactGroups().get("run").getType(), "run");
-    assertEquals(amd.getDependencies().getArtifactGroups().get("run").getArtifacts().get(0).getGroup(), "org.example.test");
-    assertEquals(amd.getDependencies().getArtifactGroups().get("run").getArtifacts().get(0).getProject(), "test-project");
-    assertEquals(amd.getDependencies().getArtifactGroups().get("run").getArtifacts().get(0).getName(), "test-project");
-    assertEquals(amd.getDependencies().getArtifactGroups().get("run").getArtifacts().get(0).getVersion(), "1.0");
-    assertEquals(amd.getDependencies().getArtifactGroups().get("run").getArtifacts().get(0).getType(), "jar");
+    assertEquals(amd.dependencies.groups.get("run").dependencies.get(1).id.group, "org.example.test");
+    assertEquals(amd.dependencies.groups.get("run").dependencies.get(1).id.project, "test-project2");
+    assertEquals(amd.dependencies.groups.get("run").dependencies.get(1).id.name, "test-project2");
+    assertEquals(amd.dependencies.groups.get("run").dependencies.get(1).version, "2.0");
+    assertEquals(amd.dependencies.groups.get("run").dependencies.get(1).id.type, "jar");
 
-    assertEquals(amd.getDependencies().getArtifactGroups().get("run").getArtifacts().get(1).getGroup(), "org.example.test");
-    assertEquals(amd.getDependencies().getArtifactGroups().get("run").getArtifacts().get(1).getProject(), "test-project2");
-    assertEquals(amd.getDependencies().getArtifactGroups().get("run").getArtifacts().get(1).getName(), "test-project2");
-    assertEquals(amd.getDependencies().getArtifactGroups().get("run").getArtifacts().get(1).getVersion(), "2.0");
-    assertEquals(amd.getDependencies().getArtifactGroups().get("run").getArtifacts().get(1).getType(), "jar");
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.size(), 2);
+    assertEquals(amd.dependencies.groups.get("compile").type, "compile");
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(0).id.group, "org.example.test");
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(0).id.project, "test-project3");
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(0).id.name, "test-project3");
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(0).version, "3.0");
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(0).id.type, "jar");
 
-    assertEquals(amd.getDependencies().getArtifactGroups().get("compile").getArtifacts().size(), 2);
-    assertEquals(amd.getDependencies().getArtifactGroups().get("compile").getType(), "compile");
-    assertEquals(amd.getDependencies().getArtifactGroups().get("compile").getArtifacts().get(0).getGroup(), "org.example.test");
-    assertEquals(amd.getDependencies().getArtifactGroups().get("compile").getArtifacts().get(0).getProject(), "test-project3");
-    assertEquals(amd.getDependencies().getArtifactGroups().get("compile").getArtifacts().get(0).getName(), "test-project3");
-    assertEquals(amd.getDependencies().getArtifactGroups().get("compile").getArtifacts().get(0).getVersion(), "3.0");
-    assertEquals(amd.getDependencies().getArtifactGroups().get("compile").getArtifacts().get(0).getType(), "jar");
-
-    assertEquals(amd.getDependencies().getArtifactGroups().get("compile").getArtifacts().get(1).getGroup(), "org.example.test");
-    assertEquals(amd.getDependencies().getArtifactGroups().get("compile").getArtifacts().get(1).getProject(), "test-project4");
-    assertEquals(amd.getDependencies().getArtifactGroups().get("compile").getArtifacts().get(1).getName(), "test-project4");
-    assertEquals(amd.getDependencies().getArtifactGroups().get("compile").getArtifacts().get(1).getVersion(), "4.0");
-    assertEquals(amd.getDependencies().getArtifactGroups().get("compile").getArtifacts().get(1).getType(), "jar");
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(1).id.group, "org.example.test");
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(1).id.project, "test-project4");
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(1).id.name, "test-project4");
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(1).version, "4.0");
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(1).id.type, "jar");
   }
 }

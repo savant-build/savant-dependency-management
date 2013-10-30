@@ -15,73 +15,72 @@
  */
 package org.savantbuild.dep.net;
 
-import java.io.File;
-
+import com.jcraft.jsch.JSchException;
 import org.testng.annotations.Test;
 
-import static org.testng.Assert.*;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
+import static org.testng.Assert.assertTrue;
 
 /**
  * SCP Tester.
  *
  * @author Brian Pontarelli
  */
+@Test(groups = "functional")
 public class SCPTest {
   @Test
-  public void userPasswordWithKnownHosts() {
-    try {
-      SSHOptions options = new SSHOptions();
-      options.identity = null;
-      options.username = "savant-test";
-      options.password = "savant-password";
-      options.server = "localhost";
-
-      File f = new File("src/java/test/integration/org/savantbuild/net/test_id_dsa");
-      File result = new File("/tmp/test_id_dsa");
-      result.delete();
-
-      SCP scp = new SCP(options);
-      scp.upload(f, "/tmp");
-      assertTrue(result.isFile());
-    } catch (DependencyException e) {
-      System.out.println("*****FIX THIS*****\n\tI couldn't figure out how to fix this unit test.  " +
-        "Something to do with ${user.home}/known_hosts I think\n*****FIX THIS*****");
-      e.printStackTrace();
-    }
-  }
-
-  @Test
-  public void userIdentity() {
+  public void userPasswordWithKnownHosts() throws IOException, JSchException {
     SSHOptions options = new SSHOptions();
     options.identity = null;
     options.username = "savant-test";
-    options.identity = "src/java/test/integration/org/savantbuild/net/test_id_dsa";
+    options.password = "savant-password";
     options.server = "localhost";
 
-    File f = new File("src/java/test/integration/org/savantbuild/net/test_id_dsa");
-    File result = new File("/tmp/test_id_dsa");
-    result.delete();
+    Path path = Paths.get("src/java/test/org/savantbuild/dep/net/test_id_dsa");
+    Path result = Paths.get("/tmp/test_id_dsa");
+    Files.delete(result);
 
     SCP scp = new SCP(options);
-    scp.upload(f, "/tmp");
-    assertTrue(result.isFile());
+    scp.upload(path, "/tmp");
+    assertTrue(Files.isRegularFile(result));
   }
 
   @Test
-  public void trust() {
+  public void userIdentity() throws IOException, JSchException {
+    SSHOptions options = new SSHOptions();
+    options.identity = null;
+    options.username = "savant-test";
+    options.identity = "src/java/test/org/savantbuild/dep/net/test_id_dsa";
+    options.server = "localhost";
+
+    Path path = Paths.get("src/java/test/org/savantbuild/dep/net/test_id_dsa");
+    Path result = Paths.get("/tmp/test_id_dsa");
+    Files.delete(result);
+
+    SCP scp = new SCP(options);
+    scp.upload(path, "/tmp");
+    assertTrue(Files.isRegularFile(result));
+  }
+
+  @Test
+  public void trust() throws IOException, JSchException {
     SSHOptions options = new SSHOptions();
     options.username = "savant-test";
-    options.identity = "src/java/test/integration/org/savantbuild/net/test_id_dsa";
+    options.identity = "src/java/test/org/savantbuild/dep/net/test_id_dsa";
     options.server = "localhost";
     options.knownHosts = null;
     options.trustUnknownHosts = true;
 
-    File f = new File("src/java/test/integration/org/savantbuild/net/test_id_dsa");
-    File result = new File("/tmp/test_id_dsa");
-    result.delete();
+    Path path = Paths.get("src/java/test/org/savantbuild/dep/net/test_id_dsa");
+    Path result = Paths.get("/tmp/test_id_dsa");
+    Files.delete(result);
 
     SCP scp = new SCP(options);
-    scp.upload(f, "/tmp");
-    assertTrue(result.isFile());
+    scp.upload(path, "/tmp");
+    assertTrue(Files.isRegularFile(result));
   }
 }

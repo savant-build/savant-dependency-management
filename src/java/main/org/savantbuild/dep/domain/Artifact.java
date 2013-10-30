@@ -116,20 +116,6 @@ public class Artifact {
   }
 
   /**
-   * Returns the artifact negative MetaData file name. This does not include any path information at all and would look
-   * something like this:
-   * <p/>
-   * <pre>
-   * common-collections-2.1.jar.amd.neg
-   * </pre>
-   *
-   * @return The negative MetaData file name.
-   */
-  public String getArtifactNegativeMetaDataFile() {
-    return getArtifactMetaDataFile() + ".neg";
-  }
-
-  /**
    * Returns the artifact source file name. This does not include any path information at all and would look something
    * like this:
    * <p/>

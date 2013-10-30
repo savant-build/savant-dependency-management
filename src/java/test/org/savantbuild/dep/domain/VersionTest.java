@@ -29,6 +29,7 @@ import static org.testng.Assert.fail;
  *
  * @author Brian Pontarelli
  */
+@Test(groups = "unit")
 public class VersionTest {
   @Test
   public void compare() throws Exception {

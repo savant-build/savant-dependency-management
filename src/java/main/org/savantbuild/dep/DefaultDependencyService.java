@@ -30,7 +30,9 @@ import org.savantbuild.dep.graph.DependencyLinkValue;
 import org.savantbuild.dep.graph.GraphNode;
 import org.savantbuild.dep.graph.ResolvedArtifactGraph;
 import org.savantbuild.dep.workflow.ArtifactMetaDataMissingException;
+import org.savantbuild.dep.workflow.ArtifactMissingException;
 import org.savantbuild.dep.workflow.Workflow;
+import org.savantbuild.dep.workflow.process.ProcessFailureException;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -65,7 +67,8 @@ public class DefaultDependencyService implements DependencyService {
    */
   @Override
   public ResolvedArtifactGraph resolve(DependencyGraph graph, Workflow workflow, ResolveConfiguration configuration,
-                                       DependencyListener... listeners) {
+                                       DependencyListener... listeners)
+      throws CyclicException, ArtifactMissingException, ProcessFailureException {
     ResolvedArtifact root = new ResolvedArtifact(graph.root.id, graph.root.version);
     ResolvedArtifactGraph resolvedGraph = new ResolvedArtifactGraph(root);
     Deque<ArtifactID> visited = new ArrayDeque<>();
@@ -133,7 +136,8 @@ public class DefaultDependencyService implements DependencyService {
 
   private void resolve(DependencyGraph graph, ResolvedArtifactGraph resolvedGraph, Workflow workflow,
                        ResolveConfiguration configuration, ResolvedArtifact origin, Deque<ArtifactID> visited,
-                       DependencyListener... listeners) {
+                       DependencyListener... listeners)
+  throws CyclicException, ArtifactMissingException, ProcessFailureException {
     Dependencies dependencies = graph.getDependencies(graph.root);
     dependencies.groups.forEach((type, group) -> {
       if (!configuration.groupConfigurations.containsKey(type)) {
@@ -141,6 +145,10 @@ public class DefaultDependencyService implements DependencyService {
       }
 
       group.dependencies.forEach((dependency) -> {
+        if (dependency.optional) {
+          return;
+        }
+
         if (visited.contains(dependency.id)) {
           throw new CyclicException("The dependency [" + dependency + "] was encountered twice. This means you have a cyclic in your dependencies");
         }

@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Map;
 import java.util.logging.Logger;
 
 /**
@@ -36,10 +35,11 @@ public class CacheProcess implements Process {
 
   private String dir;
 
-  public CacheProcess(Map<String, String> attributes) {
-    this.dir = attributes.get("dir");
+  public CacheProcess(String dir) {
     if (dir == null) {
-      dir = System.getProperty("user.home") + "/.savant/cache";
+      this.dir = System.getProperty("user.home") + "/.savant/cache";
+    } else {
+      this.dir = dir;
     }
   }
 

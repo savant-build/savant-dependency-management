@@ -35,7 +35,6 @@ import org.tmatesoft.svn.core.wc.SVNWCUtil;
 import org.tmatesoft.svn.core.wc.admin.SVNAdminClient;
 
 import java.io.Closeable;
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -263,10 +262,10 @@ public class SubVersion implements Closeable {
    * @param repositoryPath the repository path
    * @return SVNCommitInfo
    */
-  public SVNCommitInfo mkdir(File repositoryPath) throws SVNException {
+  public SVNCommitInfo mkdir(Path repositoryPath) throws SVNException {
     SVNClientManager clientManager = SVNClientManager.newInstance();
     SVNCommitClient commitClient = clientManager.getCommitClient();
-    SVNURL[] svnurl = new SVNURL[]{SVNURL.fromFile(repositoryPath)};
-    return commitClient.doMkDir(svnurl, "Creating svn directory: " + repositoryPath.getAbsolutePath());
+    SVNURL[] svnurl = new SVNURL[]{SVNURL.fromFile(repositoryPath.toFile())};
+    return commitClient.doMkDir(svnurl, "Creating svn directory: " + repositoryPath.toAbsolutePath());
   }
 }

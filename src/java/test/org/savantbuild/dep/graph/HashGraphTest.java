@@ -15,23 +15,23 @@
  */
 package org.savantbuild.dep.graph;
 
-import java.util.List;
-
 import org.testng.annotations.Test;
 
-import static org.testng.Assert.*;
+import java.util.List;
+
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotNull;
 
 /**
- * <p>
  * This tests the graph.
- * </p>
  *
  * @author Brian Pontarelli
  */
+@Test(groups = "unit")
 public class HashGraphTest {
   @Test
   public void addGraphNode() throws Exception {
-    HashGraph<String, String> graph = new HashGraph<String, String>();
+    HashGraph<String, String> graph = new HashGraph<>();
     graph.addNode("foo");
     assertNotNull(graph.getNode("foo"));
     assertNotNull(graph.contains("foo"));
@@ -40,17 +40,8 @@ public class HashGraphTest {
   }
 
   @Test
-  public void getGraphNode() throws Exception {
-    HashGraph<String, String> graph = new HashGraph<String, String>();
-    graph.addNode("foo");
-    GraphNode<String, String> node = graph.getNode("foo");
-    assertNotNull(node);
-    assertEquals("foo", node.getValue());
-  }
-
-  @Test
   public void addLink() throws Exception {
-    HashGraph<String, String> graph = new HashGraph<String, String>();
+    HashGraph<String, String> graph = new HashGraph<>();
     GraphNode<String, String> foo = graph.addNode("foo");
     GraphNode<String, String> bar = graph.addNode("bar");
     graph.addLink("foo", "bar", "link");
@@ -64,8 +55,17 @@ public class HashGraphTest {
   }
 
   @Test
+  public void getGraphNode() throws Exception {
+    HashGraph<String, String> graph = new HashGraph<>();
+    graph.addNode("foo");
+    GraphNode<String, String> node = graph.getNode("foo");
+    assertNotNull(node);
+    assertEquals("foo", node.value);
+  }
+
+  @Test
   public void getPaths() throws Exception {
-    HashGraph<String, String> graph = new HashGraph<String, String>();
+    HashGraph<String, String> graph = new HashGraph<>();
     graph.addNode("one");
     graph.addNode("two");
     graph.addNode("three");
@@ -90,7 +90,7 @@ public class HashGraphTest {
 
   @Test
   public void remove() throws Exception {
-    HashGraph<String, String> graph = new HashGraph<String, String>();
+    HashGraph<String, String> graph = new HashGraph<>();
     graph.addNode("one");
     graph.addNode("one-two");
     graph.addNode("one-three");
@@ -126,19 +126,19 @@ public class HashGraphTest {
     assertEquals(1, graph.getNode("three").getInboundLinks().size());
     assertEquals(0, graph.getNode("three").getOutboundLinks().size());
 
-    assertEquals("one", graph.getNode("one").getOutboundLink(graph.getNode("one-two")).origin.getValue());
-    assertEquals("one-two", graph.getNode("one").getOutboundLink(graph.getNode("one-two")).destination.getValue());
-    assertEquals("one", graph.getNode("one-two").getInboundLink(graph.getNode("one")).origin.getValue());
-    assertEquals("one-two", graph.getNode("one-two").getInboundLink(graph.getNode("one")).destination.getValue());
+    assertEquals("one", graph.getNode("one").getOutboundLink(graph.getNode("one-two")).origin.value);
+    assertEquals("one-two", graph.getNode("one").getOutboundLink(graph.getNode("one-two")).destination.value);
+    assertEquals("one", graph.getNode("one-two").getInboundLink(graph.getNode("one")).origin.value);
+    assertEquals("one-two", graph.getNode("one-two").getInboundLink(graph.getNode("one")).destination.value);
 
-    assertEquals("one", graph.getNode("one").getOutboundLink(graph.getNode("three")).origin.getValue());
-    assertEquals("three", graph.getNode("one").getOutboundLink(graph.getNode("three")).destination.getValue());
-    assertEquals("one", graph.getNode("three").getInboundLink(graph.getNode("one")).origin.getValue());
-    assertEquals("three", graph.getNode("three").getInboundLink(graph.getNode("one")).destination.getValue());
+    assertEquals("one", graph.getNode("one").getOutboundLink(graph.getNode("three")).origin.value);
+    assertEquals("three", graph.getNode("one").getOutboundLink(graph.getNode("three")).destination.value);
+    assertEquals("one", graph.getNode("three").getInboundLink(graph.getNode("one")).origin.value);
+    assertEquals("three", graph.getNode("three").getInboundLink(graph.getNode("one")).destination.value);
 
-    assertEquals("one-two", graph.getNode("one-two").getOutboundLink(graph.getNode("one-three")).origin.getValue());
-    assertEquals("one-three", graph.getNode("one-two").getOutboundLink(graph.getNode("one-three")).destination.getValue());
-    assertEquals("one-two", graph.getNode("one-three").getInboundLink(graph.getNode("one-two")).origin.getValue());
-    assertEquals("one-three", graph.getNode("one-three").getInboundLink(graph.getNode("one-two")).destination.getValue());
+    assertEquals("one-two", graph.getNode("one-two").getOutboundLink(graph.getNode("one-three")).origin.value);
+    assertEquals("one-three", graph.getNode("one-two").getOutboundLink(graph.getNode("one-three")).destination.value);
+    assertEquals("one-two", graph.getNode("one-three").getInboundLink(graph.getNode("one-two")).origin.value);
+    assertEquals("one-three", graph.getNode("one-three").getInboundLink(graph.getNode("one-two")).destination.value);
   }
 }

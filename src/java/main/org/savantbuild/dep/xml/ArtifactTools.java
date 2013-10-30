@@ -111,12 +111,12 @@ public class ArtifactTools {
         case "dependencies":
           dependencies = new Dependencies();
           break;
-        case "artifact-group":
+        case "dependency-group":
           String type = attributes.getValue("type");
           group = new DependencyGroup(type);
           dependencies.groups.put(type, group);
           break;
-        case "artifact":
+        case "dependency":
           Dependency dependency = new Dependency(new ArtifactID(attributes.getValue("group"), attributes.getValue("project"),
               attributes.getValue("name"), attributes.getValue("type")), new Version(attributes.getValue("version")),
               Boolean.parseBoolean(attributes.getValue("optional")));

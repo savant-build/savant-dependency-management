@@ -32,4 +32,9 @@ public class Dependency extends Artifact {
     super(id, version);
     this.optional = optional;
   }
+
+  public Dependency(String spec, boolean optional) {
+    super(spec);
+    this.optional = optional;
+  }
 }

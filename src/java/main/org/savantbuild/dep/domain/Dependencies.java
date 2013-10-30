@@ -41,6 +41,12 @@ public class Dependencies {
     this.name = name;
   }
 
+  public Dependencies(DependencyGroup... groups) {
+    for (DependencyGroup group : groups) {
+      this.groups.put(group.type, group);
+    }
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) {

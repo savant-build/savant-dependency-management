@@ -17,6 +17,7 @@ package org.savantbuild.dep.net;
 
 import org.savantbuild.dep.io.IOTools;
 import org.savantbuild.dep.io.MD5;
+import org.savantbuild.dep.io.MD5Exception;
 
 import javax.net.ssl.HttpsURLConnection;
 import java.io.File;
@@ -88,8 +89,9 @@ public class NetTools {
    * @param md5      (Optional) The MD5 of the resource (to verify).
    * @return A temp file that stores the resource or null if the given URI doesn't exist.
    * @throws IOException If the resource could not be downloaded.
+   * @throws MD5Exception If the file was downloaded but doesn't match the MD5 sum.
    */
-  public static Path downloadToPath(URI uri, String username, String password, MD5 md5) throws IOException {
+  public static Path downloadToPath(URI uri, String username, String password, MD5 md5) throws IOException, MD5Exception {
     URLConnection uc = uri.toURL().openConnection();
     if (uc instanceof HttpURLConnection) {
       HttpURLConnection huc = (HttpURLConnection) uc;

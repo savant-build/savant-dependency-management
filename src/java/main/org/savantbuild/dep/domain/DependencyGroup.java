@@ -16,6 +16,7 @@
 package org.savantbuild.dep.domain;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -32,6 +33,11 @@ public class DependencyGroup {
 
   public DependencyGroup(String type) {
     this.type = type;
+  }
+
+  public DependencyGroup(String type, Dependency... dependencies) {
+    this.type = type;
+    Collections.addAll(this.dependencies, dependencies);
   }
 
   @Override
@@ -54,5 +60,4 @@ public class DependencyGroup {
     result = 31 * result + (export ? 1 : 0);
     return result;
   }
-
 }

@@ -83,7 +83,7 @@ public class URLProcess implements Process {
       URI md5URI = NetTools.build(url, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString(), item + ".md5");
       Path md5File = NetTools.downloadToPath(md5URI, username, password, null);
       if (md5File == null) {
-        throw new ProcessFailureException("Missing MD5 file for artifact [" + artifact + "]");
+        return null;
       }
 
       MD5 md5;
