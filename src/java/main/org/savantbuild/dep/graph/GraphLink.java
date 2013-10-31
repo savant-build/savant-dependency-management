@@ -32,4 +32,16 @@ public class GraphLink<T, U> {
     this.destination = destination;
     this.value = value;
   }
+
+  public GraphNode<T, U> getDestination() {
+    return destination;
+  }
+
+  public GraphNode<T, U> getOrigin() {
+    return origin;
+  }
+
+  public U getValue() {
+    return value;
+  }
 }

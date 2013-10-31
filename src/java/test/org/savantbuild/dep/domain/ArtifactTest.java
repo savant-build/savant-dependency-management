@@ -35,8 +35,8 @@ public class ArtifactTest {
 
   @Test
   public void syntheticMethods() {
-    assertEquals(new Artifact("group:name:2.0").getArtifactFile(), "name-2.0.jar");
-    assertEquals(new Artifact("group:name:2.0").getArtifactMetaDataFile(), "name-2.0.jar.amd");
-    assertEquals(new Artifact("group:name:2.0").getArtifactSourceFile(), "name-2.0-src.jar");
+    assertEquals(new Artifact("group:name:2.0").getArtifactFile(), "name-2.0.0.jar");
+    assertEquals(new Artifact("group:name:2.0").getArtifactMetaDataFile(), "name-2.0.0.jar.amd");
+    assertEquals(new Artifact("group:name:2.0").getArtifactSourceFile(), "name-2.0.01-src.jar");
   }
 }

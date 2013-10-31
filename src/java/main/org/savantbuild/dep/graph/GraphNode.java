@@ -102,6 +102,7 @@ public class GraphNode<T, U> {
     result = 31 * result + outbound.hashCode();
     result = 31 * result + value.hashCode();
     return result;
+//    return value.hashCode();
   }
 
   /**

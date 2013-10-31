@@ -68,18 +68,6 @@ import java.util.Set;
 public class HashGraph<T, U> implements Graph<T, U> {
   private final Map<T, GraphNode<T, U>> nodes = new HashMap<>();
 
-  public GraphNode<T, U> addNode(T value) {
-    GraphNode<T, U> node = nodes.get(value);
-    if (node == null) {
-      node = new GraphNode<>(value);
-      nodes.put(value, node);
-    } else {
-      node.value = value;
-    }
-
-    return node;
-  }
-
   public void addLink(T origin, T destination, U linkValue) {
     GraphNode<T, U> originNode = addNode(origin);
     GraphNode<T, U> destinationNode = addNode(destination);
@@ -94,6 +82,18 @@ public class HashGraph<T, U> implements Graph<T, U> {
 
     origin.addOutboundLink(destination, linkValue);
     destination.addInboundLink(origin, linkValue);
+  }
+
+  public GraphNode<T, U> addNode(T value) {
+    GraphNode<T, U> node = nodes.get(value);
+    if (node == null) {
+      node = new GraphNode<>(value);
+      nodes.put(value, node);
+    } else {
+      node.value = value;
+    }
+
+    return node;
   }
 
   public boolean contains(T value) {
@@ -113,26 +113,6 @@ public class HashGraph<T, U> implements Graph<T, U> {
     return nodes.equals(hashGraph.nodes);
   }
 
-  /**
-   * @return Returns all the nodes in the graph.
-   */
-  public Set<GraphNode<T, U>> getNodes() {
-    return new HashSet<>(nodes.values());
-  }
-
-  /**
-   * Returns a Set that contains all of the unique artifacts contained in the graph.
-   *
-   * @return All the artifacts.
-   */
-  public Set<T> values() {
-    return new HashSet<>(nodes.keySet());
-  }
-
-  public GraphNode<T, U> getNode(T value) {
-    return nodes.get(value);
-  }
-
   public List<GraphLink<T, U>> getInboundLinks(T value) {
     GraphNode<T, U> node = getNode(value);
     if (node == null) {
@@ -140,6 +120,17 @@ public class HashGraph<T, U> implements Graph<T, U> {
     }
 
     return node.getInboundLinks();
+  }
+
+  public GraphNode<T, U> getNode(T value) {
+    return nodes.get(value);
+  }
+
+  /**
+   * @return Returns all the nodes in the graph.
+   */
+  public Set<GraphNode<T, U>> getNodes() {
+    return new HashSet<>(nodes.values());
   }
 
   public List<GraphLink<T, U>> getOutboundLinks(T value) {
@@ -193,54 +184,22 @@ public class HashGraph<T, U> implements Graph<T, U> {
       return;
     }
 
-    // Create the sub graph and add the removal node to it
-    Set<GraphNode<T, U>> subGraph = new HashSet<>();
-    subGraph.add(node);
-
-    // Grab the sub-graph
-    Set<GraphNode<T, U>> visited = new HashSet<>();
-    try {
-      recurseAdd(node, subGraph, visited);
-    } catch (CyclicException e) {
-      throw new CyclicException("Cyclic graph [" + e.getMessage() + "]");
-    }
-
-    // Recursively remove sub-graphs (depth first) that have no outbounds and all inbounds
-    // are marked.
-    nodeLoop:
-    for (GraphNode<T, U> graphNode : subGraph) {
-      List<GraphLink<T, U>> links = graphNode.getInboundLinks();
-      for (GraphLink<T, U> link : links) {
-
-        // If the node has a connection from the outside world, don't clear it out
-        if (!subGraph.contains(link.origin) || !subGraph.contains(link.destination)) {
-          continue nodeLoop;
-        }
-      }
-
-      // If all the links are clear, KILL IT! HAHAHAHAHA
-      nodes.remove(graphNode.value);
-      clearLinks(graphNode);
-    }
-
-    // Just in case the removal node is reachable, we need to clear out its links
+    // Get the outbound links first and then remove this nodes outbound and inbound links
+    List<GraphLink<T, U>> outboundLinks = node.getOutboundLinks();
     clearLinks(node);
+
+    outboundLinks.stream()
+                 .filter((link) -> link.destination.getInboundLinks().isEmpty())
+                 .forEach((link) -> remove(link.destination.value));
   }
 
-  public void removeLink(T origin, T destination, U linkValue) {
-    GraphNode<T, U> originNode = addNode(origin);
-    GraphNode<T, U> destinationNode = addNode(destination);
-    removeLink(originNode, destinationNode, linkValue);
-  }
-
-  public void removeLink(GraphNode<T, U> origin, GraphNode<T, U> destination, U linkValue) {
-    // Add the nodes to the graph, even if they aren't there already so that we don't blow up
-    nodes.put(origin.value, origin);
-    nodes.put(destination.value, destination);
-
-    // Remove the links from the two nodes.
-    origin.removeOutboundLink(destination, linkValue);
-    destination.removeInboundLink(origin, linkValue);
+  /**
+   * Returns a Set that contains all of the unique artifacts contained in the graph.
+   *
+   * @return All the artifacts.
+   */
+  public Set<T> values() {
+    return new HashSet<>(nodes.keySet());
   }
 
   private void clearLinks(GraphNode<T, U> node) {
@@ -256,25 +215,6 @@ public class HashGraph<T, U> implements Graph<T, U> {
       node.removeLink(link);
       GraphLink<T, U> outbound = link.origin.getOutboundLink(link.destination);
       link.origin.removeLink(outbound);
-    }
-  }
-
-  private void recurseAdd(GraphNode<T, U> node, Set<GraphNode<T, U>> result, Set<GraphNode<T, U>> visited)
-  throws CyclicException {
-    if (visited.contains(node)) {
-      // Eeck, cyclic
-      throw new CyclicException(node.value.toString());
-    }
-
-    // Depth first
-    List<GraphLink<T, U>> links = node.getOutboundLinks();
-    for (GraphLink<T, U> link : links) {
-      result.add(link.destination);
-      try {
-        recurseAdd(link.destination, result, visited);
-      } catch (CyclicException e) {
-        throw new CyclicException(node.value.toString() + "->" + e.getMessage());
-      }
     }
   }
 }

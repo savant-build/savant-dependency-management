@@ -21,6 +21,7 @@ import org.savantbuild.dep.domain.Version.PreRelease.PreReleasePart.StringPreRel
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * This class models a simple three number version as well as any free form version String. It has two modes of
@@ -109,6 +110,10 @@ public class Version implements Comparable<Version> {
 
         num.setLength(0);
       } else if (c == '-' || c == '+') {
+        if (num.length() == 0) {
+          throw new VersionException("Invalid Semantic Version string [" + version + "]. Two version delimiters should not be next to each other.");
+        }
+
         break;
       } else if (Character.isDigit(c)) {
         num.append(c);
@@ -117,10 +122,20 @@ public class Version implements Comparable<Version> {
       }
     }
 
+    // Handle the final value
+    if (num.length() > 0) {
+      if (major == null) {
+        major = Integer.parseInt(num.toString());
+      } else if (minor == null) {
+        minor = Integer.parseInt(num.toString());
+      } else if (patch == null) {
+        patch = Integer.parseInt(num.toString());
+      }
+    }
+
     // Pre-release and meta
-    int plus = -1;
+    int plus = version.indexOf('+', i);
     if (i < version.length() && version.charAt(i) == '-') {
-      plus = version.indexOf('+', i);
       preRelease = new PreRelease((plus == -1) ? version.substring(i + 1) : version.substring(i + 1, plus));
     } else {
       preRelease = null;
@@ -290,24 +305,20 @@ public class Version implements Comparable<Version> {
             throw new VersionException("Invalid Semantic Version PreRelease string [" + spec + "]. Two version (.)should not be next to each other.");
           }
 
-          String partStr = part.toString();
-          try {
-            int value = Integer.parseInt(partStr);
-            parts.add(new NumberPreReleasePart(value));
-          } catch (NumberFormatException e) {
-            parts.add(new StringPreReleasePart(partStr));
-          }
-        } else if (c != '-') {
+          addPart(part);
+        } else {
           part.append(c);
         }
       }
+
+      addPart(part);
     }
 
     @Override
     public int compareTo(PreRelease o) {
       for (int i = 0; i < Integer.max(parts.size(), o.parts.size()); i++) {
-        PreReleasePart mine = (i < parts.size() - 1) ? parts.get(i) : null;
-        PreReleasePart theirs = (i < o.parts.size() - 1) ? o.parts.get(i) : null;
+        PreReleasePart mine = (i < parts.size()) ? parts.get(i) : null;
+        PreReleasePart theirs = (i < o.parts.size()) ? o.parts.get(i) : null;
         if (mine == null && theirs == null) {
           return 0;
         }
@@ -320,19 +331,7 @@ public class Version implements Comparable<Version> {
           return 1;
         }
 
-        if (mine.isNumber() && theirs.isNumber()) {
-          return ((NumberPreReleasePart) mine).value - ((NumberPreReleasePart) theirs).value;
-        }
-
-        if (mine.isNumber()) {
-          return -1;
-        }
-
-        if (theirs.isNumber()) {
-          return 1;
-        }
-
-        int result = ((StringPreReleasePart) mine).value.compareTo(((StringPreReleasePart) theirs).value);
+        int result = mine.compareTo(theirs);
         if (result != 0) {
           return result;
         }
@@ -363,7 +362,28 @@ public class Version implements Comparable<Version> {
       return parts.size() == 1 && !parts.get(0).isNumber() && ((StringPreReleasePart) parts.get(0)).value.equals("{integration}");
     }
 
-    public static interface PreReleasePart {
+    @Override
+    public String toString() {
+      return String.join(".", parts.stream().map(Object::toString).collect(Collectors.toList()));
+    }
+
+    private void addPart(StringBuilder part) {
+      if (part.length() == 0) {
+        return;
+      }
+
+      String partStr = part.toString();
+      try {
+        int value = Integer.parseInt(partStr);
+        parts.add(new NumberPreReleasePart(value));
+      } catch (NumberFormatException e) {
+        parts.add(new StringPreReleasePart(partStr));
+      }
+
+      part.setLength(0);
+    }
+
+    public static interface PreReleasePart extends Comparable<PreReleasePart> {
       boolean isNumber();
 
       /**
@@ -374,6 +394,15 @@ public class Version implements Comparable<Version> {
 
         public NumberPreReleasePart(int value) {
           this.value = value;
+        }
+
+        @Override
+        public int compareTo(PreReleasePart o) {
+          if (o instanceof StringPreReleasePart) {
+            return -1;
+          }
+
+          return value - ((NumberPreReleasePart) o).value;
         }
 
         @Override
@@ -398,6 +427,11 @@ public class Version implements Comparable<Version> {
         public boolean isNumber() {
           return true;
         }
+
+        @Override
+        public String toString() {
+          return "" + value;
+        }
       }
 
       /**
@@ -408,6 +442,15 @@ public class Version implements Comparable<Version> {
 
         public StringPreReleasePart(String value) {
           this.value = value;
+        }
+
+        @Override
+        public int compareTo(PreReleasePart o) {
+          if (o instanceof NumberPreReleasePart) {
+            return 1;
+          }
+
+          return value.compareTo(((StringPreReleasePart) o).value);
         }
 
         @Override
@@ -431,6 +474,11 @@ public class Version implements Comparable<Version> {
         @Override
         public boolean isNumber() {
           return false;
+        }
+
+        @Override
+        public String toString() {
+          return value;
         }
       }
     }

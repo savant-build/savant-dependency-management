@@ -20,6 +20,11 @@ import org.savantbuild.dep.domain.Version.PreRelease.PreReleasePart.NumberPreRel
 import org.savantbuild.dep.domain.Version.PreRelease.PreReleasePart.StringPreReleasePart;
 import org.testng.annotations.Test;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+import static java.util.Arrays.asList;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
@@ -37,6 +42,7 @@ public class VersionTest {
     assertCompareTo("1.8", "1.7");
     assertCompareTo("1.8.1", "1.8.0");
 
+    assertCompareTo("1.8.0-beta", "1.8.0-1");
     assertCompareTo("1.8.0-beta", "1.8.0-alpha");
     assertCompareTo("1.8.0-beta.2", "1.8.0-alpha");
     assertCompareTo("1.8.0-beta.2", "1.8.0-beta");
@@ -66,6 +72,10 @@ public class VersionTest {
     assertCompareTo("1.8.0-2.2", "1.8.0-2.1");
     assertCompareTo("1.8.0-2.2.2", "1.8.0-2.2.1");
     assertCompareTo("1.8.0-2.2.2.2", "1.8.0-2.2.2.1");
+
+    List<Version> versions = new ArrayList<>(asList(new Version("3.0"), new Version("1.7"), new Version("1.0"), new Version("2.0"), new Version("1.8"), new Version("1.6-alpha"), new Version("1.6")));
+    Collections.sort(versions);
+    assertEquals(versions, asList(new Version("1.0"), new Version("1.6-alpha"), new Version("1.6"), new Version("1.7"), new Version("1.8"), new Version("2.0"), new Version("3.0")));
   }
 
   @Test
@@ -79,7 +89,7 @@ public class VersionTest {
     assertVersionEquals("1.2.6-1-2.beta.foo", 1, 2, 6, new PreRelease(new StringPreReleasePart("1-2"), new StringPreReleasePart("beta"), new StringPreReleasePart("foo")));
     assertVersionEquals("1.2.6-1-2.3-4.5-6", 1, 2, 6, new PreRelease(new StringPreReleasePart("1-2"), new StringPreReleasePart("3-4"), new StringPreReleasePart("5-6")));
     assertVersionEquals("1.2.6-1", 1, 2, 6, new PreRelease(new NumberPreReleasePart(1)));
-    assertVersionEquals("1.2.6-1.2.", 1, 2, 6, new PreRelease(new NumberPreReleasePart(1), new NumberPreReleasePart(2)));
+    assertVersionEquals("1.2.6-1.2", 1, 2, 6, new PreRelease(new NumberPreReleasePart(1), new NumberPreReleasePart(2)));
     assertVersionEquals("1.2.6-1.2.3", 1, 2, 6, new PreRelease(new NumberPreReleasePart(1), new NumberPreReleasePart(2), new NumberPreReleasePart(3)));
     assertVersionEquals("1.2.6-alpha.1.build.2", 1, 2, 6, new PreRelease(new StringPreReleasePart("alpha"), new NumberPreReleasePart(1), new StringPreReleasePart("build"), new NumberPreReleasePart(2)));
   }
@@ -154,7 +164,7 @@ public class VersionTest {
     assertVersion("3.4.5-1-2.2", 3, 4, 5, false, false, false, true, false,
         new PreRelease(new StringPreReleasePart("1-2"), new NumberPreReleasePart(2)), null);
 
-    assertVersion("3.4.5-beta+metaData", 3, 4, 5, false, false, false, true, false, new PreRelease(new StringPreReleasePart("beta")), "metadata");
+    assertVersion("3.4.5-beta+metaData", 3, 4, 5, false, false, false, true, false, new PreRelease(new StringPreReleasePart("beta")), "metaData");
     assertVersion("3.4.5-beta.1+49393", 3, 4, 5, false, false, false, true, false, new PreRelease(new StringPreReleasePart("beta"), new NumberPreReleasePart(1)), "49393");
     assertVersion("3.4.5-beta.2+foobar", 3, 4, 5, false, false, false, true, false, new PreRelease(new StringPreReleasePart("beta"), new NumberPreReleasePart(2)), "foobar");
     assertVersion("3.4.5-beta.2.build.4+30930927", 3, 4, 5, false, false, false, true, false,
@@ -164,12 +174,12 @@ public class VersionTest {
     assertVersion("3.4.5-1-2.2+meta-data", 3, 4, 5, false, false, false, true, false,
         new PreRelease(new StringPreReleasePart("1-2"), new NumberPreReleasePart(2)), "meta-data");
 
-    assertVersion("3.4.5+metaData", 3, 4, 5, false, false, false, true, false, null, "metadata");
-    assertVersion("3.4.5+49393", 3, 4, 5, false, false, false, true, false, null, "49393");
-    assertVersion("3.4.5+foobar", 3, 4, 5, false, false, false, true, false, null, "foobar");
-    assertVersion("3.4.5+30930927", 3, 4, 5, false, false, false, true, false, null, "30930927");
-    assertVersion("3.4.5+sha.f938de838ab", 3, 4, 5, false, false, false, true, false, null, "sha.f938de838ab");
-    assertVersion("3.4.5+meta-data", 3, 4, 5, false, false, false, true, false, null, "meta-data");
+    assertVersion("3.4.5+metaData", 3, 4, 5, false, false, true, false, false, null, "metaData");
+    assertVersion("3.4.5+49393", 3, 4, 5, false, false, true, false, false, null, "49393");
+    assertVersion("3.4.5+foobar", 3, 4, 5, false, false, true, false, false, null, "foobar");
+    assertVersion("3.4.5+30930927", 3, 4, 5, false, false, true, false, false, null, "30930927");
+    assertVersion("3.4.5+sha.f938de838ab", 3, 4, 5, false, false, true, false, false, null, "sha.f938de838ab");
+    assertVersion("3.4.5+meta-data", 3, 4, 5, false, false, true, false, false, null, "meta-data");
 
     assertBadVersion("-1.0.0");
     assertBadVersion("0.-1.0");
@@ -202,30 +212,30 @@ public class VersionTest {
     Version v1 = new Version(spec1);
     Version v2 = new Version(spec2);
     int comparison = v1.compareTo(v2);
-    assertTrue(comparison < 0);
-    comparison = v2.compareTo(v1);
     assertTrue(comparison > 0);
+    comparison = v2.compareTo(v1);
+    assertTrue(comparison < 0);
 
     v1 = new Version(spec1);
     v2 = new Version(spec2 + "+bMetaData");
     comparison = v1.compareTo(v2);
-    assertTrue(comparison < 0);
-    comparison = v2.compareTo(v1);
     assertTrue(comparison > 0);
+    comparison = v2.compareTo(v1);
+    assertTrue(comparison < 0);
 
     v1 = new Version(spec1 + "+aMetaData");
     v2 = new Version(spec2);
     comparison = v1.compareTo(v2);
-    assertTrue(comparison < 0);
-    comparison = v2.compareTo(v1);
     assertTrue(comparison > 0);
+    comparison = v2.compareTo(v1);
+    assertTrue(comparison < 0);
 
     v1 = new Version(spec1 + "+aMetaData");
     v2 = new Version(spec2 + "+bMetaData");
     comparison = v1.compareTo(v2);
-    assertTrue(comparison < 0);
-    comparison = v2.compareTo(v1);
     assertTrue(comparison > 0);
+    comparison = v2.compareTo(v1);
+    assertTrue(comparison < 0);
   }
 
   private void assertVersion(String spec, int major, int minor, int patch, boolean isMajor, boolean isMinor,

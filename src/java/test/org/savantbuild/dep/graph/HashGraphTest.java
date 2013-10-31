@@ -88,6 +88,39 @@ public class HashGraphTest {
     System.out.println(paths.get(2).getPath());
   }
 
+  /**
+   * Graph:
+   * <p/>
+   * <pre>
+   *   one --> one-two --> one-three --|
+   *       |                 /\        |
+   *       |                 |         |
+   *       |-> two ------> four        |
+   *       |    |           |          |
+   *       |    |          \/          |
+   *       |    |-------> five         |
+   *       |    |                      |
+   *       |    |-------> six <--------|
+   *       |    |
+   *       |   \/
+   *       |-> three
+   * </pre>
+   * <p/>
+   * Potential sub-graph to prune includes (in traversal order with duplicates):
+   * <p/>
+   * <pre>
+   *   two
+   *     four
+   *       one-three
+   *         six
+   *       five
+   *     five
+   *     six
+   *     three
+   * </pre>
+   *
+   * @throws Exception
+   */
   @Test
   public void remove() throws Exception {
     HashGraph<String, String> graph = new HashGraph<>();
@@ -98,47 +131,53 @@ public class HashGraphTest {
     graph.addNode("three");
     graph.addNode("four");
     graph.addNode("five");
+    graph.addNode("six");
 
     graph.addLink("one", "one-two", "link");
     graph.addLink("one-two", "one-three", "link");
+    graph.addLink("one-three", "six", "link");
     graph.addLink("one", "two", "link");
     graph.addLink("one", "three", "link");
     graph.addLink("two", "three", "link");
     graph.addLink("two", "four", "link");
     graph.addLink("two", "five", "link");
+    graph.addLink("two", "six", "link");
     graph.addLink("four", "five", "link");
     graph.addLink("four", "one-three", "link");
 
     graph.remove("two");
-    assertEquals(4, graph.getNodes().size());
-    assertEquals(4, graph.values().size());
+    assertEquals(graph.getNodes().size(), 5);
+    assertEquals(graph.values().size(), 5);
     assertNotNull(graph.getNode("one"));
-    assertNotNull(graph.getNode("three"));
     assertNotNull(graph.getNode("one-two"));
     assertNotNull(graph.getNode("one-three"));
+    assertNotNull(graph.getNode("three"));
+    assertNotNull(graph.getNode("six"));
 
-    assertEquals(2, graph.getNode("one").getOutboundLinks().size());
-    assertEquals(0, graph.getNode("one").getInboundLinks().size());
-    assertEquals(1, graph.getNode("one-two").getInboundLinks().size());
-    assertEquals(1, graph.getNode("one-two").getOutboundLinks().size());
-    assertEquals(1, graph.getNode("one-three").getInboundLinks().size());
-    assertEquals(0, graph.getNode("one-three").getOutboundLinks().size());
-    assertEquals(1, graph.getNode("three").getInboundLinks().size());
-    assertEquals(0, graph.getNode("three").getOutboundLinks().size());
+    assertEquals(graph.getNode("one").getOutboundLinks().size(), 2);
+    assertEquals(graph.getNode("one").getInboundLinks().size(), 0);
+    assertEquals(graph.getNode("one-two").getInboundLinks().size(), 1);
+    assertEquals(graph.getNode("one-two").getOutboundLinks().size(), 1);
+    assertEquals(graph.getNode("one-three").getInboundLinks().size(), 1);
+    assertEquals(graph.getNode("one-three").getOutboundLinks().size(), 1);
+    assertEquals(graph.getNode("three").getInboundLinks().size(), 1);
+    assertEquals(graph.getNode("three").getOutboundLinks().size(), 0);
 
-    assertEquals("one", graph.getNode("one").getOutboundLink(graph.getNode("one-two")).origin.value);
-    assertEquals("one-two", graph.getNode("one").getOutboundLink(graph.getNode("one-two")).destination.value);
-    assertEquals("one", graph.getNode("one-two").getInboundLink(graph.getNode("one")).origin.value);
-    assertEquals("one-two", graph.getNode("one-two").getInboundLink(graph.getNode("one")).destination.value);
+    assertEquals(graph.getNode("one").getOutboundLink(graph.getNode("one-two")).origin.value, "one");
+    assertEquals(graph.getNode("one").getOutboundLink(graph.getNode("one-two")).destination.value, "one-two");
+    assertEquals(graph.getNode("one-two").getInboundLink(graph.getNode("one")).origin.value, "one");
+    assertEquals(graph.getNode("one-two").getInboundLink(graph.getNode("one")).destination.value, "one-two");
 
-    assertEquals("one", graph.getNode("one").getOutboundLink(graph.getNode("three")).origin.value);
-    assertEquals("three", graph.getNode("one").getOutboundLink(graph.getNode("three")).destination.value);
-    assertEquals("one", graph.getNode("three").getInboundLink(graph.getNode("one")).origin.value);
-    assertEquals("three", graph.getNode("three").getInboundLink(graph.getNode("one")).destination.value);
+    assertEquals(graph.getNode("one").getOutboundLink(graph.getNode("three")).origin.value, "one");
+    assertEquals(graph.getNode("one").getOutboundLink(graph.getNode("three")).destination.value, "three");
+    assertEquals(graph.getNode("three").getInboundLink(graph.getNode("one")).origin.value, "one");
+    assertEquals(graph.getNode("three").getInboundLink(graph.getNode("one")).destination.value, "three");
 
-    assertEquals("one-two", graph.getNode("one-two").getOutboundLink(graph.getNode("one-three")).origin.value);
-    assertEquals("one-three", graph.getNode("one-two").getOutboundLink(graph.getNode("one-three")).destination.value);
-    assertEquals("one-two", graph.getNode("one-three").getInboundLink(graph.getNode("one-two")).origin.value);
-    assertEquals("one-three", graph.getNode("one-three").getInboundLink(graph.getNode("one-two")).destination.value);
+    assertEquals(graph.getNode("one-two").getOutboundLink(graph.getNode("one-three")).origin.value, "one-two");
+    assertEquals(graph.getNode("one-two").getOutboundLink(graph.getNode("one-three")).destination.value, "one-three");
+    assertEquals(graph.getNode("one-three").getInboundLink(graph.getNode("one-two")).origin.value, "one-two");
+    assertEquals(graph.getNode("one-three").getInboundLink(graph.getNode("one-two")).destination.value, "one-three");
+    assertEquals(graph.getNode("one-three").getOutboundLink(graph.getNode("six")).origin.value, "one-three");
+    assertEquals(graph.getNode("one-three").getOutboundLink(graph.getNode("six")).destination.value, "six");
   }
 }
