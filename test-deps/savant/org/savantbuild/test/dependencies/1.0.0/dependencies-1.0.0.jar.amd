@@ -15,10 +15,10 @@
   -->
 <artifact-meta-data>
   <dependencies>
-    <artifact-group type="run">
-      <artifact group="org.savantbuild.test" project="major-compat" name="major-compat" version="2.0" type="jar"/>
-      <artifact group="org.savantbuild.test" project="minor-compat" name="minor-compat" version="1.1" type="jar"/>
-      <artifact group="org.savantbuild.test" project="patch-compat" name="patch-compat" version="1.0" type="jar"/>
-    </artifact-group>
+    <dependency-group type="run">
+      <dependency group="org.savantbuild.test" project="major-compat" name="major-compat" version="2.0" type="jar"/>
+      <dependency group="org.savantbuild.test" project="minor-compat" name="minor-compat" version="1.1" type="jar"/>
+      <dependency group="org.savantbuild.test" project="patch-compat" name="patch-compat" version="1.0" type="jar"/>
+    </dependency-group>
   </dependencies>
 </artifact-meta-data>

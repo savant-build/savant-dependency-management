@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright (c) 2001-2010, Inversoft, All Rights Reserved
+  ~ Copyright (c) 2001-2011, Inversoft, All Rights Reserved
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -13,4 +13,10 @@
   ~ either express or implied. See the License for the specific
   ~ language governing permissions and limitations under the License.
   -->
-<artifact-meta-data/>
+<artifact-meta-data>
+  <dependencies>
+    <dependency-group type="run">
+      <dependency group="org.savantbuild.test" project="integration-build" name="integration-build" version="2.1.1-{integration}" type="jar"/>
+    </dependency-group>
+  </dependencies>
+</artifact-meta-data>
