@@ -25,18 +25,18 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 
 /**
- * This class tests the FileTools.
+ * This class tests the MD5Test.
  *
  * @author Brian Pontarelli
  */
 @Test(groups = "unit")
-public class FileToolsTest {
+public class MD5Test {
   @Test
   public void md5() throws IOException {
-    Path f = Paths.get("src/java/test/org/savantbuild/dep/io/FileToolsTest.txt");
-    MD5 md5 = FileTools.md5(f);
+    Path f = Paths.get("src/java/test/org/savantbuild/dep/io/MD5Test.txt");
+    MD5 md5 = MD5.fromPath(f);
     assertNotNull(md5);
-    assertEquals(md5.fileName, "FileToolsTest.txt");
+    assertEquals(md5.fileName, "MD5Test.txt");
     assertEquals(md5.sum, "c0bfbec19e8e5578e458ce5bfee20751");
   }
 }

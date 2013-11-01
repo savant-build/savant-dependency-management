@@ -19,6 +19,7 @@ import org.savantbuild.dep.domain.ArtifactMetaData;
 import org.savantbuild.dep.domain.Dependencies;
 import org.savantbuild.dep.domain.Dependency;
 import org.savantbuild.dep.domain.DependencyGroup;
+import org.savantbuild.dep.domain.Version;
 import org.testng.annotations.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -116,13 +117,13 @@ public class ArtifactToolsTest {
     assertEquals(amd.dependencies.groups.get("run").dependencies.get(0).id.group, "org.example.test");
     assertEquals(amd.dependencies.groups.get("run").dependencies.get(0).id.project, "test-project");
     assertEquals(amd.dependencies.groups.get("run").dependencies.get(0).id.name, "test-project");
-    assertEquals(amd.dependencies.groups.get("run").dependencies.get(0).version, "1.0");
+    assertEquals(amd.dependencies.groups.get("run").dependencies.get(0).version, new Version("1.0.0"));
     assertEquals(amd.dependencies.groups.get("run").dependencies.get(0).id.type, "jar");
 
     assertEquals(amd.dependencies.groups.get("run").dependencies.get(1).id.group, "org.example.test");
     assertEquals(amd.dependencies.groups.get("run").dependencies.get(1).id.project, "test-project2");
     assertEquals(amd.dependencies.groups.get("run").dependencies.get(1).id.name, "test-project2");
-    assertEquals(amd.dependencies.groups.get("run").dependencies.get(1).version, "2.0");
+    assertEquals(amd.dependencies.groups.get("run").dependencies.get(1).version, new Version("2.0.0"));
     assertEquals(amd.dependencies.groups.get("run").dependencies.get(1).id.type, "jar");
 
     assertEquals(amd.dependencies.groups.get("compile").dependencies.size(), 2);
@@ -130,13 +131,13 @@ public class ArtifactToolsTest {
     assertEquals(amd.dependencies.groups.get("compile").dependencies.get(0).id.group, "org.example.test");
     assertEquals(amd.dependencies.groups.get("compile").dependencies.get(0).id.project, "test-project3");
     assertEquals(amd.dependencies.groups.get("compile").dependencies.get(0).id.name, "test-project3");
-    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(0).version, "3.0");
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(0).version, new Version("3.0.0"));
     assertEquals(amd.dependencies.groups.get("compile").dependencies.get(0).id.type, "jar");
 
     assertEquals(amd.dependencies.groups.get("compile").dependencies.get(1).id.group, "org.example.test");
     assertEquals(amd.dependencies.groups.get("compile").dependencies.get(1).id.project, "test-project4");
     assertEquals(amd.dependencies.groups.get("compile").dependencies.get(1).id.name, "test-project4");
-    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(1).version, "4.0");
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(1).version, new Version("4.0.0"));
     assertEquals(amd.dependencies.groups.get("compile").dependencies.get(1).id.type, "jar");
   }
 }

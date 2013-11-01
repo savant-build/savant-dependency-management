@@ -47,38 +47,37 @@ public class IOTools {
       return null;
     }
 
-    String str = new String(Files.readAllBytes(path), "UTF-8");
+    String str = new String(Files.readAllBytes(path), "UTF-8").trim();
+
+    // Validate format (should be either only the md5sum or the sum plus the file name)
+    if (str.length() < 32) {
+      throw new MD5Exception("Invalid md5sum [" + str + "]");
+    }
+
     String name = null;
-    String sum = null;
-    if (str.length() > 0) {
-      // Validate format (should be either only the md5sum or the sum plus the file name)
-      if (str.length() < 32) {
-        throw new MD5Exception("Invalid md5sum [" + str + "]");
-      }
+    String sum;
+    if (str.length() == 32) {
+      sum = str;
+    } else if (str.length() > 33) {
+      int index = str.indexOf(" ");
+      if (index == 32) {
+        sum = str.substring(0, 32);
 
-      if (str.length() == 32) {
-        sum = str;
-      } else if (str.length() > 33) {
-        int index = str.indexOf(" ");
-        if (index == 32) {
-          sum = str.substring(0, 32);
+        // Find file name and verify
+        while (str.charAt(index) == ' ') {
+          index++;
+        }
 
-          // Find file name and verify
-          while (str.charAt(index) == ' ') {
-            index++;
-          }
-
-          if (index == str.length()) {
-            throw new MD5Exception("Invalid md5sum [" + str + "]");
-          }
-
-          name = str.substring(index);
-        } else {
+        if (index == str.length()) {
           throw new MD5Exception("Invalid md5sum [" + str + "]");
         }
+
+        name = str.substring(index);
       } else {
         throw new MD5Exception("Invalid md5sum [" + str + "]");
       }
+    } else {
+      throw new MD5Exception("Invalid md5sum [" + str + "]. It has a length of [" + str.length() + "] and it should be 32");
     }
 
     return new MD5(sum, StringTools.fromHex(sum), name);

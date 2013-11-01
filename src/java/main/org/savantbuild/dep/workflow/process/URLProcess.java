@@ -21,6 +21,7 @@ import org.savantbuild.dep.io.MD5;
 import org.savantbuild.dep.net.NetTools;
 import org.savantbuild.dep.workflow.PublishWorkflow;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -109,6 +110,9 @@ public class URLProcess implements Process {
       }
 
       return itemFile;
+    } catch (FileNotFoundException e) {
+      // Special case for file:// URLs
+      return null;
     } catch (IOException | URISyntaxException e) {
       throw new ProcessFailureException(e);
     }

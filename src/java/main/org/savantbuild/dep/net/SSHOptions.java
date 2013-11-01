@@ -15,25 +15,23 @@
  */
 package org.savantbuild.dep.net;
 
+import java.io.File;
+
 /**
  * This class stores all the options.
  *
  * @author Brian Pontarelli
  */
 public class SSHOptions {
-  public String cipher;
+  public File identity = new File(System.getProperty("user.home") + "/.ssh/id_dsa");
 
-  public String identity = System.getProperty("user.home") + "/.ssh/id_dsa";
+  public File knownHosts = new File(System.getProperty("user.home") + "/.ssh/known_hosts");
 
-  public String knownHosts = System.getProperty("user.home") + "/.ssh/known_hosts";
-
-  public String passphrase = "";
+  public String passphrase;
 
   public String password;
 
   public int port = 22;
-
-  public String server;
 
   public boolean trustUnknownHosts = false;
 

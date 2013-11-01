@@ -26,6 +26,7 @@ import java.nio.file.Paths;
 import java.util.Base64;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.AssertJUnit.fail;
 
 /**
  * Base class for unit tests.
@@ -53,17 +54,29 @@ public abstract class BaseUnitTest {
         assertEquals(httpExchange.getRequestHeaders().get("Authorization").get(0), "Basic " + Base64.getEncoder().encodeToString((username + ":" + password).getBytes()));
       }
 
+      // Verify a GET request
+      if (!httpExchange.getRequestMethod().equals("GET")) {
+        fail("Should have been a GET request");
+      }
+
+      // Close the input stream because we don't need to read anything
+      httpExchange.getRequestBody().close();
+
       String path = httpExchange.getRequestURI().getPath();
-      Path file = Paths.get(path);
+      Path file = Paths.get(path.substring(1));
       if (Files.isRegularFile(file)) {
         httpExchange.sendResponseHeaders(200, Files.size(file));
         byte[] bytes = Files.readAllBytes(file);
         httpExchange.getResponseBody().write(bytes);
         httpExchange.getResponseBody().flush();
+        httpExchange.getResponseBody().close();
       } else {
         httpExchange.sendResponseHeaders(404, 0);
       }
     });
+
+    server.start();
+
     return server;
   }
 }

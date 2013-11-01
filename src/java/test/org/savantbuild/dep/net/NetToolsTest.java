@@ -52,7 +52,7 @@ public class NetToolsTest extends BaseUnitTest {
     HttpServer server = makeFileServer(null, null);
 
     try {
-      Path path = NetTools.downloadToPath(new URI("http://localhost:7000/src/java/test/org/savantbuild/dep/net/FileToolsTest.txt"), null, null, null);
+      Path path = NetTools.downloadToPath(new URI("http://localhost:7000/src/java/test/org/savantbuild/dep/io/MD5Test.txt"), null, null, null);
       String result = new String(Files.readAllBytes(path), "UTF-8");
       assertEquals(result.trim(), "This file is a test file for copying and writing and such.");
     } finally {
@@ -65,7 +65,7 @@ public class NetToolsTest extends BaseUnitTest {
     HttpServer server = makeFileServer("User", "Pass");
 
     try {
-      Path path = NetTools.downloadToPath(new URI("http://localhost:7000/src/java/test/org/savantbuild/dep/net/FileToolsTest.txt"), "User", "Pass", null);
+      Path path = NetTools.downloadToPath(new URI("http://localhost:7000/src/java/test/org/savantbuild/dep/io/MD5Test.txt"), "User", "Pass", null);
       String result = new String(Files.readAllBytes(path), "UTF-8");
       assertEquals(result.trim(), "This file is a test file for copying and writing and such.");
     } finally {
@@ -78,8 +78,8 @@ public class NetToolsTest extends BaseUnitTest {
     HttpServer server = makeFileServer(null, null);
 
     try {
-      MD5 md5 = MD5.fromBytes(Files.readAllBytes(Paths.get("src/java/test/org/savantbuild/dep/io/FileToolsTest.txt")), "FileToolsTest.txt");
-      Path path = NetTools.downloadToPath(new URI("http://localhost:7000/src/java/test/org/savantbuild/dep/net/FileToolsTest.txt"), null, null, md5);
+      MD5 md5 = MD5.fromBytes(Files.readAllBytes(Paths.get("src/java/test/org/savantbuild/dep/io/MD5Test.txt")), "MD5Test.txt");
+      Path path = NetTools.downloadToPath(new URI("http://localhost:7000/src/java/test/org/savantbuild/dep/io/MD5Test.txt"), null, null, md5);
       String result = new String(Files.readAllBytes(path), "UTF-8");
       assertEquals(result.trim(), "This file is a test file for copying and writing and such.");
     } finally {
@@ -89,12 +89,15 @@ public class NetToolsTest extends BaseUnitTest {
 
   @Test
   public void downloadToFileWithMD5Failure() throws Exception {
-    MD5 md5 = new MD5("0000000000000000000000000000000", null, "");
+    HttpServer server = makeFileServer(null, null);
+    MD5 md5 = new MD5("0000000000000000000000000000000", new byte[] {0,0,0,0,0}, null);
     try {
-      NetTools.downloadToPath(new URI("http://savant.inversoft.org/org/junit/junit/4.4/junit-4.4.jar"), null, null, md5);
+      NetTools.downloadToPath(new URI("http://localhost:7000/src/java/test/org/savantbuild/dep/io/MD5Test.txt"), null, null, md5);
       fail("Should have failed");
     } catch (MD5Exception e) {
       // Expected
+    } finally {
+      server.stop(0);
     }
   }
 }

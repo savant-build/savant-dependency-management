@@ -19,20 +19,15 @@ import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.io.FileTools;
 import org.savantbuild.dep.io.IOTools;
 import org.savantbuild.dep.io.MD5;
-import org.savantbuild.dep.io.MD5Exception;
 import org.savantbuild.dep.net.NetTools;
-import org.savantbuild.dep.net.SubVersion;
+import org.savantbuild.dep.util.RuntimeTools;
 import org.savantbuild.dep.workflow.PublishWorkflow;
-import org.tmatesoft.svn.core.SVNErrorCode;
-import org.tmatesoft.svn.core.SVNException;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.Objects;
 import java.util.logging.Logger;
 
@@ -84,8 +79,12 @@ public class SVNProcess implements Process {
   @Override
   public Path fetch(Artifact artifact, String item, PublishWorkflow publishWorkflow) throws ProcessFailureException {
     try {
-      URI md5URI = NetTools.build(artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString(), item + ".md5");
-      Path md5File = export(md5URI, null);
+      Path md5File = FileTools.createTempPath("savant-svn-process", "export", true);
+      URI md5URI = NetTools.build(repository, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString(), item + ".md5");
+      if (!export(md5URI, md5File)) {
+        return null;
+      }
+
       MD5 md5;
       try {
         md5 = IOTools.parseMD5(md5File);
@@ -94,10 +93,15 @@ public class SVNProcess implements Process {
         throw new ProcessFailureException(e);
       }
 
+      Path itemFile = FileTools.createTempPath("savant-svn-process", "export", true);
       URI itemURI = NetTools.build(repository, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString(), item);
-      Path itemFile = export(itemURI, md5);
-      if (itemFile == null) {
+      if (!export(itemURI, itemFile)) {
         return null;
+      }
+
+      MD5 itemMD5 = MD5.fromPath(itemFile);
+      if (!itemMD5.equals(md5)) {
+        throw new ProcessFailureException("Artifact item file [" + itemURI.toString() + "] doesn't match MD5");
       }
 
       logger.info("Downloaded from SubVersion at [" + itemURI + "]");
@@ -111,7 +115,7 @@ public class SVNProcess implements Process {
       }
 
       return itemFile;
-    } catch (IOException | URISyntaxException e) {
+    } catch (IOException | URISyntaxException | InterruptedException e) {
       throw new ProcessFailureException(e);
     }
   }
@@ -127,51 +131,32 @@ public class SVNProcess implements Process {
    */
   @Override
   public Path publish(Artifact artifact, String item, Path artifactFile) throws ProcessFailureException {
-    try (SubVersion svn = new SubVersion(repository, username, password)) {
-      if (!svn.isExists()) {
-        throw new ProcessFailureException("Repository URL [" + repository + "] doesn't exist on the SubVersion server");
-      } else if (svn.isFile()) {
-        throw new ProcessFailureException("Repository URL [" + repository + "] points to a file and must point to a directory");
+    try {
+      URI uri = NetTools.build(repository, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString(), item);
+      if (!imprt(uri, artifactFile)) {
+        throw new ProcessFailureException("Unable to publish artifact item [" + item + "] to [" + uri + "]");
       }
 
-      URI uri = NetTools.build(artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString(), item);
-      svn.doImport(uri.toString(), artifactFile);
       logger.info("Published to SubVersion at [" + repository + "/" + uri + "]");
       return null;
-    } catch (SVNException | URISyntaxException e) {
+    } catch (URISyntaxException | IOException | InterruptedException e) {
       throw new ProcessFailureException(e);
     }
   }
 
-  private Path export(final URI uri, final MD5 md5) throws IOException {
-    File file = File.createTempFile("savant-svn-process", "export");
-    file.deleteOnExit();
-
-    Path path = file.toPath();
-    try (SubVersion svn = new SubVersion(repository, username, password)) {
-      if (!svn.isExists()) {
-        throw new IOException("Repository [" + repository + "] doesn't exist on the SubVersion server");
-      } else if (svn.isFile()) {
-        throw new IOException("Repository [" + repository + "] points to a file and must point to a directory");
-      }
-
-      svn.doExport(uri.toString(), path);
-
-      if (md5 != null && md5.bytes != null) {
-        MD5 exportedMD5 = FileTools.md5(path);
-        if (!Arrays.equals(exportedMD5.bytes, md5.bytes)) {
-          throw new MD5Exception("MD5 mismatch.");
-        }
-      }
-
-      return path;
-    } catch (SVNException e) {
-      // These should indicate that the URL was not valid and the exported file doesn't exist
-      if (e.getErrorMessage().getErrorCode() == SVNErrorCode.BAD_URL || e.getErrorMessage().getErrorCode() == SVNErrorCode.RA_ILLEGAL_URL) {
-        return null;
-      }
-
-      throw new IOException(e);
+  private boolean export(URI uri, Path file) throws IOException, InterruptedException {
+    if (username != null) {
+      return RuntimeTools.exec("svn", "export", "--force", "--non-interactive", "--no-auth-cache", "--username", username, "--password", password, uri.toString(), file.toAbsolutePath().toString());
     }
+
+    return RuntimeTools.exec("svn", "export", "--force", "--non-interactive", "--no-auth-cache", uri.toString(), file.toAbsolutePath().toString());
+  }
+
+  private boolean imprt(URI uri, Path file) throws IOException, InterruptedException {
+    if (username != null) {
+      return RuntimeTools.exec("svn", "import", "--non-interactive", "--no-auth-cache", "-m", "Published artifact", "--username", username, "--password", password, file.toAbsolutePath().toString(), uri.toString());
+    }
+
+    return RuntimeTools.exec("svn", "import", "--non-interactive", "--no-auth-cache", "-m", "Published artifact", file.toAbsolutePath().toString(), uri.toString());
   }
 }

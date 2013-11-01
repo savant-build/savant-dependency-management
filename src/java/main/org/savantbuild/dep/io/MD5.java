@@ -24,6 +24,7 @@ import java.nio.file.Path;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 
 /**
  * This class is a simple holder for a MD5 checksum. It holds the sum and the file name. It can also hold the MD5 sum
@@ -31,7 +32,7 @@ import java.security.NoSuchAlgorithmException;
  *
  * @author Brian Pontarelli
  */
-public class MD5 {
+public final class MD5 {
   public final byte[] bytes;
 
   public final String fileName;
@@ -79,6 +80,21 @@ public class MD5 {
   }
 
   /**
+   * Calculates the MD5 sum for the given Path.
+   *
+   * @param path The path to MD5.
+   * @return The MD5 sum and never null.
+   * @throws IOException If the file could not be MD5 summed.
+   */
+  public static MD5 fromPath(Path path) throws IOException {
+    if (!Files.isRegularFile(path)) {
+      throw new IllegalArgumentException("Invalid file to MD5 [" + path.toAbsolutePath() + "]");
+    }
+
+    return MD5.fromBytes(Files.readAllBytes(path), path.getFileName().toString());
+  }
+
+  /**
    * Writes the MD5 information out to the given Path file.
    *
    * @param md5  The MD5.
@@ -87,5 +103,23 @@ public class MD5 {
    */
   public static void writeMD5(MD5 md5, Path path) throws IOException {
     Files.write(path, md5.sum.getBytes("UTF-8"));
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    final MD5 md5 = (MD5) o;
+    return Arrays.equals(bytes, md5.bytes);
+  }
+
+  @Override
+  public int hashCode() {
+    return Arrays.hashCode(bytes);
   }
 }

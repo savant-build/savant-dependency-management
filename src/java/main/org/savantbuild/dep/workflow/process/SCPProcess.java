@@ -15,9 +15,7 @@
  */
 package org.savantbuild.dep.workflow.process;
 
-import com.jcraft.jsch.JSchException;
 import org.savantbuild.dep.domain.Artifact;
-import org.savantbuild.dep.net.SCP;
 import org.savantbuild.dep.net.SSHOptions;
 import org.savantbuild.dep.workflow.PublishWorkflow;
 
@@ -26,8 +24,12 @@ import java.nio.file.Path;
 import java.util.Objects;
 import java.util.logging.Logger;
 
+import ch.ethz.ssh2.Connection;
+import ch.ethz.ssh2.SCPClient;
+import ch.ethz.ssh2.Session;
+
 /**
- * This is an implementation of the Process that uses the JSCH to publish artifacts to a server using SSH and SCP.
+ * This is an implementation of the Process that uses the Ganymed to publish artifacts to a server using SSH and SCP.
  *
  * @author Brian Pontarelli
  */
@@ -38,6 +40,8 @@ public class SCPProcess implements Process {
 
   private final SSHOptions options;
 
+  private final String server;
+
   /**
    * Constructs the SSHProcess.
    *
@@ -45,17 +49,17 @@ public class SCPProcess implements Process {
    * @param location The location to SCP to.
    * @throws NullPointerException If any of the required options are null.
    */
-  public SCPProcess(SSHOptions options, String location) throws NullPointerException {
+  public SCPProcess(String server, String location, SSHOptions options) throws NullPointerException {
+    Objects.requireNonNull(server, "The [server] attribute is required for the [scp] workflow process");
     Objects.requireNonNull(location, "The [location] attribute is required for the [scp] workflow process");
-    Objects.requireNonNull(options, "The [server] attribute is required for the [scp] workflow process");
+    Objects.requireNonNull(options, "The [options] attribute is required for the [scp] workflow process");
     if (options != null) {
-      Objects.requireNonNull(options.server, "The [server] attribute is required for the [scp] workflow process");
-      if (options.username != null || options.password != null) {
-        Objects.requireNonNull(options.username, "You must specify both the [username] and [password] attributes to turn on authentication for the [scp] workflow process.");
-        Objects.requireNonNull(options.password, "You must specify both the [username] and [password] attributes to turn on authentication for the [scp] workflow process.");
+      if (options.username != null) {
+        Objects.requireNonNull(options.username, "You must specify both the [username] attributes for the [scp] workflow process.");
       }
     }
 
+    this.server = server;
     this.options = options;
     this.location = location;
   }
@@ -87,15 +91,32 @@ public class SCPProcess implements Process {
    */
   @Override
   public Path publish(Artifact artifact, String item, Path artifactFile) throws ProcessFailureException {
-    String path = String.join("/", location, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString(), item);
-    SCP scp = new SCP(options);
+    String path = String.join("/", location, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString());
+
     try {
-      scp.upload(artifactFile, path);
-    } catch (JSchException | IOException e) {
+      Connection connection = new Connection(server, options.port);
+      connection.connect();
+      if (options.password != null) {
+        connection.authenticateWithPassword(options.username, options.password);
+      } else {
+        connection.authenticateWithPublicKey(options.username, options.identity, options.passphrase);
+      }
+
+      // Make the directories
+      Session session = connection.openSession();
+      session.execCommand("mkdir -p " + path);
+      session.close();
+
+      // SCP the file
+      SCPClient client = new SCPClient(connection);
+      client.put(artifactFile.toAbsolutePath().toString(), item, path, "0444");
+
+      connection.close();
+    } catch (IOException e) {
       throw new ProcessFailureException(e);
     }
 
-    logger.info("Published via SCP to [" + options.server + ":" + options.port + location + "/" + path + "]");
+    logger.info("Published via SCP to [" + server + ":" + location + "/" + path + "]");
     return null;
   }
 }

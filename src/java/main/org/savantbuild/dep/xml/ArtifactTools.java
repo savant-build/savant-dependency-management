@@ -123,9 +123,11 @@ public class ArtifactTools {
 
           group.dependencies.add(dependency);
           break;
+        case "artifact-meta-data":
+          // Do nothing, this is the root element
+          break;
         default:
-          throw new SAXException("Invalid element encountered in AMD file [" + qName + "]. You might need to upgrade " +
-              "Savant to use this artifact because it might be using a new feature of Savant.");
+          throw new SAXException("Invalid element encountered in AMD file [" + qName + "].");
       }
     }
   }

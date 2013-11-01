@@ -15,14 +15,13 @@
  */
 package org.savantbuild.dep.io;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.jar.JarEntry;
-import java.util.jar.JarInputStream;
 
 /**
  * This class provides File utility methods.
@@ -30,19 +29,13 @@ import java.util.jar.JarInputStream;
  * @author Brian Pontarelli
  */
 public class FileTools {
-  /**
-   * Calculates the MD5 sum for the given Path.
-   *
-   * @param path The path to MD5.
-   * @return The MD5 sum and never null.
-   * @throws IOException If the file could not be MD5 summed.
-   */
-  public static MD5 md5(Path path) throws IOException {
-    if (!Files.isRegularFile(path)) {
-      throw new IllegalArgumentException("Invalid file to MD5 [" + path.toAbsolutePath() + "]");
+  public static Path createTempPath(String prefix, String suffix, boolean deleteOnExit) throws IOException {
+    File file = File.createTempFile(prefix, suffix);
+    if (deleteOnExit) {
+      file.deleteOnExit();
     }
 
-    return MD5.fromBytes(Files.readAllBytes(path), path.getFileName().toString());
+    return file.toPath();
   }
 
   /**
@@ -75,27 +68,5 @@ public class FileTools {
         return FileVisitResult.CONTINUE;
       }
     });
-  }
-
-  /**
-   * Unzips the given JAR file.
-   *
-   * @param file The JAR file to unzip.
-   * @param dir  The directory to unzip to.
-   * @throws IOException If the unzip fails.
-   */
-  public static void unzip(Path file, Path dir) throws IOException {
-    try (JarInputStream jis = new JarInputStream(Files.newInputStream(file))) {
-      JarEntry entry = jis.getNextJarEntry();
-      while (entry != null) {
-        if (!entry.isDirectory()) {
-          Path outFile = dir.resolve(entry.getName());
-          Files.createDirectories(outFile.getParent());
-          Files.copy(jis, outFile);
-        }
-
-        entry = jis.getNextJarEntry();
-      }
-    }
   }
 }

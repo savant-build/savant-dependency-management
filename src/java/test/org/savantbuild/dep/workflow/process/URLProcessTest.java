@@ -58,10 +58,10 @@ public class URLProcessTest extends BaseUnitTest {
     return new Object[][]{
         {makeLocalURL(), "dependencies", "1.0.0", "build/test/cache/org/savantbuild/test/dependencies/1.0.0/dependencies-1.0.0.jar"},
         {makeLocalURL(), "dependencies-with-groups", "1.0.0", "build/test/cache/org/savantbuild/test/dependencies-with-groups/1.0.0/dependencies-with-groups-1.0.0.jar"},
-        {makeLocalURL(), "integration-build", "2.1.1-{integration}", "build/test/cache/org/savantbuild/test/major-compat/1.1/major-compat-1.1.jar"},
+        {makeLocalURL(), "integration-build", "2.1.1-{integration}", "build/test/cache/org/savantbuild/test/integration-build/2.1.1-{integration}/integration-build-2.1.1-{integration}.jar"},
         {"http://localhost:7000/test-deps/savant", "dependencies", "1.0.0", "build/test/cache/org/savantbuild/test/dependencies/1.0.0/dependencies-1.0.0.jar"},
         {"http://localhost:7000/test-deps/savant", "dependencies-with-groups", "1.0.0", "build/test/cache/org/savantbuild/test/dependencies-with-groups/1.0.0/dependencies-with-groups-1.0.0.jar"},
-        {"http://localhost:7000/test-deps/savant", "integration-build", "2.1.1-{integration}", "build/test/cache/org/savantbuild/test/major-compat/1.1/major-compat-1.1.jar"}
+        {"http://localhost:7000/test-deps/savant", "integration-build", "2.1.1-{integration}", "build/test/cache/org/savantbuild/test/integration-build/2.1.1-{integration}/integration-build-2.1.1-{integration}.jar"}
     };
   }
 

@@ -108,6 +108,8 @@ public class NetTools {
       huc.setHostnameVerifier((s, sslSession) -> true);
     }
 
+    uc.setDoInput(true);
+    uc.setDoOutput(false);
     uc.connect();
 
     if (uc instanceof HttpURLConnection) {
