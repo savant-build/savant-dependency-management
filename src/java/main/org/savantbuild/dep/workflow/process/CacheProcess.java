@@ -135,7 +135,7 @@ public class CacheProcess implements Process {
     }
 
     if (!item.endsWith("md5")) {
-      logger.info("Cached at [" + dir + "/" + artifactFile + "]");
+      logger.info("Cached at [" + cacheFile + "]");
     }
 
     return cacheFile;

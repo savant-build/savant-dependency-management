@@ -44,20 +44,20 @@ public class GraphNode<T, U> {
       return false;
     }
 
-    final GraphNode<T, U> graphNode = (GraphNode<T, U>) o;
-    if (!value.equals(graphNode.value)) {
+    final GraphNode<T, U> that = (GraphNode<T, U>) o;
+    if (!value.equals(that.value)) {
       return false;
     }
 
     // Compare the lists brute force (to avoid nasty Comparable inflection)
-    if (inbound.size() != graphNode.inbound.size()) {
+    if (inbound.size() != that.inbound.size()) {
       return false;
     }
-    if (outbound.size() != graphNode.outbound.size()) {
+    if (outbound.size() != that.outbound.size()) {
       return false;
     }
     for (GraphLink<T, U> myLink : outbound) {
-      boolean matches = graphNode.outbound.stream().anyMatch(
+      boolean matches = that.outbound.stream().anyMatch(
           (GraphLink<T, U> theirLink) -> myLink.value.equals(theirLink.value) && myLink.destination.value.equals(theirLink.destination.value)
       );
       if (!matches) {

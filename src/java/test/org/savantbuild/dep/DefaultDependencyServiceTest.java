@@ -123,7 +123,6 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
    */
   @Test
   public void buildGraphSimple() throws Exception {
-    Artifact root = new Artifact("org.savantbuild.test:root:1.0.0");
     ArtifactID leaf1 = new ArtifactID("org.savantbuild.test", "leaf", "leaf1", "jar");
     ArtifactID leaf2 = new ArtifactID("org.savantbuild.test", "leaf", "leaf2", "jar");
     ArtifactID leaf1_1 = new ArtifactID("org.savantbuild.test", "leaf1", "leaf1", "jar");
@@ -134,10 +133,10 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     ArtifactID multipleVersions = new ArtifactID("org.savantbuild.test", "multiple-versions", "multiple-versions", "jar");
     ArtifactID multipleVersionsDifferentDeps = new ArtifactID("org.savantbuild.test", "multiple-versions-different-dependencies", "multiple-versions-different-dependencies", "jar");
 
-    DependencyGraph expected = new DependencyGraph(root);
-    expected.addLink(root.id, multipleVersions, new DependencyLinkValue(new Version("1.0.0"), new Version("1.0.0"), "compile", false));
-    expected.addLink(root.id, intermediate, new DependencyLinkValue(new Version("1.0.0"), new Version("1.0.0"), "run", false));
-    expected.addLink(root.id, multipleVersionsDifferentDeps, new DependencyLinkValue(new Version("1.0.0"), new Version("1.0.0"), "compile", false));
+    DependencyGraph expected = new DependencyGraph(project);
+    expected.addLink(project.id, multipleVersions, new DependencyLinkValue(new Version("1.0.0"), new Version("1.0.0"), "compile", false));
+    expected.addLink(project.id, intermediate, new DependencyLinkValue(new Version("1.0.0"), new Version("1.0.0"), "run", false));
+    expected.addLink(project.id, multipleVersionsDifferentDeps, new DependencyLinkValue(new Version("1.0.0"), new Version("1.0.0"), "compile", false));
 
     expected.addLink(intermediate, multipleVersions, new DependencyLinkValue(new Version("1.0.0"), new Version("1.1.0"), "compile", false));
     expected.addLink(intermediate, multipleVersionsDifferentDeps, new DependencyLinkValue(new Version("1.0.0"), new Version("1.1.0"), "run", false));
