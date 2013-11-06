@@ -29,6 +29,7 @@ import org.savantbuild.dep.graph.DependencyGraph;
 import org.savantbuild.dep.graph.DependencyLinkValue;
 import org.savantbuild.dep.graph.GraphNode;
 import org.savantbuild.dep.graph.ResolvedArtifactGraph;
+import org.savantbuild.dep.io.MD5Exception;
 import org.savantbuild.dep.workflow.ArtifactMetaDataMissingException;
 import org.savantbuild.dep.workflow.ArtifactMissingException;
 import org.savantbuild.dep.workflow.Workflow;
@@ -55,7 +56,7 @@ public class DefaultDependencyService implements DependencyService {
    */
   @Override
   public DependencyGraph buildGraph(Artifact project, Dependencies dependencies, Workflow workflow)
-      throws ArtifactMetaDataMissingException {
+      throws ArtifactMetaDataMissingException, ProcessFailureException {
     logger.fine("Building DependencyGraph");
     DependencyGraph graph = new DependencyGraph(project);
     populateGraph(graph, new Dependency(project.id, project.version, false), dependencies, workflow, new HashSet<>());
@@ -68,7 +69,7 @@ public class DefaultDependencyService implements DependencyService {
   @Override
   public ResolvedArtifactGraph resolve(DependencyGraph graph, Workflow workflow, ResolveConfiguration configuration,
                                        DependencyListener... listeners)
-      throws CyclicException, ArtifactMissingException, ProcessFailureException {
+      throws CyclicException, ArtifactMissingException, ProcessFailureException, MD5Exception {
     ResolvedArtifact root = new ResolvedArtifact(graph.root.id, graph.root.version);
     ResolvedArtifactGraph resolvedGraph = new ResolvedArtifactGraph(root);
     Deque<ArtifactID> visited = new ArrayDeque<>();
@@ -112,7 +113,7 @@ public class DefaultDependencyService implements DependencyService {
    * @param artifactsRecursed The set of artifacts already resolved and recursed for.
    */
   private void populateGraph(DependencyGraph graph, Dependency origin, Dependencies dependencies, Workflow workflow,
-                             Set<Artifact> artifactsRecursed) throws ArtifactMetaDataMissingException {
+                             Set<Artifact> artifactsRecursed) throws ArtifactMetaDataMissingException, ProcessFailureException {
     dependencies.groups.forEach((type, group) -> {
       for (Dependency dependency : group.dependencies) {
         // Create a link using nodes so that we can be explicit
@@ -126,7 +127,9 @@ public class DefaultDependencyService implements DependencyService {
 
         // Recurse
         ArtifactMetaData amd = workflow.fetchMetaData(dependency);
-        populateGraph(graph, dependency, amd.dependencies, workflow, artifactsRecursed);
+        if (amd.dependencies != null) {
+          populateGraph(graph, dependency, amd.dependencies, workflow, artifactsRecursed);
+        }
 
         // Add the artifact to the list
         artifactsRecursed.add(dependency);

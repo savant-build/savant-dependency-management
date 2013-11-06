@@ -54,11 +54,11 @@ public class CacheProcessTest {
   @Test
   public void fetch() {
     CacheProcess process = new CacheProcess("test-deps/savant");
-    Artifact artifact = new Artifact("org.savantbuild.test:dependencies:dependencies:1.0.0:jar");
+    Artifact artifact = new Artifact("org.savantbuild.test:multiple-versions:multiple-versions:1.0.0:jar");
 
     Path file = process.fetch(artifact, artifact.getArtifactFile(), null);
     assertNotNull(file);
-    assertTrue(file.toAbsolutePath().toString().replace('\\', '/').endsWith("test-deps/savant/org/savantbuild/test/dependencies/1.0.0/dependencies-1.0.0.jar"));
+    assertTrue(file.toAbsolutePath().toString().replace('\\', '/').endsWith("test-deps/savant/org/savantbuild/test/multiple-versions/1.0.0/multiple-versions-1.0.0.jar"));
     assertTrue(Files.isRegularFile(file));
   }
 
@@ -68,12 +68,12 @@ public class CacheProcessTest {
     FileTools.prune(cache);
 
     CacheProcess process = new CacheProcess("build/test/deps");
-    Artifact artifact = new Artifact("org.savantbuild.test:dependencies:dependencies:1.0.0:jar");
+    Artifact artifact = new Artifact("org.savantbuild.test:multiple-versions:multiple-versions:1.0.0:jar");
 
-    Path artFile = Paths.get("test-deps/savant/org/savantbuild/test/dependencies/1.0.0/dependencies-1.0.0.jar");
+    Path artFile = Paths.get("test-deps/savant/org/savantbuild/test/multiple-versions/1.0.0/multiple-versions-1.0.0.jar");
     Path file = process.publish(artifact, artifact.getArtifactFile(), artFile);
     assertNotNull(file);
-    assertTrue(file.toAbsolutePath().toString().replace('\\', '/').endsWith("build/test/deps/org/savantbuild/test/dependencies/1.0.0/dependencies-1.0.0.jar"));
+    assertTrue(file.toAbsolutePath().toString().replace('\\', '/').endsWith("build/test/deps/org/savantbuild/test/multiple-versions/1.0.0/multiple-versions-1.0.0.jar"));
     assertTrue(Files.isRegularFile(file));
   }
 }

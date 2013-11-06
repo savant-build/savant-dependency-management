@@ -18,6 +18,7 @@ package org.savantbuild.dep.workflow;
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.ArtifactMetaData;
 import org.savantbuild.dep.domain.VersionException;
+import org.savantbuild.dep.io.MD5Exception;
 import org.savantbuild.dep.workflow.process.NegativeCacheException;
 import org.savantbuild.dep.workflow.process.ProcessFailureException;
 import org.savantbuild.dep.xml.ArtifactTools;
@@ -52,8 +53,9 @@ public class Workflow {
    * @throws ArtifactMissingException If the artifact could not be found.
    * @throws ProcessFailureException  If any of the processes encountered a failure while attempting to fetch the
    *                                  artifact.
+   * @throws MD5Exception If the item's MD5 file did not match the item.
    */
-  public Path fetchArtifact(Artifact artifact) throws ArtifactMissingException, ProcessFailureException {
+  public Path fetchArtifact(Artifact artifact) throws ArtifactMissingException, ProcessFailureException, MD5Exception {
     Path file = fetchWorkflow.fetchItem(artifact, artifact.getArtifactFile(), publishWorkflow);
     if (file == null) {
       throw new ArtifactMissingException(artifact);
@@ -73,9 +75,10 @@ public class Workflow {
    *                                 If the AMD file could not be found.
    * @throws ProcessFailureException If any of the processes encountered a failure while attempting to fetch the AMD
    *                                 file.
+   * @throws MD5Exception If the item's MD5 file did not match the item.
    */
   public ArtifactMetaData fetchMetaData(Artifact artifact)
-      throws ArtifactMetaDataMissingException, ProcessFailureException {
+      throws ArtifactMetaDataMissingException, ProcessFailureException, MD5Exception {
     Path file = fetchWorkflow.fetchItem(artifact, artifact.getArtifactMetaDataFile(), publishWorkflow);
     if (file == null) {
       throw new ArtifactMetaDataMissingException(artifact);
@@ -97,8 +100,9 @@ public class Workflow {
    * @return The Path of the source or null if it doesn't exist.
    * @throws ProcessFailureException If any of the processes encountered a failure while attempting to fetch the source
    *                                 file.
+   * @throws MD5Exception If the item's MD5 file did not match the item.
    */
-  public Path fetchSource(Artifact artifact) throws ProcessFailureException {
+  public Path fetchSource(Artifact artifact) throws ProcessFailureException, MD5Exception {
     try {
       Path file = fetchWorkflow.fetchItem(artifact, artifact.getArtifactSourceFile(), publishWorkflow);
       if (file == null) {

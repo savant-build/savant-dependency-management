@@ -19,6 +19,7 @@ import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.io.FileTools;
 import org.savantbuild.dep.io.IOTools;
 import org.savantbuild.dep.io.MD5;
+import org.savantbuild.dep.io.MD5Exception;
 import org.savantbuild.dep.net.NetTools;
 import org.savantbuild.dep.util.RuntimeTools;
 import org.savantbuild.dep.workflow.PublishWorkflow;
@@ -101,7 +102,7 @@ public class SVNProcess implements Process {
 
       MD5 itemMD5 = MD5.fromPath(itemFile);
       if (!itemMD5.equals(md5)) {
-        throw new ProcessFailureException("Artifact item file [" + itemURI.toString() + "] doesn't match MD5");
+        throw new MD5Exception("Artifact item file [" + itemURI.toString() + "] doesn't match MD5");
       }
 
       logger.info("Downloaded from SubVersion at [" + itemURI + "]");

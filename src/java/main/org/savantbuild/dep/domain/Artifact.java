@@ -79,7 +79,7 @@ public class Artifact {
     if (this == o) {
       return true;
     }
-    if (o == null || getClass() != o.getClass()) {
+    if (o == null || !(o instanceof Artifact)) {
       return false;
     }
 

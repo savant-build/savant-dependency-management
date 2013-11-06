@@ -16,6 +16,7 @@
 package org.savantbuild.dep.workflow;
 
 import org.savantbuild.dep.domain.Artifact;
+import org.savantbuild.dep.io.MD5Exception;
 import org.savantbuild.dep.workflow.process.Process;
 import org.savantbuild.dep.workflow.process.ProcessFailureException;
 
@@ -54,9 +55,10 @@ public class FetchWorkflow {
    * @param publishWorkflow The PublishWorkflow that is used to store the item if it can be found.
    * @return A file that contains the item contents or null if the item was not found.
    * @throws ProcessFailureException If any of the processes failed while attempting to fetch the artifact.
+   * @throws MD5Exception If the item's MD5 file did not match the item.
    */
   public Path fetchItem(Artifact artifact, String item, PublishWorkflow publishWorkflow)
-      throws ProcessFailureException {
+      throws ProcessFailureException, MD5Exception {
     logger.fine("Running processes " + processes + " to fetch [" + item + "]");
     return processes.stream()
                     .map((process) -> process.fetch(artifact, item, publishWorkflow))

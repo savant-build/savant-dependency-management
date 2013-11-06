@@ -13,4 +13,13 @@
   ~ either express or implied. See the License for the specific
   ~ language governing permissions and limitations under the License.
   -->
-<artifact-meta-data/>
+<artifact-meta-data>
+  <dependencies>
+    <dependency-group type="compile">
+      <dependency group="org.savantbuild.test" project="leaf1" name="leaf1" version="1.0.0" type="jar" optional="false"/>
+    </dependency-group>
+    <dependency-group type="run">
+      <dependency group="org.savantbuild.test" project="leaf" name="leaf2" version="1.0.0" type="jar" optional="false"/>
+    </dependency-group>
+  </dependencies>
+</artifact-meta-data>

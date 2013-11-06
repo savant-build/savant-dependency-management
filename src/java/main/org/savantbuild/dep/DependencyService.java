@@ -21,6 +21,7 @@ import org.savantbuild.dep.domain.Dependencies;
 import org.savantbuild.dep.graph.CyclicException;
 import org.savantbuild.dep.graph.DependencyGraph;
 import org.savantbuild.dep.graph.ResolvedArtifactGraph;
+import org.savantbuild.dep.io.MD5Exception;
 import org.savantbuild.dep.workflow.ArtifactMetaDataMissingException;
 import org.savantbuild.dep.workflow.ArtifactMissingException;
 import org.savantbuild.dep.workflow.Workflow;
@@ -54,7 +55,7 @@ public interface DependencyService {
    * @throws ProcessFailureException If a workflow process failed while fetching the meta-data.
    */
   DependencyGraph buildGraph(Artifact project, Dependencies dependencies, Workflow workflow)
-      throws ArtifactMetaDataMissingException;
+      throws ArtifactMetaDataMissingException, ProcessFailureException;
 
   /**
    * Resolves the graph by downloading the artifacts. This will use the Workflow to download the artifacts in the graph
@@ -69,10 +70,11 @@ public interface DependencyService {
    * @throws ProcessFailureException  If a workflow process failed while fetching an artifact or its source.
    * @throws ArtifactMissingException If any of the required artifacts are missing.
    * @throws CyclicException If any of the artifact graph has any cycles in it.
+   * @throws MD5Exception If the item's MD5 file did not match the item.
    */
   ResolvedArtifactGraph resolve(DependencyGraph graph, Workflow workflow, ResolveConfiguration configuration,
                                 DependencyListener... listeners)
-      throws CyclicException, ArtifactMissingException, ProcessFailureException;
+      throws CyclicException, ArtifactMissingException, ProcessFailureException, MD5Exception;
 
   /**
    * Verifies that the given graph contains compatible versions of each artifact. This does not modify the graph in any

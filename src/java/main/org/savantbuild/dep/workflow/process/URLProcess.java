@@ -18,6 +18,7 @@ package org.savantbuild.dep.workflow.process;
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.io.IOTools;
 import org.savantbuild.dep.io.MD5;
+import org.savantbuild.dep.io.MD5Exception;
 import org.savantbuild.dep.net.NetTools;
 import org.savantbuild.dep.workflow.PublishWorkflow;
 
@@ -96,7 +97,12 @@ public class URLProcess implements Process {
       }
 
       URI itemURI = NetTools.build(url, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString(), item);
-      Path itemFile = NetTools.downloadToPath(itemURI, username, password, md5);
+      Path itemFile;
+      try {
+        itemFile = NetTools.downloadToPath(itemURI, username, password, md5);
+      } catch (MD5Exception e) {
+        throw new MD5Exception("MD5 mismatch when downloading item from [" + itemURI.toString() + "]");
+      }
 
       if (itemFile != null) {
         logger.info("Downloaded from [" + itemURI + "]");

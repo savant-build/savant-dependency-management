@@ -56,11 +56,11 @@ public class URLProcessTest extends BaseUnitTest {
   @DataProvider(name = "fetchData")
   public Object[][] fetchData() {
     return new Object[][]{
-        {makeLocalURL(), "dependencies", "1.0.0", "build/test/cache/org/savantbuild/test/dependencies/1.0.0/dependencies-1.0.0.jar"},
-        {makeLocalURL(), "dependencies-with-groups", "1.0.0", "build/test/cache/org/savantbuild/test/dependencies-with-groups/1.0.0/dependencies-with-groups-1.0.0.jar"},
+        {makeLocalURL(), "multiple-versions", "1.0.0", "build/test/cache/org/savantbuild/test/multiple-versions/1.0.0/multiple-versions-1.0.0.jar"},
+        {makeLocalURL(), "leaf1", "1.0.0", "build/test/cache/org/savantbuild/test/leaf1/1.0.0/leaf1-1.0.0.jar"},
         {makeLocalURL(), "integration-build", "2.1.1-{integration}", "build/test/cache/org/savantbuild/test/integration-build/2.1.1-{integration}/integration-build-2.1.1-{integration}.jar"},
-        {"http://localhost:7000/test-deps/savant", "dependencies", "1.0.0", "build/test/cache/org/savantbuild/test/dependencies/1.0.0/dependencies-1.0.0.jar"},
-        {"http://localhost:7000/test-deps/savant", "dependencies-with-groups", "1.0.0", "build/test/cache/org/savantbuild/test/dependencies-with-groups/1.0.0/dependencies-with-groups-1.0.0.jar"},
+        {"http://localhost:7000/test-deps/savant", "multiple-versions", "1.0.0", "build/test/cache/org/savantbuild/test/multiple-versions/1.0.0/multiple-versions-1.0.0.jar"},
+        {"http://localhost:7000/test-deps/savant", "leaf1", "1.0.0", "build/test/cache/org/savantbuild/test/leaf1/1.0.0/leaf1-1.0.0.jar"},
         {"http://localhost:7000/test-deps/savant", "integration-build", "2.1.1-{integration}", "build/test/cache/org/savantbuild/test/integration-build/2.1.1-{integration}/integration-build-2.1.1-{integration}.jar"}
     };
   }
@@ -84,7 +84,7 @@ public class URLProcessTest extends BaseUnitTest {
   public void metaData(String url) throws Exception {
     FileTools.prune(Paths.get("build/test/cache"));
 
-    Artifact artifact = new Artifact("org.savantbuild.test:dependencies:dependencies:1.0:jar");
+    Artifact artifact = new Artifact("org.savantbuild.test:multiple-versions:multiple-versions:1.0:jar");
 
     CacheProcess process = new CacheProcess("build/test/cache");
     PublishWorkflow pw = new PublishWorkflow();
