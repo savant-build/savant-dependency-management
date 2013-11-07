@@ -20,6 +20,7 @@ import org.savantbuild.dep.DependencyService.ResolveConfiguration;
 import org.savantbuild.dep.DependencyService.ResolveConfiguration.TypeResolveConfiguration;
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.ArtifactID;
+import org.savantbuild.dep.domain.CompatibilityException;
 import org.savantbuild.dep.domain.Dependencies;
 import org.savantbuild.dep.domain.Dependency;
 import org.savantbuild.dep.domain.DependencyGroup;
@@ -152,6 +153,12 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
   }
 
   @Test
+  public void buildGraph() throws Exception {
+    DependencyGraph actual = service.buildGraph(project, dependencies, workflow);
+    assertEquals(actual, goodGraph);
+  }
+
+  @Test
   public void buildGraphFailureBadAMDMD5() throws Exception {
     try {
       Dependencies dependencies = makeSimpleDependencies("org.savantbuild.test:bad-amd-md5:1.0.0");
@@ -196,32 +203,6 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
   }
 
   @Test
-  public void buildGraph() throws Exception {
-    DependencyGraph actual = service.buildGraph(project, dependencies, workflow);
-    assertEquals(actual, goodGraph);
-  }
-
-  @Test
-  public void resolveGraphFailureMD5() throws Exception {
-    DependencyGraph graph = makeSimpleGraph("org.savantbuild.test:bad-md5:1.0.0");
-    try {
-      service.resolve(graph, workflow, new ResolveConfiguration().with("compile", new TypeResolveConfiguration(true, true)));
-    } catch (MD5Exception e) {
-      assertEquals(e.getMessage(), "MD5 mismatch when downloading item from [http://localhost:7000/test-deps/savant/org/savantbuild/test/bad-md5/1.0.0/bad-md5-1.0.0.jar]");
-    }
-  }
-
-  @Test
-  public void resolveGraphFailureMissingDependency() throws Exception {
-    DependencyGraph graph = makeSimpleGraph("org.savantbuild.test:missing-item:1.0.0");
-    try {
-      service.resolve(graph, workflow, new ResolveConfiguration().with("compile", new TypeResolveConfiguration(true, true)));
-    } catch (ArtifactMissingException e) {
-      assertEquals(e.artifact, new Artifact("org.savantbuild.test:missing-item:1.0.0"));
-    }
-  }
-
-  @Test
   public void resolveGraph() throws Exception {
     ResolvedArtifactGraph expected = new ResolvedArtifactGraph(projectResolved);
     ResolvedArtifact intermediate = new ResolvedArtifact("org.savantbuild.test:intermediate:1.0.0", cache.resolve("org/savantbuild/test/intermediate/1.0.0/intermediate-1.0.0.jar"));
@@ -259,13 +240,287 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
   }
 
   @Test
-  public void verifyCompatibility() throws Exception {
-
+  public void resolveGraphFailureMD5() throws Exception {
+    DependencyGraph graph = makeSimpleGraph("org.savantbuild.test:bad-md5:1.0.0");
+    try {
+      service.resolve(graph, workflow, new ResolveConfiguration().with("compile", new TypeResolveConfiguration(true, true)));
+    } catch (MD5Exception e) {
+      assertEquals(e.getMessage(), "MD5 mismatch when downloading item from [http://localhost:7000/test-deps/savant/org/savantbuild/test/bad-md5/1.0.0/bad-md5-1.0.0.jar]");
+    }
   }
 
   @Test
-  public void verifyCompatibilityFailure() throws Exception {
+  public void resolveGraphFailureMissingDependency() throws Exception {
+    DependencyGraph graph = makeSimpleGraph("org.savantbuild.test:missing-item:1.0.0");
+    try {
+      service.resolve(graph, workflow, new ResolveConfiguration().with("compile", new TypeResolveConfiguration(true, true)));
+    } catch (ArtifactMissingException e) {
+      assertEquals(e.artifact, new Artifact("org.savantbuild.test:missing-item:1.0.0"));
+    }
+  }
 
+  /**
+   * Graph:
+   * <p/>
+   * <pre>
+   *   root(1.0.0)-->(1.0.0)multiple-versions(1.0.0)-->(1.0.0)leaf:leaf1
+   *              |            (1.1.0)       (1.1.0)-->(1.0.0)leaf:leaf1
+   *              |              ^           (1.0.0)-->(2.1.1-{integration})integration-build
+   *              |              |           (1.1.0)-->(2.1.1-{integration})integration-build
+   *              |              |
+   *              |->(1.0.0)intermediate
+   *              |              |
+   *              |             \/
+   *              |          (1.1.0)
+   *              |->(1.0.0)multiple-versions-different-dependencies(1.0.0)-->(1.0.0)leaf:leaf2
+   *              |                                                 (1.0.0)-->(1.0.0)leaf1:leaf1
+   *              |                                                 (1.1.0)-->(2.0.0)leaf1:leaf1 // This is the upgrade
+   *              |                                                 (1.1.0)-->(1.0.0)leaf2:leaf2
+   *              |                                                 (1.1.0)-->(1.0.0)leaf3:leaf3 (optional)
+   * </pre>
+   * <p/>
+   * Notice that the leaf1:leaf1 node gets upgrade across a major version. This is allowed because the
+   * multiple-versions-different-dependencies node gets upgrade to 1.1.0 and therefore all of the dependencies below it
+   * are from the 1.1.0 version.
+   */
+  @Test
+  public void verifyCompatibilityComplex() throws Exception {
+    ArtifactID leaf1 = new ArtifactID("org.savantbuild.test", "leaf", "leaf1", "jar");
+    ArtifactID leaf2 = new ArtifactID("org.savantbuild.test", "leaf", "leaf2", "jar");
+    ArtifactID leaf1_1 = new ArtifactID("org.savantbuild.test", "leaf1", "leaf1", "jar");
+    ArtifactID leaf2_2 = new ArtifactID("org.savantbuild.test", "leaf2", "leaf2", "jar");
+    ArtifactID leaf3_3 = new ArtifactID("org.savantbuild.test", "leaf3", "leaf3", "jar");
+    ArtifactID integrationBuild = new ArtifactID("org.savantbuild.test", "integration-build", "integration-build", "jar");
+    ArtifactID intermediate = new ArtifactID("org.savantbuild.test", "intermediate", "intermediate", "jar");
+    ArtifactID multipleVersions = new ArtifactID("org.savantbuild.test", "multiple-versions", "multiple-versions", "jar");
+    ArtifactID multipleVersionsDifferentDeps = new ArtifactID("org.savantbuild.test", "multiple-versions-different-dependencies", "multiple-versions-different-dependencies", "jar");
+
+    DependencyGraph incompatible = new DependencyGraph(project);
+    incompatible.addLink(project.id, multipleVersions, new DependencyLinkValue(new Version("1.0.0"), new Version("1.0.0"), "compile", false));
+    incompatible.addLink(project.id, intermediate, new DependencyLinkValue(new Version("1.0.0"), new Version("1.0.0"), "run", false));
+    incompatible.addLink(project.id, multipleVersionsDifferentDeps, new DependencyLinkValue(new Version("1.0.0"), new Version("1.0.0"), "compile", false));
+
+    incompatible.addLink(intermediate, multipleVersions, new DependencyLinkValue(new Version("1.0.0"), new Version("1.1.0"), "compile", false));
+    incompatible.addLink(intermediate, multipleVersionsDifferentDeps, new DependencyLinkValue(new Version("1.0.0"), new Version("1.1.0"), "run", false));
+
+    incompatible.addLink(multipleVersions, leaf1, new DependencyLinkValue(new Version("1.0.0"), new Version("1.0.0"), "compile", false));
+    incompatible.addLink(multipleVersions, leaf1, new DependencyLinkValue(new Version("1.1.0"), new Version("1.0.0"), "compile", false));
+    incompatible.addLink(multipleVersions, integrationBuild, new DependencyLinkValue(new Version("1.0.0"), new Version("2.1.1-{integration}"), "compile", false));
+    incompatible.addLink(multipleVersions, integrationBuild, new DependencyLinkValue(new Version("1.1.0"), new Version("2.1.1-{integration}"), "compile", false));
+
+    incompatible.addLink(multipleVersionsDifferentDeps, leaf2, new DependencyLinkValue(new Version("1.0.0"), new Version("1.0.0"), "run", false));
+    incompatible.addLink(multipleVersionsDifferentDeps, leaf1_1, new DependencyLinkValue(new Version("1.0.0"), new Version("1.0.0"), "compile", false));
+
+    incompatible.addLink(multipleVersionsDifferentDeps, leaf1_1, new DependencyLinkValue(new Version("1.1.0"), new Version("2.0.0"), "compile", false));
+    incompatible.addLink(multipleVersionsDifferentDeps, leaf2_2, new DependencyLinkValue(new Version("1.1.0"), new Version("1.0.0"), "compile", false));
+    incompatible.addLink(multipleVersionsDifferentDeps, leaf3_3, new DependencyLinkValue(new Version("1.1.0"), new Version("1.0.0"), "run", true));
+
+    try {
+      service.verifyCompatibility(goodGraph);
+    } catch (CompatibilityException e) {
+      fail("Should not have thrown");
+    }
+  }
+
+  /**
+   * Graph:
+   * <p/>
+   * <pre>
+   *   root(1.0.0)-->(1.0.0)multiple-versions(1.0.0)-->(1.0.0)leaf:leaf
+   *              |            (1.1.0)       (1.1.0)-->(2.0.0)leaf:leaf
+   *              |              ^                         (1.0.0) (2.0.0)
+   *              |              |                           |       ^
+   *              |->(1.0.0)intermediate                     |       |
+   *              |              |                           |       |
+   *              |             \/                           |       |
+   *              |          (1.1.0)                      (1.0.0) (1.1.0)
+   *              |->(1.0.0)multiple-versions-different-dependencies
+   *              |
+   *              |
+   *              |
+   *              |
+   * </pre>
+   * <p/>
+   * Notice that the leaf has two versions, 1.0.0 and 2.0.0. Since the first visit to this node from the
+   * multiple-versions node will upgrade leaf to 2.0.0, it should ignore the 1.0.0 version of it and not generate an
+   * error.
+   */
+  @Test
+  public void verifyCompatibilityComplexCross() throws Exception {
+    ArtifactID leaf = new ArtifactID("org.savantbuild.test", "leaf", "leaf", "jar");
+    ArtifactID intermediate = new ArtifactID("org.savantbuild.test", "intermediate", "intermediate", "jar");
+    ArtifactID multipleVersions = new ArtifactID("org.savantbuild.test", "multiple-versions", "multiple-versions", "jar");
+    ArtifactID multipleVersionsDifferentDeps = new ArtifactID("org.savantbuild.test", "multiple-versions-different-dependencies", "multiple-versions-different-dependencies", "jar");
+
+    DependencyGraph incompatible = new DependencyGraph(project);
+    incompatible.addLink(project.id, multipleVersions, new DependencyLinkValue(new Version("1.0.0"), new Version("1.0.0"), "compile", false));
+    incompatible.addLink(project.id, intermediate, new DependencyLinkValue(new Version("1.0.0"), new Version("1.0.0"), "run", false));
+    incompatible.addLink(project.id, multipleVersionsDifferentDeps, new DependencyLinkValue(new Version("1.0.0"), new Version("1.0.0"), "compile", false));
+
+    incompatible.addLink(intermediate, multipleVersions, new DependencyLinkValue(new Version("1.0.0"), new Version("1.1.0"), "compile", false));
+    incompatible.addLink(intermediate, multipleVersionsDifferentDeps, new DependencyLinkValue(new Version("1.0.0"), new Version("1.1.0"), "run", false));
+
+    incompatible.addLink(multipleVersions, leaf, new DependencyLinkValue(new Version("1.0.0"), new Version("1.0.0"), "compile", false));
+    incompatible.addLink(multipleVersions, leaf, new DependencyLinkValue(new Version("1.1.0"), new Version("2.0.0"), "compile", false));
+
+    incompatible.addLink(multipleVersionsDifferentDeps, leaf, new DependencyLinkValue(new Version("1.0.0"), new Version("1.0.0"), "run", false));
+    incompatible.addLink(multipleVersionsDifferentDeps, leaf, new DependencyLinkValue(new Version("1.1.0"), new Version("2.0.0"), "run", false));
+
+    try {
+      service.verifyCompatibility(goodGraph);
+    } catch (CompatibilityException e) {
+      fail("Should not have thrown");
+    }
+  }
+
+  /**
+   * Graph:
+   * <p/>
+   * <pre>
+   *   root(1.0.0)-->(1.0.0)multiple-versions(1.0.0)-->(1.0.0)leaf:leaf
+   *              |            (1.1.0)       (1.1.0)-->(1.0.0)leaf:leaf
+   *              |              ^                          (2.0.0) (1.0.0)
+   *              |              |                              ^      ^
+   *              |->(1.0.0)intermediate                        |      |
+   *              |              |                              |      |
+   *              |             \/                              |      |
+   *              |          (1.1.0)                        (1.0.0) (1.1.0)
+   *              |->(1.0.0)multiple-versions-different-dependencies
+   *              |
+   *              |
+   *              |
+   *              |
+   * </pre>
+   * <p/>
+   * Notice that the leaf has two versions, 1.0.0 and 2.0.0. However, leaf multiple-versions-different-dependencies gets
+   * upgraded to 1.1.0, which means that leaf gets downgraded to 1.0.0. This should not cause a failure.
+   */
+  @Test
+  public void verifyCompatibilityDowngrade() throws Exception {
+    ArtifactID leaf = new ArtifactID("org.savantbuild.test", "leaf", "leaf", "jar");
+    ArtifactID intermediate = new ArtifactID("org.savantbuild.test", "intermediate", "intermediate", "jar");
+    ArtifactID multipleVersions = new ArtifactID("org.savantbuild.test", "multiple-versions", "multiple-versions", "jar");
+    ArtifactID multipleVersionsDifferentDeps = new ArtifactID("org.savantbuild.test", "multiple-versions-different-dependencies", "multiple-versions-different-dependencies", "jar");
+
+    DependencyGraph incompatible = new DependencyGraph(project);
+    incompatible.addLink(project.id, multipleVersions, new DependencyLinkValue(new Version("1.0.0"), new Version("1.0.0"), "compile", false));
+    incompatible.addLink(project.id, intermediate, new DependencyLinkValue(new Version("1.0.0"), new Version("1.0.0"), "run", false));
+    incompatible.addLink(project.id, multipleVersionsDifferentDeps, new DependencyLinkValue(new Version("1.0.0"), new Version("1.0.0"), "compile", false));
+
+    incompatible.addLink(intermediate, multipleVersions, new DependencyLinkValue(new Version("1.0.0"), new Version("1.1.0"), "compile", false));
+    incompatible.addLink(intermediate, multipleVersionsDifferentDeps, new DependencyLinkValue(new Version("1.0.0"), new Version("1.1.0"), "run", false));
+
+    incompatible.addLink(multipleVersions, leaf, new DependencyLinkValue(new Version("1.0.0"), new Version("1.0.0"), "compile", false));
+    incompatible.addLink(multipleVersions, leaf, new DependencyLinkValue(new Version("1.1.0"), new Version("1.0.0"), "compile", false));
+
+    incompatible.addLink(multipleVersionsDifferentDeps, leaf, new DependencyLinkValue(new Version("1.0.0"), new Version("2.0.0"), "run", false));
+    incompatible.addLink(multipleVersionsDifferentDeps, leaf, new DependencyLinkValue(new Version("1.1.0"), new Version("1.0.0"), "compile", false));
+
+    try {
+      service.verifyCompatibility(incompatible);
+    } catch (CompatibilityException e) {
+      e.printStackTrace();
+      fail("Should not have thrown");
+    }
+  }
+
+  /**
+   * Graph:
+   * <p/>
+   * <pre>
+   *   root(1.0.0)-->(1.0.0)leaf
+   *              |     * (2.0.0)
+   *              |          ^
+   *              |          |
+   *              |          |
+   *              |->(1.0.0)intermediate
+   * </pre>
+   * <p/>
+   * Notice that leaf has two versions, 1.0.0 and 2.0.0. Since this artifact is reachable from the root node, it will
+   * cause a failure.
+   */
+  @Test
+  public void verifyCompatibilityFailureFromRoot() throws Exception {
+    ArtifactID leaf = new ArtifactID("org.savantbuild.test", "leaf", "leaf", "jar");
+    ArtifactID intermediate = new ArtifactID("org.savantbuild.test", "intermediate", "intermediate", "jar");
+
+    DependencyGraph incompatible = new DependencyGraph(project);
+    incompatible.addLink(project.id, leaf, new DependencyLinkValue(new Version("1.0.0"), new Version("1.0.0"), "run", false));
+    incompatible.addLink(project.id, intermediate, new DependencyLinkValue(new Version("1.0.0"), new Version("1.0.0"), "run", false));
+    incompatible.addLink(intermediate, leaf, new DependencyLinkValue(new Version("1.0.0"), new Version("2.0.0"), "compile", false));
+
+    try {
+      service.verifyCompatibility(incompatible);
+      fail("Should have failed");
+    } catch (CompatibilityException e) {
+      assertEquals(e.artifactID, leaf);
+      assertEquals(e.min, new Version("1.0.0"));
+      assertEquals(e.max, new Version("2.0.0"));
+      e.printStackTrace();
+    }
+  }
+
+  /**
+   * Graph:
+   * <p/>
+   * <pre>
+   *   root(1.0.0)-->(1.0.0)multiple-versions(1.0.0)-->(1.0.0)leaf:leaf
+   *              |            (1.1.0)       (1.1.0)-->(1.0.0)leaf:leaf
+   *              |              ^                          (1.0.0) (2.0.0)
+   *              |              |                              ^      ^
+   *              |->(1.0.0)intermediate                        |      |
+   *              |              |                              |      |
+   *              |             \/                              |      |
+   *              |          (1.1.0)                        (1.0.0) (1.1.0)
+   *              |->(1.0.0)multiple-versions-different-dependencies
+   *              |
+   *              |
+   *              |
+   *              |
+   * </pre>
+   * <p/>
+   * Notice that the leaf has two versions, 1.0.0 and 2.0.0. Since the first visit to this node from the
+   * multiple-versions node will encounter two incompatible versions, it will cause a failure.
+   */
+  @Test
+  public void verifyCompatibilityFailureNested() throws Exception {
+    ArtifactID leaf = new ArtifactID("org.savantbuild.test", "leaf", "leaf", "jar");
+    ArtifactID intermediate = new ArtifactID("org.savantbuild.test", "intermediate", "intermediate", "jar");
+    ArtifactID multipleVersions = new ArtifactID("org.savantbuild.test", "multiple-versions", "multiple-versions", "jar");
+    ArtifactID multipleVersionsDifferentDeps = new ArtifactID("org.savantbuild.test", "multiple-versions-different-dependencies", "multiple-versions-different-dependencies", "jar");
+
+    DependencyGraph incompatible = new DependencyGraph(project);
+    incompatible.addLink(project.id, multipleVersions, new DependencyLinkValue(new Version("1.0.0"), new Version("1.0.0"), "compile", false));
+    incompatible.addLink(project.id, intermediate, new DependencyLinkValue(new Version("1.0.0"), new Version("1.0.0"), "run", false));
+    incompatible.addLink(project.id, multipleVersionsDifferentDeps, new DependencyLinkValue(new Version("1.0.0"), new Version("1.0.0"), "compile", false));
+
+    incompatible.addLink(intermediate, multipleVersions, new DependencyLinkValue(new Version("1.0.0"), new Version("1.1.0"), "compile", false));
+    incompatible.addLink(intermediate, multipleVersionsDifferentDeps, new DependencyLinkValue(new Version("1.0.0"), new Version("1.1.0"), "run", false));
+
+    incompatible.addLink(multipleVersions, leaf, new DependencyLinkValue(new Version("1.0.0"), new Version("1.0.0"), "compile", false));
+    incompatible.addLink(multipleVersions, leaf, new DependencyLinkValue(new Version("1.1.0"), new Version("1.0.0"), "compile", false));
+
+    incompatible.addLink(multipleVersionsDifferentDeps, leaf, new DependencyLinkValue(new Version("1.0.0"), new Version("1.0.0"), "run", false));
+    incompatible.addLink(multipleVersionsDifferentDeps, leaf, new DependencyLinkValue(new Version("1.1.0"), new Version("2.0.0"), "compile", false));
+
+    try {
+      service.verifyCompatibility(incompatible);
+      fail("Should have failed");
+    } catch (CompatibilityException e) {
+      assertEquals(e.artifactID, leaf);
+      assertEquals(e.min, new Version("1.0.0"));
+      assertEquals(e.max, new Version("2.0.0"));
+      e.printStackTrace();
+    }
+  }
+
+  @Test
+  public void verifyCompatibilitySimple() throws Exception {
+    try {
+      service.verifyCompatibility(goodGraph);
+    } catch (CompatibilityException e) {
+      fail("Should not have thrown");
+    }
   }
 
   private Dependencies makeSimpleDependencies(String dependency) {

@@ -13,26 +13,32 @@
  * either express or implied. See the License for the specific
  * language governing permissions and limitations under the License.
  */
-package org.savantbuild.dep.domain;
+package org.savantbuild.dep.util;
 
 /**
- * An exception that is thrown when a Version string cannot be parsed.
+ * Stores the min and max of a comparable.
  *
  * @author Brian Pontarelli
  */
-public class CompatibilityException extends RuntimeException {
-  public final ArtifactID artifactID;
-  public final Version min;
-  public final Version max;
+public class MinMax<T extends Comparable<T>> {
+  public T min;
+  public T max;
 
-  public CompatibilityException(ArtifactID artifactID, Version min, Version max) {
-    this.artifactID = artifactID;
-    this.min = min;
-    this.max = max;
+  public void add(T t) {
+    if (min == null || min.compareTo(t) > 0) {
+      min = t;
+    }
+
+    if (max == null || max.compareTo(t) < 0) {
+      max = t;
+    }
   }
 
   @Override
   public String toString() {
-    return "The artifact [" + artifactID + "] has incompatible versions in your dependencies. The versions are [" + min + ", " + max + "]";
+    return "MinMax{" +
+        "min=" + min +
+        ", max=" + max +
+        "} " + super.toString();
   }
 }

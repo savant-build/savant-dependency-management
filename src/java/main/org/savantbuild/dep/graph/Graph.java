@@ -45,16 +45,6 @@ import java.util.Set;
  */
 public interface Graph<T, U> {
   /**
-   * Adds the given value to the graph in a new node. If the implementation does allow duplicates this will create a new
-   * node. If the implementation does not allow duplicates, this will replace any existing node value but will retain
-   * the node itself (more like an updateNode).
-   *
-   * @param value The value to add to an existing or new node.
-   * @return The Node created or updated.
-   */
-  GraphNode<T, U> addNode(T value);
-
-  /**
    * Adds a link between the node whose value is the origin value given and the node whose value is the destination
    * value given. This method works well for implementations that only allow values to exist once.
    * <p/>
@@ -78,6 +68,16 @@ public interface Graph<T, U> {
   void addLink(GraphNode<T, U> origin, GraphNode<T, U> destination, U linkValue);
 
   /**
+   * Adds the given value to the graph in a new node. If the implementation does allow duplicates this will create a new
+   * node. If the implementation does not allow duplicates, this will replace any existing node value but will retain
+   * the node itself (more like an updateNode).
+   *
+   * @param value The value to add to an existing or new node.
+   * @return The Node created or updated.
+   */
+  GraphNode<T, U> addNode(T value);
+
+  /**
    * Determines if the Graph contains the given value or not.
    *
    * @param value The value.
@@ -86,11 +86,13 @@ public interface Graph<T, U> {
   boolean contains(T value);
 
   /**
-   * Returns a Set that contains all of the unique values contained in the graph.
+   * Returns a list of all the inbound links for the node whose value is given. This locates the first node with the
+   * value.
    *
-   * @return All the values.
+   * @param value The value to find the links for.
+   * @return The links or an empty list if the node exists and has no links or null if the node does not exist.
    */
-  Set<T> values();
+  List<GraphLink<T, U>> getInboundLinks(T value);
 
   /**
    * Retrieves the graph node whose value is equal to the given value. If the implementation allows duplicates, this
@@ -101,15 +103,6 @@ public interface Graph<T, U> {
    * @return The node or null if there isn't one.
    */
   GraphNode<T, U> getNode(T value);
-
-  /**
-   * Returns a list of all the inbound links for the node whose value is given. This locates the first node with the
-   * value.
-   *
-   * @param value The value to find the links for.
-   * @return The links or an empty list if the node exists and has no links or null if the node does not exist.
-   */
-  List<GraphLink<T, U>> getInboundLinks(T value);
 
   /**
    * Returns a list of all the outbound links for the node whose value is given. This locates the first node with the
@@ -129,4 +122,11 @@ public interface Graph<T, U> {
    *         nodes don't exist.
    */
   List<GraphPath<T>> getPaths(T origin, T destination);
+
+  /**
+   * Returns a Set that contains all of the unique values contained in the graph.
+   *
+   * @return All the values.
+   */
+  Set<T> values();
 }

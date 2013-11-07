@@ -206,15 +206,13 @@ public class HashGraph<T, U> implements Graph<T, U> {
     List<GraphLink<T, U>> links = node.getOutboundLinks();
     for (GraphLink<T, U> link : links) {
       node.removeLink(link);
-      GraphLink<T, U> inbound = link.destination.getInboundLink(link.origin);
-      link.destination.removeLink(inbound);
+      link.destination.getInboundLinks(link.origin).forEach(link.destination::removeLink);
     }
 
     links = node.getInboundLinks();
     for (GraphLink<T, U> link : links) {
       node.removeLink(link);
-      GraphLink<T, U> outbound = link.origin.getOutboundLink(link.destination);
-      link.origin.removeLink(outbound);
+      link.origin.getOutboundLinks(link.destination).forEach(link.origin::removeLink);
     }
   }
 }

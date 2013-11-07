@@ -27,9 +27,10 @@ import org.savantbuild.dep.domain.Version;
 import org.savantbuild.dep.graph.CyclicException;
 import org.savantbuild.dep.graph.DependencyGraph;
 import org.savantbuild.dep.graph.DependencyLinkValue;
-import org.savantbuild.dep.graph.GraphNode;
+import org.savantbuild.dep.graph.GraphLink;
 import org.savantbuild.dep.graph.ResolvedArtifactGraph;
 import org.savantbuild.dep.io.MD5Exception;
+import org.savantbuild.dep.util.MinMax;
 import org.savantbuild.dep.workflow.ArtifactMetaDataMissingException;
 import org.savantbuild.dep.workflow.ArtifactMissingException;
 import org.savantbuild.dep.workflow.Workflow;
@@ -40,6 +41,7 @@ import java.util.Deque;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import static java.util.Arrays.asList;
 
@@ -85,21 +87,38 @@ public class DefaultDependencyService implements DependencyService {
    */
   @Override
   public void verifyCompatibility(DependencyGraph graph) throws CompatibilityException {
-    for (GraphNode<ArtifactID, DependencyLinkValue> node : graph.getNodes()) {
-      Version min = node.getInboundLinks()
-                        .stream()
-                        .map((link) -> link.value.dependencyVersion)
-                        .min(Version::compareTo)
-                        .get();
-      Version max = node.getInboundLinks()
-                        .stream()
-                        .map((link) -> link.value.dependencyVersion)
-                        .max(Version::compareTo)
-                        .get();
-      if (!min.isCompatibleWith(max)) {
-        throw new CompatibilityException(node.value, min, max);
+    graph.getNodes().forEach((node) -> {
+      if (node.getInboundLinks().isEmpty()) {
+        System.out.println("Node [" + node.value + "] is empty");
+        return;
       }
-    }
+
+      MinMax<Version> minMax = new MinMax<>();
+      Set<ArtifactID> dependents = node.getInboundLinks().stream().map((link) -> link.origin.value).collect(Collectors.toSet());
+      System.out.println("Node [" + node.value + "] dependents " + dependents);
+      dependents.forEach((dependent) -> {
+        Version maxDependentVersion = node.getInboundLinks()
+                                          .stream()
+                                          .filter((link) -> link.origin.equals(graph.getNode(dependent)))
+                                          .map((link) -> link.value.dependentVersion)
+                                          .max(Version::compareTo)
+                                          .get();
+
+        Version dependentMax = node.getInboundLinks(graph.getNode(dependent))
+                                   .stream()
+                                   .filter((link) -> link.value.dependentVersion.equals(maxDependentVersion))
+                                   .map((link) -> link.value.dependencyVersion)
+                                   .findFirst()
+                                   .get();
+        minMax.add(dependentMax);
+
+        System.out.println("Dependent [" + dependent + "] max version [" + maxDependentVersion + "] dependent max [" + dependentMax + "]");
+      });
+
+      if (!minMax.min.isCompatibleWith(minMax.max)) {
+        throw new CompatibilityException(node.value, minMax.min, minMax.max);
+      }
+    });
   }
 
   /**

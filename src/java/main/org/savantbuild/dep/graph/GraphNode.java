@@ -17,6 +17,7 @@ package org.savantbuild.dep.graph;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * This class is a single node in the artifact graph.
@@ -68,28 +69,16 @@ public class GraphNode<T, U> {
     return true;
   }
 
-  public GraphLink<T, U> getInboundLink(GraphNode<T, U> origin) {
-    for (GraphLink<T, U> link : inbound) {
-      if (link.origin.equals(origin)) {
-        return link;
-      }
-    }
-
-    return null;
+  public List<GraphLink<T, U>> getInboundLinks(GraphNode<T, U> origin) {
+    return inbound.stream().filter((link) -> link.origin.equals(origin)).collect(Collectors.toList());
   }
 
   public List<GraphLink<T, U>> getInboundLinks() {
     return new ArrayList<>(inbound);
   }
 
-  public GraphLink<T, U> getOutboundLink(GraphNode<T, U> destination) {
-    for (GraphLink<T, U> link : outbound) {
-      if (link.destination.equals(destination)) {
-        return link;
-      }
-    }
-
-    return null;
+  public List<GraphLink<T, U>> getOutboundLinks(GraphNode<T, U> destination) {
+    return outbound.stream().filter((link) -> link.destination.equals(destination)).collect(Collectors.toList());
   }
 
   public List<GraphLink<T, U>> getOutboundLinks() {

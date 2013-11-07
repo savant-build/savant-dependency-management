@@ -45,13 +45,13 @@ public class HashGraphTest {
     GraphNode<String, String> foo = graph.addNode("foo");
     GraphNode<String, String> bar = graph.addNode("bar");
     graph.addLink("foo", "bar", "link");
-    GraphLink<String, String> link = foo.getOutboundLink(bar);
-    assertNotNull(link);
-    assertEquals("link", link.value);
+    List<GraphLink<String, String>> links = foo.getOutboundLinks(bar);
+    assertEquals(links.size(), 1);
+    assertEquals("link", links.get(0).value);
 
-    link = bar.getInboundLink(foo);
-    assertNotNull(link);
-    assertEquals("link", link.value);
+    links = bar.getInboundLinks(foo);
+    assertEquals(links.size(), 1);
+    assertEquals("link", links.get(0).value);
   }
 
   @Test
@@ -163,21 +163,21 @@ public class HashGraphTest {
     assertEquals(graph.getNode("three").getInboundLinks().size(), 1);
     assertEquals(graph.getNode("three").getOutboundLinks().size(), 0);
 
-    assertEquals(graph.getNode("one").getOutboundLink(graph.getNode("one-two")).origin.value, "one");
-    assertEquals(graph.getNode("one").getOutboundLink(graph.getNode("one-two")).destination.value, "one-two");
-    assertEquals(graph.getNode("one-two").getInboundLink(graph.getNode("one")).origin.value, "one");
-    assertEquals(graph.getNode("one-two").getInboundLink(graph.getNode("one")).destination.value, "one-two");
+    assertEquals(graph.getNode("one").getOutboundLinks(graph.getNode("one-two")).get(0).origin.value, "one");
+    assertEquals(graph.getNode("one").getOutboundLinks(graph.getNode("one-two")).get(0).destination.value, "one-two");
+    assertEquals(graph.getNode("one-two").getInboundLinks(graph.getNode("one")).get(0).origin.value, "one");
+    assertEquals(graph.getNode("one-two").getInboundLinks(graph.getNode("one")).get(0).destination.value, "one-two");
 
-    assertEquals(graph.getNode("one").getOutboundLink(graph.getNode("three")).origin.value, "one");
-    assertEquals(graph.getNode("one").getOutboundLink(graph.getNode("three")).destination.value, "three");
-    assertEquals(graph.getNode("three").getInboundLink(graph.getNode("one")).origin.value, "one");
-    assertEquals(graph.getNode("three").getInboundLink(graph.getNode("one")).destination.value, "three");
+    assertEquals(graph.getNode("one").getOutboundLinks(graph.getNode("three")).get(0).origin.value, "one");
+    assertEquals(graph.getNode("one").getOutboundLinks(graph.getNode("three")).get(0).destination.value, "three");
+    assertEquals(graph.getNode("three").getInboundLinks(graph.getNode("one")).get(0).origin.value, "one");
+    assertEquals(graph.getNode("three").getInboundLinks(graph.getNode("one")).get(0).destination.value, "three");
 
-    assertEquals(graph.getNode("one-two").getOutboundLink(graph.getNode("one-three")).origin.value, "one-two");
-    assertEquals(graph.getNode("one-two").getOutboundLink(graph.getNode("one-three")).destination.value, "one-three");
-    assertEquals(graph.getNode("one-three").getInboundLink(graph.getNode("one-two")).origin.value, "one-two");
-    assertEquals(graph.getNode("one-three").getInboundLink(graph.getNode("one-two")).destination.value, "one-three");
-    assertEquals(graph.getNode("one-three").getOutboundLink(graph.getNode("six")).origin.value, "one-three");
-    assertEquals(graph.getNode("one-three").getOutboundLink(graph.getNode("six")).destination.value, "six");
+    assertEquals(graph.getNode("one-two").getOutboundLinks(graph.getNode("one-three")).get(0).origin.value, "one-two");
+    assertEquals(graph.getNode("one-two").getOutboundLinks(graph.getNode("one-three")).get(0).destination.value, "one-three");
+    assertEquals(graph.getNode("one-three").getInboundLinks(graph.getNode("one-two")).get(0).origin.value, "one-two");
+    assertEquals(graph.getNode("one-three").getInboundLinks(graph.getNode("one-two")).get(0).destination.value, "one-three");
+    assertEquals(graph.getNode("one-three").getOutboundLinks(graph.getNode("six")).get(0).origin.value, "one-three");
+    assertEquals(graph.getNode("one-three").getOutboundLinks(graph.getNode("six")).get(0).destination.value, "six");
   }
 }
