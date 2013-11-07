@@ -136,9 +136,7 @@ public class CacheProcess implements Process {
       throw new ProcessFailureException(e);
     }
 
-    if (!item.endsWith("md5")) {
-      logger.info("Cached at [" + cacheFile + "]");
-    }
+    logger.fine("Cached at [" + cacheFile + "]");
 
     return cacheFile;
   }

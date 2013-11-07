@@ -22,6 +22,9 @@ import org.savantbuild.dep.domain.Dependency;
 import org.savantbuild.dep.domain.DependencyGroup;
 import org.savantbuild.dep.domain.Version;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Formatter;
 import java.util.List;
 
 /**
@@ -103,5 +106,31 @@ public class DependencyGraph extends HashGraph<ArtifactID, DependencyLinkValue> 
     int result = super.hashCode();
     result = 31 * result + root.hashCode();
     return result;
+  }
+
+  /**
+   * Outputs this DependencyGraph as a GraphViz DOT file.
+   *
+   * @return The DOT file String.
+   */
+  public String toDOT() {
+    StringBuilder build = new StringBuilder();
+    build.append("digraph Dependencies {\n");
+
+    Deque<ArtifactID> visited = new ArrayDeque<>();
+    Formatter formatter = new Formatter(build);
+    recurseToDOT(formatter, root.id, visited);
+
+    build.append("}\n");
+    return build.toString();
+  }
+
+  private void recurseToDOT(Formatter formatter, ArtifactID origin, Deque<ArtifactID> visited) {
+    getOutboundLinks(origin).forEach((link) -> {
+      formatter.format("  \"%s\" -> \"%s\" [label=\"%s\", headlabel=\"%s\", taillabel=\"%s\"];\n", link.origin.value, link.destination.value, link.value.type, link.value.dependentVersion, link.value.dependencyVersion);
+      visited.push(origin);
+      recurseToDOT(formatter, link.destination.value, visited);
+      visited.pop();
+    });
   }
 }
