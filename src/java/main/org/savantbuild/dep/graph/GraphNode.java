@@ -49,7 +49,7 @@ public class GraphNode<T, U> {
       return false;
     }
 
-    // Compare the lists brute force (to avoid nasty Comparable inflection)
+    // Compare the lists brute force (to avoid nasty Comparable infection)
     if (inbound.size() != that.inbound.size()) {
       return false;
     }

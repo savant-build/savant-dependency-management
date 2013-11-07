@@ -85,13 +85,27 @@ public interface DependencyService {
    */
   void verifyCompatibility(DependencyGraph graph) throws CompatibilityException;
 
+  /**
+   * Controls how resolution functions for each dependency-group. This determines if sources are fetched or if
+   * transitive dependencies are fetch.
+   */
   public static class ResolveConfiguration {
     Map<String, TypeResolveConfiguration> groupConfigurations = new HashMap<>();
 
-    public static class TypeResolveConfiguration {
-      public boolean fetchSource;
+    public ResolveConfiguration with(String type, TypeResolveConfiguration typeResolveConfiguration) {
+      groupConfigurations.put(type, typeResolveConfiguration);
+      return this;
+    }
 
-      public boolean transitive;
+    public static class TypeResolveConfiguration {
+      public final boolean fetchSource;
+
+      public final boolean transitive;
+
+      public TypeResolveConfiguration(boolean fetchSource, boolean transitive) {
+        this.fetchSource = fetchSource;
+        this.transitive = transitive;
+      }
     }
   }
 }

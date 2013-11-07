@@ -37,4 +37,27 @@ public class Dependency extends Artifact {
     super(spec);
     this.optional = optional;
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+
+    final Dependency that = (Dependency) o;
+    return optional == that.optional;
+  }
+
+  @Override
+  public int hashCode() {
+    int result = super.hashCode();
+    result = 31 * result + (optional ? 1 : 0);
+    return result;
+  }
 }

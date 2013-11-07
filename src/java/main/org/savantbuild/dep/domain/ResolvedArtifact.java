@@ -30,4 +30,32 @@ public class ResolvedArtifact extends Artifact {
     this.id = id;
     this.version = version;
   }
+
+  public ResolvedArtifact(String spec, Path file) {
+    super(spec);
+    this.file = file;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+
+    final ResolvedArtifact that = (ResolvedArtifact) o;
+    return (file != null ? file.equals(that.file) : that.file == null);
+  }
+
+  @Override
+  public int hashCode() {
+    int result = super.hashCode();
+    result = 31 * result + (file != null ? file.hashCode() : 0);
+    return result;
+  }
 }

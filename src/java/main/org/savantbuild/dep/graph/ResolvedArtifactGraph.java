@@ -31,4 +31,27 @@ public class ResolvedArtifactGraph extends HashGraph<ResolvedArtifact, String> {
     this.root = root;
     addNode(root);
   }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+
+    final ResolvedArtifactGraph that = (ResolvedArtifactGraph) o;
+    return root.equals(that.root);
+  }
+
+  @Override
+  public int hashCode() {
+    int result = super.hashCode();
+    result = 31 * result + root.hashCode();
+    return result;
+  }
 }

@@ -74,7 +74,9 @@ public class DefaultDependencyService implements DependencyService {
     ResolvedArtifactGraph resolvedGraph = new ResolvedArtifactGraph(root);
     Deque<ArtifactID> visited = new ArrayDeque<>();
     visited.push(root.id);
-    resolve(graph, resolvedGraph, workflow, configuration, root, visited, listeners);
+    Deque<ArtifactID> resolved = new ArrayDeque<>();
+    resolved.push(root.id);
+    resolve(graph, resolvedGraph, workflow, configuration, root, visited, resolved, listeners);
     return resolvedGraph;
   }
 
@@ -139,9 +141,9 @@ public class DefaultDependencyService implements DependencyService {
 
   private void resolve(DependencyGraph graph, ResolvedArtifactGraph resolvedGraph, Workflow workflow,
                        ResolveConfiguration configuration, ResolvedArtifact origin, Deque<ArtifactID> visited,
-                       DependencyListener... listeners)
+                       Deque<ArtifactID> resolved, DependencyListener... listeners)
   throws CyclicException, ArtifactMissingException, ProcessFailureException {
-    Dependencies dependencies = graph.getDependencies(graph.root);
+    Dependencies dependencies = graph.getDependencies(origin);
     dependencies.groups.forEach((type, group) -> {
       if (!configuration.groupConfigurations.containsKey(type)) {
         return;
@@ -172,10 +174,11 @@ public class DefaultDependencyService implements DependencyService {
           listener.artifactFetched(resolvedArtifact);
         });
 
-        // Recurse if the configuration is set to transitive
-        if (typeResolveConfiguration.transitive) {
-          visited.push(dependency.id);
-          resolve(graph, resolvedGraph, workflow, configuration, resolvedArtifact, visited, listeners);
+        // Recurse if the configuration is set to transitive and this dependency hasn't been recursed yet
+        if (typeResolveConfiguration.transitive && !resolved.contains(resolvedArtifact.id)) {
+          visited.push(resolvedArtifact.id);
+          resolve(graph, resolvedGraph, workflow, configuration, resolvedArtifact, visited, resolved, listeners);
+          resolved.add(resolvedArtifact.id);
           visited.pop();
         }
       });

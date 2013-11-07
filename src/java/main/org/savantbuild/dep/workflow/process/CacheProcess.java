@@ -82,6 +82,8 @@ public class CacheProcess implements Process {
       file = Paths.get(path + ".neg");
       if (Files.isRegularFile(file)) {
         throw new NegativeCacheException();
+      } else {
+        file = null;
       }
     }
 

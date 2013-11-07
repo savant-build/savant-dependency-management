@@ -186,24 +186,23 @@ public class Version implements Comparable<Version> {
   /**
    * Compares the given Object with this Version for equality.
    *
-   * @param other The object to compare with this Version for equality.
+   * @param o The object to compare with this Version for equality.
    * @return True if they are both Versions and equal, false otherwise.
    */
 
-  public boolean equals(Object other) {
-    if (this == other) {
+  public boolean equals(Object o) {
+    if (this == o) {
       return true;
     }
-    if (other == null || getClass() != other.getClass()) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
 
-    final Version version = (Version) other;
-
-    return major == version.major &&
-        minor == version.minor &&
-        patch == version.patch &&
-        (preRelease != null ? preRelease.equals(version.preRelease) : version.preRelease == null);
+    final Version that = (Version) o;
+    return major == that.major &&
+        minor == that.minor &&
+        patch == that.patch &&
+        (preRelease != null ? preRelease.equals(that.preRelease) : that.preRelease == null);
   }
 
   /**
