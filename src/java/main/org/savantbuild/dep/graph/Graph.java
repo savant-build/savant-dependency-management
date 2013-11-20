@@ -227,6 +227,10 @@ public interface Graph<T, U> {
         result = 31 * result + value.hashCode();
         return result;
       }
+
+      public String toString() {
+        return origin + "-(" + value + ")->" + destination;
+      }
     }
   }
 

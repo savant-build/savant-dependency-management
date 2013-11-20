@@ -322,12 +322,16 @@ public class HashGraph<T, U> implements Graph<T, U> {
 
     void addInboundEdge(HashNode<T, U> origin, U edgeValue) {
       HashEdge<T, U> edge = new HashEdge<>(origin, this, edgeValue);
-      inbound.add(edge);
+      if (!inbound.contains(edge)) {
+        inbound.add(edge);
+      }
     }
 
     void addOutboundEdge(HashNode<T, U> destination, U edgeValue) {
       HashEdge<T, U> edge = new HashEdge<>(this, destination, edgeValue);
-      outbound.add(edge);
+      if (!outbound.contains(edge)) {
+        outbound.add(edge);
+      }
     }
 
     public void removeEdge(HashEdge<T, U> edge) {

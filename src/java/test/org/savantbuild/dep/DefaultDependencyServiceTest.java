@@ -61,6 +61,8 @@ public class DefaultDependencyServiceTest extends BaseTest {
 
   public DependencyGraph goodGraph;
 
+  public ArtifactGraph goodReducedGraph;
+
   public Artifact project = new Artifact("org.savantbuild.test:project:1.0", License.Apachev2);
 
   public ResolvedArtifact projectResolved = new ResolvedArtifact(project.id, project.version, License.Apachev2, null);
@@ -69,7 +71,10 @@ public class DefaultDependencyServiceTest extends BaseTest {
 
   public DefaultDependencyService service = new DefaultDependencyService();
 
-  public ArtifactGraph goodReducedGraph;
+  @AfterMethod
+  public void afterMethodStopFileServer() {
+    server.stop(0);
+  }
 
   /**
    * Graph:
@@ -126,7 +131,6 @@ public class DefaultDependencyServiceTest extends BaseTest {
     goodReducedGraph.addEdge(intermediate, multipleVersionsDifferentDeps, "run");
     goodReducedGraph.addEdge(multipleVersions, leaf1, "compile");
     goodReducedGraph.addEdge(multipleVersions, integrationBuild, "compile");
-    goodReducedGraph.addEdge(multipleVersionsDifferentDeps, leaf2, "run");
     goodReducedGraph.addEdge(multipleVersionsDifferentDeps, leaf1_1, "compile");
     goodReducedGraph.addEdge(multipleVersionsDifferentDeps, leaf1_1, "compile");
     goodReducedGraph.addEdge(multipleVersionsDifferentDeps, leaf2_2, "compile");
@@ -140,11 +144,6 @@ public class DefaultDependencyServiceTest extends BaseTest {
             new Dependency(intermediate.id, new Version("1.0.0"), false)
         )
     );
-  }
-
-  @AfterMethod
-  public void afterMethodStopFileServer() {
-    server.stop(0);
   }
 
   @BeforeMethod
@@ -207,64 +206,6 @@ public class DefaultDependencyServiceTest extends BaseTest {
     }
   }
 
-  @Test
-  public void resolveGraph() throws Exception {
-    ResolvedArtifactGraph expected = new ResolvedArtifactGraph(projectResolved);
-    ResolvedArtifact intermediate = new ResolvedArtifact("org.savantbuild.test:intermediate:1.0.0", License.Apachev2, cache.resolve("org/savantbuild/test/intermediate/1.0.0/intermediate-1.0.0.jar"));
-    ResolvedArtifact multipleVersions = new ResolvedArtifact("org.savantbuild.test:multiple-versions:1.1.0", License.Apachev2, cache.resolve("org/savantbuild/test/multiple-versions/1.1.0/multiple-versions-1.1.0.jar"));
-    ResolvedArtifact multipleVersionsDifferentDeps = new ResolvedArtifact("org.savantbuild.test:multiple-versions-different-dependencies:1.1.0", License.Apachev2, cache.resolve("org/savantbuild/test/multiple-versions-different-dependencies/1.1.0/multiple-versions-different-dependencies-1.1.0.jar"));
-    ResolvedArtifact leaf1 = new ResolvedArtifact("org.savantbuild.test:leaf:leaf1:1.0.0:jar", License.GPL, cache.resolve("org/savantbuild/test/leaf/1.0.0/leaf1-1.0.0.jar"));
-    ResolvedArtifact leaf1_1 = new ResolvedArtifact("org.savantbuild.test:leaf1:1.0.0", License.Commercial, cache.resolve("org/savantbuild/test/leaf1/1.0.0/leaf1-1.0.0.jar"));
-    ResolvedArtifact leaf2_2 = new ResolvedArtifact("org.savantbuild.test:leaf2:1.0.0", License.OtherNonDistributableOpenSource, cache.resolve("org/savantbuild/test/leaf2/1.0.0/leaf2-1.0.0.jar"));
-    ResolvedArtifact integrationBuild = new ResolvedArtifact("org.savantbuild.test:integration-build:2.1.1-{integration}", License.Apachev2, cache.resolve("org/savantbuild/test/integration-build/2.1.1-{integration}/integration-build-2.1.1-{integration}.jar"));
-
-    expected.addEdge(projectResolved, multipleVersions, "compile");
-    expected.addEdge(projectResolved, intermediate, "run");
-    expected.addEdge(projectResolved, multipleVersionsDifferentDeps, "compile");
-    expected.addEdge(intermediate, multipleVersions, "compile");
-    expected.addEdge(intermediate, multipleVersionsDifferentDeps, "run");
-    expected.addEdge(multipleVersions, leaf1, "compile");
-    expected.addEdge(multipleVersions, integrationBuild, "compile");
-    expected.addEdge(multipleVersionsDifferentDeps, leaf1_1, "compile");
-    expected.addEdge(multipleVersionsDifferentDeps, leaf2_2, "compile");
-
-    ArtifactGraph artifactGraph = service.reduce(goodGraph);
-    ResolvedArtifactGraph actual = service.resolve(artifactGraph, workflow,
-        new ResolveConfiguration().with("compile", new TypeResolveConfiguration(true, true))
-                                  .with("run", new TypeResolveConfiguration(true, true))
-    );
-
-    assertEquals(actual, expected);
-
-    // Verify that all the artifacts have files and they all exist (except for the project)
-    Set<ResolvedArtifact> artifacts = actual.values();
-    artifacts.remove(projectResolved);
-    artifacts.forEach((artifact) -> assertTrue(Files.isRegularFile(artifact.file)));
-  }
-
-  @Test
-  public void resolveGraphFailureMD5() throws Exception {
-    DependencyGraph graph = makeSimpleGraph("org.savantbuild.test:bad-md5:1.0.0");
-    try {
-      ArtifactGraph artifactGraph = service.reduce(graph);
-      service.resolve(artifactGraph, workflow, new ResolveConfiguration().with("compile", new TypeResolveConfiguration(true, true)));
-    } catch (MD5Exception e) {
-      assertEquals(e.getMessage(), "MD5 mismatch when downloading item from [http://localhost:7000/test-deps/savant/org/savantbuild/test/bad-md5/1.0.0/bad-md5-1.0.0.jar]");
-    }
-  }
-
-  @Test
-  public void resolveGraphFailureMissingDependency() throws Exception {
-    DependencyGraph graph = makeSimpleGraph("org.savantbuild.test:missing-item:1.0.0");
-    try {
-      ArtifactGraph artifactGraph = service.reduce(graph);
-      service.resolve(artifactGraph, workflow, new ResolveConfiguration().with("compile", new TypeResolveConfiguration(true, true)));
-    } catch (ArtifactMissingException e) {
-      assertEquals(e.artifact, new AbstractArtifact("org.savantbuild.test:missing-item:1.0.0") {
-      });
-    }
-  }
-
   /**
    * Graph:
    * <p/>
@@ -273,8 +214,9 @@ public class DefaultDependencyServiceTest extends BaseTest {
    *              |            (1.1.0)       (1.1.0)-->(1.0.0)leaf:leaf1
    *              |              ^           (1.0.0)-->(2.1.1-{integration})integration-build
    *              |              |           (1.1.0)-->(2.1.1-{integration})integration-build
-   *              |              |
+   *              |           (1.0.0)
    *              |->(1.0.0)intermediate
+   *              |           (1.0.0)
    *              |              |
    *              |             \/
    *              |          (1.1.0)
@@ -296,7 +238,7 @@ public class DefaultDependencyServiceTest extends BaseTest {
     Artifact leaf1_1 = new Artifact(new ArtifactID("org.savantbuild.test", "leaf1", "leaf1", "jar"), new Version("2.0.0"), License.Commercial);
     Artifact leaf2_2 = new Artifact(new ArtifactID("org.savantbuild.test", "leaf2", "leaf2", "jar"), new Version("1.0.0"), License.Commercial);
     Artifact leaf3_3 = new Artifact(new ArtifactID("org.savantbuild.test", "leaf3", "leaf3", "jar"), new Version("1.0.0"), License.Commercial);
-    Artifact integrationBuild = new Artifact(new ArtifactID("org.savantbuild.test", "integration-build", "integration-build", "jar"), new Version("2.1.1={integration}"), License.Commercial);
+    Artifact integrationBuild = new Artifact(new ArtifactID("org.savantbuild.test", "integration-build", "integration-build", "jar"), new Version("2.1.1-{integration}"), License.Commercial);
     Artifact intermediate = new Artifact(new ArtifactID("org.savantbuild.test", "intermediate", "intermediate", "jar"), new Version("1.0.0"), License.Commercial);
     Artifact multipleVersions = new Artifact(new ArtifactID("org.savantbuild.test", "multiple-versions", "multiple-versions", "jar"), new Version("1.1.0"), License.Commercial);
     Artifact multipleVersionsDifferentDeps = new Artifact(new ArtifactID("org.savantbuild.test", "multiple-versions-different-dependencies", "multiple-versions-different-dependencies", "jar"), new Version("1.1.0"), License.Commercial);
@@ -405,9 +347,10 @@ public class DefaultDependencyServiceTest extends BaseTest {
    *              |
    * </pre>
    * <p/>
-   * Notice that the intermediate2 has two versions, 1.0.0 and 2.0.0. However, multiple-versions-different-dependencies gets
-   * upgraded to 1.1.0, which means that intermediate2 gets downgraded to 1.0.0. This also means that leaf should be downgraded
-   * to 1.0.0 since the dependency from intermediate2(2.0.0) should be ignored since that version is never used in the graph.
+   * Notice that the intermediate2 has two versions, 1.0.0 and 2.0.0. However, multiple-versions-different-dependencies
+   * gets upgraded to 1.1.0, which means that intermediate2 gets downgraded to 1.0.0. This also means that leaf should
+   * be downgraded to 1.0.0 since the dependency from intermediate2(2.0.0) should be ignored since that version is never
+   * used in the graph.
    */
   @Test
   public void reduceDowngrade() throws Exception {
@@ -503,7 +446,7 @@ public class DefaultDependencyServiceTest extends BaseTest {
    * multiple-versions node will encounter two incompatible versions, it will cause a failure.
    */
   @Test
-  public void verifyCompatibilityFailureNested() throws Exception {
+  public void reduceFailureNested() throws Exception {
     ArtifactID leaf = new ArtifactID("org.savantbuild.test", "leaf", "leaf", "jar");
     ArtifactID intermediate = new ArtifactID("org.savantbuild.test", "intermediate", "intermediate", "jar");
     ArtifactID multipleVersions = new ArtifactID("org.savantbuild.test", "multiple-versions", "multiple-versions", "jar");
@@ -532,9 +475,67 @@ public class DefaultDependencyServiceTest extends BaseTest {
   }
 
   @Test
-  public void verifyCompatibilitySimple() throws Exception {
+  public void reduceSimple() throws Exception {
     ArtifactGraph actual = service.reduce(goodGraph);
     assertEquals(actual, goodReducedGraph);
+  }
+
+  @Test
+  public void resolveGraph() throws Exception {
+    ResolvedArtifactGraph expected = new ResolvedArtifactGraph(projectResolved);
+    ResolvedArtifact intermediate = new ResolvedArtifact("org.savantbuild.test:intermediate:1.0.0", License.Apachev2, cache.resolve("org/savantbuild/test/intermediate/1.0.0/intermediate-1.0.0.jar"));
+    ResolvedArtifact multipleVersions = new ResolvedArtifact("org.savantbuild.test:multiple-versions:1.1.0", License.Apachev2, cache.resolve("org/savantbuild/test/multiple-versions/1.1.0/multiple-versions-1.1.0.jar"));
+    ResolvedArtifact multipleVersionsDifferentDeps = new ResolvedArtifact("org.savantbuild.test:multiple-versions-different-dependencies:1.1.0", License.Apachev2, cache.resolve("org/savantbuild/test/multiple-versions-different-dependencies/1.1.0/multiple-versions-different-dependencies-1.1.0.jar"));
+    ResolvedArtifact leaf1 = new ResolvedArtifact("org.savantbuild.test:leaf:leaf1:1.0.0:jar", License.GPL, cache.resolve("org/savantbuild/test/leaf/1.0.0/leaf1-1.0.0.jar"));
+    ResolvedArtifact leaf1_1 = new ResolvedArtifact("org.savantbuild.test:leaf1:1.0.0", License.Commercial, cache.resolve("org/savantbuild/test/leaf1/1.0.0/leaf1-1.0.0.jar"));
+    ResolvedArtifact leaf2_2 = new ResolvedArtifact("org.savantbuild.test:leaf2:1.0.0", License.OtherNonDistributableOpenSource, cache.resolve("org/savantbuild/test/leaf2/1.0.0/leaf2-1.0.0.jar"));
+    ResolvedArtifact integrationBuild = new ResolvedArtifact("org.savantbuild.test:integration-build:2.1.1-{integration}", License.Apachev2, cache.resolve("org/savantbuild/test/integration-build/2.1.1-{integration}/integration-build-2.1.1-{integration}.jar"));
+
+    expected.addEdge(projectResolved, multipleVersions, "compile");
+    expected.addEdge(projectResolved, intermediate, "run");
+    expected.addEdge(projectResolved, multipleVersionsDifferentDeps, "compile");
+    expected.addEdge(intermediate, multipleVersions, "compile");
+    expected.addEdge(intermediate, multipleVersionsDifferentDeps, "run");
+    expected.addEdge(multipleVersions, leaf1, "compile");
+    expected.addEdge(multipleVersions, integrationBuild, "compile");
+    expected.addEdge(multipleVersionsDifferentDeps, leaf1_1, "compile");
+    expected.addEdge(multipleVersionsDifferentDeps, leaf2_2, "compile");
+
+    ArtifactGraph artifactGraph = service.reduce(goodGraph);
+    ResolvedArtifactGraph actual = service.resolve(artifactGraph, workflow,
+        new ResolveConfiguration().with("compile", new TypeResolveConfiguration(true, true))
+                                  .with("run", new TypeResolveConfiguration(true, true))
+    );
+
+    assertEquals(actual, expected);
+
+    // Verify that all the artifacts have files and they all exist (except for the project)
+    Set<ResolvedArtifact> artifacts = actual.values();
+    artifacts.remove(projectResolved);
+    artifacts.forEach((artifact) -> assertTrue(Files.isRegularFile(artifact.file)));
+  }
+
+  @Test
+  public void resolveGraphFailureMD5() throws Exception {
+    DependencyGraph graph = makeSimpleGraph("org.savantbuild.test:bad-md5:1.0.0");
+    try {
+      ArtifactGraph artifactGraph = service.reduce(graph);
+      service.resolve(artifactGraph, workflow, new ResolveConfiguration().with("compile", new TypeResolveConfiguration(true, true)));
+    } catch (MD5Exception e) {
+      assertEquals(e.getMessage(), "MD5 mismatch when downloading item from [http://localhost:7000/test-deps/savant/org/savantbuild/test/bad-md5/1.0.0/bad-md5-1.0.0.jar]");
+    }
+  }
+
+  @Test
+  public void resolveGraphFailureMissingDependency() throws Exception {
+    DependencyGraph graph = makeSimpleGraph("org.savantbuild.test:missing-item:1.0.0");
+    try {
+      ArtifactGraph artifactGraph = service.reduce(graph);
+      service.resolve(artifactGraph, workflow, new ResolveConfiguration().with("compile", new TypeResolveConfiguration(true, true)));
+    } catch (ArtifactMissingException e) {
+      assertEquals(e.artifact, new AbstractArtifact("org.savantbuild.test:missing-item:1.0.0") {
+      });
+    }
   }
 
   private Dependencies makeSimpleDependencies(String dependency) {

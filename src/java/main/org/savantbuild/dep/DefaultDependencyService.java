@@ -43,7 +43,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
-import java.util.stream.Stream;
+import java.util.stream.Collectors;
 
 import static java.util.Arrays.asList;
 
@@ -80,24 +80,37 @@ public class DefaultDependencyService implements DependencyService {
 
     ArtifactGraph artifactGraph = new ArtifactGraph(graph.root);
     Map<ArtifactID, Artifact> artifacts = new HashMap<>();
+    artifacts.put(graph.root.id, graph.root);
+
     graph.traverse(graph.root.id, (origin, destination, edgeValue, depth) -> {
-      // If this edge is not the correct version of the parent or it is optional, bail
-      if (!edgeValue.dependentVersion.equals(artifacts.get(origin).version) || edgeValue.optional) {
-        return true;
+      // If this edge optional, skip it and don't continue traversal down
+      if (edgeValue.optional) {
+        return false;
       }
 
       List<Edge<ArtifactID, DependencyEdgeValue>> inbound = graph.getInboundEdges(destination);
       boolean alreadyCheckedAllParents = inbound.size() > 0 && inbound.stream().allMatch((edge) -> artifacts.containsKey(edge.getOrigin()));
       if (alreadyCheckedAllParents) {
+        List<Edge<ArtifactID, DependencyEdgeValue>> significantInbound = inbound.stream()
+                                                                                .filter((edge) -> edge.getValue().dependentVersion.equals(artifacts.get(edge.getOrigin()).version))
+                                                                                .collect(Collectors.toList());
+
         // This is the complex part, for each inbound edge, grab the one where the origin is the correct version (based
         // on the versions we have already kept). Then for each of those, map to the dependency version (the version of
         // the destination node). Then get the min and max.
-        Stream<Version> filteredEdgeVersions =
-            inbound.stream()
-                   .filter((edge) -> edge.getValue().dependentVersion.equals(artifacts.get(edge.getOrigin()).version))
-                   .map((edge) -> edge.getValue().dependencyVersion);
-        Version min = filteredEdgeVersions.min(Version::compareTo).get();
-        Version max = filteredEdgeVersions.max(Version::compareTo).get();
+        Version min = significantInbound.stream()
+                                        .map((edge) -> edge.getValue().dependencyVersion)
+                                        .min(Version::compareTo)
+                                        .orElse(null);
+        Version max = significantInbound.stream()
+                                        .map((edge) -> edge.getValue().dependencyVersion)
+                                        .max(Version::compareTo)
+                                        .orElse(null);
+
+        // This dependency is no longer used
+        if (min == null || max == null) {
+          return false;
+        }
 
         // Ensure min and max are compatible
         if (!min.isCompatibleWith(max)) {
@@ -106,9 +119,13 @@ public class DefaultDependencyService implements DependencyService {
 
         // Build the artifact for this node, save it in the Map and put it in the ArtifactGraph
         Artifact destinationArtifact = new Artifact(destination, max, edgeValue.license);
-        Artifact originArtifact = artifacts.get(origin);
         artifacts.put(destination, destinationArtifact);
-        artifactGraph.addEdge(originArtifact, destinationArtifact, edgeValue.type);
+
+        significantInbound.stream()
+                          .forEach((edge) -> {
+                            Artifact originArtifact = artifacts.get(edge.getOrigin());
+                            artifactGraph.addEdge(originArtifact, destinationArtifact, edge.getValue().type);
+                          });
       }
 
       return true; // Always continue traversal
