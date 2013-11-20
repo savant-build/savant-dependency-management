@@ -15,10 +15,8 @@
  */
 package org.savantbuild.dep.domain;
 
-import org.savantbuild.dep.graph.DependencyGraph;
-
-import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -28,9 +26,7 @@ import java.util.Set;
  * @author Brian Pontarelli
  */
 public class Dependencies {
-  public final Map<String, DependencyGroup> groups = new HashMap<>();
-
-  public DependencyGraph graph;
+  public final Map<String, DependencyGroup> groups = new LinkedHashMap<>();
 
   public String name;
 
@@ -66,8 +62,8 @@ public class Dependencies {
    *
    * @return All of the artifacts.
    */
-  public Set<Artifact> getAllArtifacts() {
-    Set<Artifact> set = new HashSet<>();
+  public Set<AbstractArtifact> getAllArtifacts() {
+    Set<AbstractArtifact> set = new HashSet<>();
     groups.values().forEach((group) -> set.addAll(group.dependencies));
     return set;
   }

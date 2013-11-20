@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001-2013, Inversoft, All Rights Reserved
+ * Copyright (c) 2013, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,32 +13,30 @@
  * either express or implied. See the License for the specific
  * language governing permissions and limitations under the License.
  */
-package org.savantbuild.dep.util;
+
+package org.savantbuild.dep.domain;
 
 /**
- * Stores the min and max of a comparable.
+ * Enumeration for licenses.
  *
  * @author Brian Pontarelli
  */
-public class MinMax<T extends Comparable<T>> {
-  public T min;
-  public T max;
+public enum License {
+  Apachev1,
 
-  public void add(T t) {
-    if (min == null || min.compareTo(t) > 0) {
-      min = t;
-    }
+  Apachev2,
 
-    if (max == null || max.compareTo(t) < 0) {
-      max = t;
-    }
-  }
+  BSD,
 
-  @Override
-  public String toString() {
-    return "MinMax{" +
-        "min=" + min +
-        ", max=" + max +
-        "} " + super.toString();
-  }
+  Commercial,
+
+  GPL,
+
+  LGPL,
+
+  OtherDistributableOpenSource,
+
+  OtherNonDistributableOpenSource,
+
+  MIT
 }

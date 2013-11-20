@@ -20,6 +20,7 @@ import org.savantbuild.dep.domain.ArtifactMetaData;
 import org.savantbuild.dep.domain.Dependencies;
 import org.savantbuild.dep.domain.Dependency;
 import org.savantbuild.dep.domain.DependencyGroup;
+import org.savantbuild.dep.domain.License;
 import org.savantbuild.dep.domain.Version;
 import org.savantbuild.dep.domain.VersionException;
 import org.xml.sax.Attributes;
@@ -34,8 +35,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Path;
-import java.util.Map;
-import java.util.Set;
+import java.util.Objects;
+
+import static java.util.Arrays.asList;
 
 /**
  * This class is a toolkit for handling artifact operations.
@@ -57,15 +59,17 @@ public class ArtifactTools {
 
     try (PrintWriter pw = new PrintWriter(new FileWriter(tmp))) {
       pw.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-      pw.printf("<artifact-meta-data>\n");
+      pw.printf("<artifact-meta-data license=\"%s\">\n", artifactMetaData.license);
 
       Dependencies dependencies = artifactMetaData.dependencies;
       if (dependencies != null) {
         pw.println("  <dependencies>");
-        Map<String, DependencyGroup> groups = dependencies.groups;
-        Set<String> keys = groups.keySet();
-        for (String key : keys) {
-          DependencyGroup group = groups.get(key);
+
+        dependencies.groups.forEach((type, group) -> {
+          if (!group.export) {
+            return;
+          }
+
           pw.printf("    <dependency-group type=\"%s\">\n", group.type);
 
           for (Dependency dependency : group.dependencies) {
@@ -73,7 +77,8 @@ public class ArtifactTools {
                 dependency.id.group, dependency.id.project, dependency.id.name, dependency.version, dependency.id.type, dependency.optional);
           }
           pw.println("    </dependency-group>");
-        }
+        });
+
         pw.println("  </dependencies>");
       }
       pw.println("</artifact-meta-data>");
@@ -97,13 +102,15 @@ public class ArtifactTools {
     SAXParser parser = SAXParserFactory.newInstance().newSAXParser();
     ArtifactMetaDataHandler handler = new ArtifactMetaDataHandler();
     parser.parse(file.toFile(), handler);
-    return new ArtifactMetaData(handler.dependencies);
+    return new ArtifactMetaData(handler.dependencies, handler.license);
   }
 
   public static class ArtifactMetaDataHandler extends DefaultHandler {
-    private Dependencies dependencies;
+    public License license;
 
-    private DependencyGroup group;
+    public Dependencies dependencies;
+
+    public DependencyGroup group;
 
     @Override
     public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
@@ -112,19 +119,35 @@ public class ArtifactTools {
           dependencies = new Dependencies();
           break;
         case "dependency-group":
-          String type = attributes.getValue("type");
-          group = new DependencyGroup(type);
-          dependencies.groups.put(type, group);
+          try {
+            String type = attributes.getValue("type");
+            group = new DependencyGroup(type, true);
+            dependencies.groups.put(type, group);
+          } catch (NullPointerException e) {
+            throw new NullPointerException("Invalid AMD file. The dependency-group elements must specify a [type] attribute");
+          }
+
           break;
         case "dependency":
-          Dependency dependency = new Dependency(new ArtifactID(attributes.getValue("group"), attributes.getValue("project"),
-              attributes.getValue("name"), attributes.getValue("type")), new Version(attributes.getValue("version")),
-              Boolean.parseBoolean(attributes.getValue("optional")));
+          try {
+            Dependency dependency = new Dependency(new ArtifactID(attributes.getValue("group"), attributes.getValue("project"),
+                attributes.getValue("name"), attributes.getValue("type")), new Version(attributes.getValue("version")),
+                Boolean.parseBoolean(attributes.getValue("optional")));
+            group.dependencies.add(dependency);
+          } catch (NullPointerException e) {
+            throw new NullPointerException("Invalid AMD file. The dependency element is missing a required attribute. The error message is [" + e.getMessage() + "]");
+          }
 
-          group.dependencies.add(dependency);
           break;
         case "artifact-meta-data":
-          // Do nothing, this is the root element
+          String license = attributes.getValue("license");
+          try {
+            Objects.requireNonNull(license, "AMD files must contain a license attribute on the root element");
+            this.license = License.valueOf(license);
+          } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid AMD file. The license [" + license + "] is not an allowed license type. Allowable values are " + asList(License.values()), e);
+          }
+
           break;
         default:
           throw new SAXException("Invalid element encountered in AMD file [" + qName + "].");

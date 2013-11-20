@@ -15,29 +15,38 @@
  */
 package org.savantbuild.dep.graph;
 
-import org.savantbuild.dep.domain.ArtifactID;
-import org.savantbuild.dep.domain.Dependency;
+import org.savantbuild.dep.domain.License;
 import org.savantbuild.dep.domain.Version;
 
+import java.util.Objects;
+
 /**
- * This class stores the information for links between artifacts in the graph.
+ * This class stores the information for edges between artifacts in the graph.
  *
  * @author Brian Pontarelli
  */
-public class DependencyLinkValue {
+public class DependencyEdgeValue {
   public final Version dependencyVersion;
 
   public final Version dependentVersion;
+
+  public final License license;
 
   public final boolean optional;
 
   public final String type;
 
-  public DependencyLinkValue(Version dependentVersion, Version dependencyVersion, String type, boolean optional) {
+  public DependencyEdgeValue(Version dependentVersion, Version dependencyVersion, String type, boolean optional,
+                             License license) {
+    Objects.requireNonNull(dependentVersion, "DependencyEdgeValue requires a dependentVersion");
+    Objects.requireNonNull(dependencyVersion, "DependencyEdgeValue requires a dependencyVersion");
+    Objects.requireNonNull(type, "DependencyEdgeValue requires a type");
+    Objects.requireNonNull(license, "DependencyEdgeValue requires a license");
     this.dependentVersion = dependentVersion;
     this.dependencyVersion = dependencyVersion;
     this.type = type;
     this.optional = optional;
+    this.license = license;
   }
 
   @Override
@@ -49,9 +58,12 @@ public class DependencyLinkValue {
       return false;
     }
 
-    final DependencyLinkValue that = (DependencyLinkValue) o;
-    return dependencyVersion.equals(that.dependencyVersion) && dependentVersion.equals(that.dependentVersion) &&
-        type.equals(that.type) && optional == that.optional;
+    final DependencyEdgeValue that = (DependencyEdgeValue) o;
+    return dependencyVersion.equals(that.dependencyVersion) &&
+        dependentVersion.equals(that.dependentVersion) &&
+        type.equals(that.type) &&
+        optional == that.optional &&
+        license == that.license;
   }
 
   @Override
@@ -62,7 +74,7 @@ public class DependencyLinkValue {
     return result;
   }
 
-  public Dependency toDependency(ArtifactID id) {
-    return new Dependency(id, dependencyVersion, optional);
+  public String toString() {
+    return dependentVersion.toString() + " ---(optional=" + optional + ",type=" + type + ",license=" + license + ")--> " + dependencyVersion.toString();
   }
 }

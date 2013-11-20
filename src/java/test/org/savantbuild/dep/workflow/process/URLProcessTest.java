@@ -16,8 +16,10 @@
 package org.savantbuild.dep.workflow.process;
 
 import com.sun.net.httpserver.HttpServer;
-import org.savantbuild.dep.BaseUnitTest;
+import org.savantbuild.dep.BaseTest;
+import org.savantbuild.dep.domain.AbstractArtifact;
 import org.savantbuild.dep.domain.Artifact;
+import org.savantbuild.dep.domain.License;
 import org.savantbuild.dep.io.FileTools;
 import org.savantbuild.dep.workflow.PublishWorkflow;
 import org.testng.annotations.AfterMethod;
@@ -38,16 +40,16 @@ import static org.testng.Assert.assertNull;
  * @author Brian Pontarelli
  */
 @Test(groups = "unit")
-public class URLProcessTest extends BaseUnitTest {
+public class URLProcessTest extends BaseTest {
   private HttpServer server;
 
   @Test(dataProvider = "fetchData")
   public void fetch(String url, String name, String version, String result) throws Exception {
-    FileTools.prune(Paths.get("build/test/cache"));
+    FileTools.prune(projectDir.resolve("build/test/cache"));
 
-    Artifact artifact = new Artifact("org.savantbuild.test:" + name + ":" + name + ":" + version + ":jar");
+    AbstractArtifact artifact = new Artifact("org.savantbuild.test:" + name + ":" + name + ":" + version + ":jar", License.Apachev2);
     URLProcess ufp = new URLProcess(url, null, null);
-    Path file = ufp.fetch(artifact, artifact.getArtifactFile(), new PublishWorkflow(new CacheProcess("build/test/cache")));
+    Path file = ufp.fetch(artifact, artifact.getArtifactFile(), new PublishWorkflow(new CacheProcess(cache.toString())));
     assertNotNull(file);
 
     assertEquals(file.toAbsolutePath(), Paths.get(result).toAbsolutePath());
@@ -56,22 +58,22 @@ public class URLProcessTest extends BaseUnitTest {
   @DataProvider(name = "fetchData")
   public Object[][] fetchData() {
     return new Object[][]{
-        {makeLocalURL(), "multiple-versions", "1.0.0", "build/test/cache/org/savantbuild/test/multiple-versions/1.0.0/multiple-versions-1.0.0.jar"},
-        {makeLocalURL(), "leaf1", "1.0.0", "build/test/cache/org/savantbuild/test/leaf1/1.0.0/leaf1-1.0.0.jar"},
-        {makeLocalURL(), "integration-build", "2.1.1-{integration}", "build/test/cache/org/savantbuild/test/integration-build/2.1.1-{integration}/integration-build-2.1.1-{integration}.jar"},
-        {"http://localhost:7000/test-deps/savant", "multiple-versions", "1.0.0", "build/test/cache/org/savantbuild/test/multiple-versions/1.0.0/multiple-versions-1.0.0.jar"},
-        {"http://localhost:7000/test-deps/savant", "leaf1", "1.0.0", "build/test/cache/org/savantbuild/test/leaf1/1.0.0/leaf1-1.0.0.jar"},
-        {"http://localhost:7000/test-deps/savant", "integration-build", "2.1.1-{integration}", "build/test/cache/org/savantbuild/test/integration-build/2.1.1-{integration}/integration-build-2.1.1-{integration}.jar"}
+        {makeLocalURL(), "multiple-versions", "1.0.0", projectDir.resolve("build/test/cache/org/savantbuild/test/multiple-versions/1.0.0/multiple-versions-1.0.0.jar").toString()},
+        {makeLocalURL(), "leaf1", "1.0.0", projectDir.resolve("build/test/cache/org/savantbuild/test/leaf1/1.0.0/leaf1-1.0.0.jar").toString()},
+        {makeLocalURL(), "integration-build", "2.1.1-{integration}", projectDir.resolve("build/test/cache/org/savantbuild/test/integration-build/2.1.1-{integration}/integration-build-2.1.1-{integration}.jar").toString()},
+        {"http://localhost:7000/test-deps/savant", "multiple-versions", "1.0.0", projectDir.resolve("build/test/cache/org/savantbuild/test/multiple-versions/1.0.0/multiple-versions-1.0.0.jar").toString()},
+        {"http://localhost:7000/test-deps/savant", "leaf1", "1.0.0", projectDir.resolve("build/test/cache/org/savantbuild/test/leaf1/1.0.0/leaf1-1.0.0.jar").toString()},
+        {"http://localhost:7000/test-deps/savant", "integration-build", "2.1.1-{integration}", projectDir.resolve("build/test/cache/org/savantbuild/test/integration-build/2.1.1-{integration}/integration-build-2.1.1-{integration}.jar").toString()}
     };
   }
 
   @Test(dataProvider = "urls")
   public void integration(String url) throws Exception {
-    FileTools.prune(Paths.get("build/test/cache"));
+    FileTools.prune(projectDir.resolve("build/test/cache"));
 
-    Artifact artifact = new Artifact("org.savantbuild.test:integration-build:integration-build:2.1.1-{integration}:jar");
+    AbstractArtifact artifact = new Artifact("org.savantbuild.test:integration-build:integration-build:2.1.1-{integration}:jar", License.Apachev2);
 
-    CacheProcess process = new CacheProcess("build/test/cache");
+    CacheProcess process = new CacheProcess(cache.toString());
     PublishWorkflow pw = new PublishWorkflow();
     pw.getProcesses().add(process);
 
@@ -82,11 +84,11 @@ public class URLProcessTest extends BaseUnitTest {
 
   @Test(dataProvider = "urls")
   public void metaData(String url) throws Exception {
-    FileTools.prune(Paths.get("build/test/cache"));
+    FileTools.prune(projectDir.resolve("build/test/cache"));
 
-    Artifact artifact = new Artifact("org.savantbuild.test:multiple-versions:multiple-versions:1.0:jar");
+    AbstractArtifact artifact = new Artifact("org.savantbuild.test:multiple-versions:multiple-versions:1.0:jar", License.Apachev2);
 
-    CacheProcess process = new CacheProcess("build/test/cache");
+    CacheProcess process = new CacheProcess(cache.toString());
     PublishWorkflow pw = new PublishWorkflow();
     pw.getProcesses().add(process);
 
@@ -97,11 +99,11 @@ public class URLProcessTest extends BaseUnitTest {
 
   @Test(dataProvider = "urls")
   public void missingAMD(String url) throws Exception {
-    FileTools.prune(Paths.get("build/test/cache"));
+    FileTools.prune(projectDir.resolve("build/test/cache"));
 
-    Artifact artifact = new Artifact("org.savantbuild.test:missing-item:missing-item:1.0:jar");
+    AbstractArtifact artifact = new Artifact("org.savantbuild.test:missing-item:missing-item:1.0:jar", License.Apachev2);
 
-    CacheProcess process = new CacheProcess("build/test/cache");
+    CacheProcess process = new CacheProcess(cache.toString());
     PublishWorkflow pw = new PublishWorkflow();
     pw.getProcesses().add(process);
 
@@ -112,11 +114,11 @@ public class URLProcessTest extends BaseUnitTest {
 
   @Test(dataProvider = "urls")
   public void missingItem(String url) throws Exception {
-    FileTools.prune(Paths.get("build/test/cache"));
+    FileTools.prune(projectDir.resolve("build/test/cache"));
 
-    Artifact artifact = new Artifact("org.savantbuild.test:missing-item:missing-item:1.0:jar");
+    AbstractArtifact artifact = new Artifact("org.savantbuild.test:missing-item:missing-item:1.0:jar", License.Apachev2);
 
-    CacheProcess process = new CacheProcess("build/test/cache");
+    CacheProcess process = new CacheProcess(cache.toString());
     PublishWorkflow pw = new PublishWorkflow();
     pw.getProcesses().add(process);
 
@@ -127,11 +129,11 @@ public class URLProcessTest extends BaseUnitTest {
 
   @Test
   public void missingMD5() throws Exception {
-    FileTools.prune(Paths.get("build/test/cache"));
+    FileTools.prune(projectDir.resolve("build/test/cache"));
 
-    Artifact artifact = new Artifact("org.savantbuild.test:missing-md5:missing-md5:1.0:jar");
+    AbstractArtifact artifact = new Artifact("org.savantbuild.test:missing-md5:missing-md5:1.0:jar", License.Apachev2);
 
-    CacheProcess process = new CacheProcess("build/test/cache");
+    CacheProcess process = new CacheProcess(cache.toString());
     PublishWorkflow pw = new PublishWorkflow();
     pw.getProcesses().add(process);
 
@@ -159,6 +161,6 @@ public class URLProcessTest extends BaseUnitTest {
   }
 
   private String makeLocalURL() {
-    return Paths.get("").toAbsolutePath().toUri().toString() + "/test-deps/savant";
+    return projectDir.toAbsolutePath().toUri().toString() + "/test-deps/savant";
   }
 }

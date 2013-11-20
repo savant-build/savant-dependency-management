@@ -15,7 +15,7 @@
  */
 package org.savantbuild.dep.workflow.process;
 
-import org.savantbuild.dep.domain.Artifact;
+import org.savantbuild.dep.domain.AbstractArtifact;
 import org.savantbuild.dep.io.FileTools;
 import org.savantbuild.dep.io.IOTools;
 import org.savantbuild.dep.io.MD5;
@@ -63,8 +63,8 @@ public class SVNProcess implements Process {
    * Not implemented yet.
    */
   @Override
-  public void deleteIntegrationBuilds(Artifact artifact) throws ProcessFailureException {
-    throw new ProcessFailureException("The [svn] process doesn't allow deleting of integration builds.");
+  public void deleteIntegrationBuilds(AbstractArtifact artifact) throws ProcessFailureException {
+    throw new ProcessFailureException(artifact, "The [svn] process doesn't allow deleting of integration builds.");
   }
 
   /**
@@ -78,7 +78,7 @@ public class SVNProcess implements Process {
    * @throws ProcessFailureException If the SVN fetch failed.
    */
   @Override
-  public Path fetch(Artifact artifact, String item, PublishWorkflow publishWorkflow) throws ProcessFailureException {
+  public Path fetch(AbstractArtifact artifact, String item, PublishWorkflow publishWorkflow) throws ProcessFailureException {
     try {
       Path md5File = FileTools.createTempPath("savant-svn-process", "export", true);
       URI md5URI = NetTools.build(repository, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString(), item + ".md5");
@@ -91,7 +91,7 @@ public class SVNProcess implements Process {
         md5 = IOTools.parseMD5(md5File);
       } catch (IOException e) {
         Files.delete(md5File);
-        throw new ProcessFailureException(e);
+        throw new ProcessFailureException(artifact, e);
       }
 
       Path itemFile = FileTools.createTempPath("savant-svn-process", "export", true);
@@ -102,7 +102,7 @@ public class SVNProcess implements Process {
 
       MD5 itemMD5 = MD5.fromPath(itemFile);
       if (!itemMD5.equals(md5)) {
-        throw new MD5Exception("Artifact item file [" + itemURI.toString() + "] doesn't match MD5");
+        throw new MD5Exception("AbstractArtifact item file [" + itemURI.toString() + "] doesn't match MD5");
       }
 
       logger.info("Downloaded from SubVersion at [" + itemURI + "]");
@@ -112,12 +112,12 @@ public class SVNProcess implements Process {
         itemFile = publishWorkflow.publish(artifact, item, itemFile);
       } catch (ProcessFailureException e) {
         Files.delete(md5File);
-        throw new ProcessFailureException(e);
+        throw new ProcessFailureException(artifact, e);
       }
 
       return itemFile;
     } catch (IOException | URISyntaxException | InterruptedException e) {
-      throw new ProcessFailureException(e);
+      throw new ProcessFailureException(artifact, e);
     }
   }
 
@@ -131,17 +131,17 @@ public class SVNProcess implements Process {
    * @throws ProcessFailureException If the publish fails.
    */
   @Override
-  public Path publish(Artifact artifact, String item, Path artifactFile) throws ProcessFailureException {
+  public Path publish(AbstractArtifact artifact, String item, Path artifactFile) throws ProcessFailureException {
     try {
       URI uri = NetTools.build(repository, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString(), item);
       if (!imprt(uri, artifactFile)) {
-        throw new ProcessFailureException("Unable to publish artifact item [" + item + "] to [" + uri + "]");
+        throw new ProcessFailureException(artifact, "Unable to publish artifact item [" + item + "] to [" + uri + "]");
       }
 
       logger.info("Published to SubVersion at [" + repository + "/" + uri + "]");
       return null;
     } catch (URISyntaxException | IOException | InterruptedException e) {
-      throw new ProcessFailureException(e);
+      throw new ProcessFailureException(artifact, e);
     }
   }
 

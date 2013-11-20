@@ -15,12 +15,19 @@
  */
 package org.savantbuild.dep.graph;
 
+import org.savantbuild.dep.graph.Graph.Edge.BaseEdge;
+import org.savantbuild.dep.graph.Graph.Path.BasePath;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
+
+import static java.util.Arrays.asList;
 
 /**
  * This class is used to construct and manage graph structures. This is a simple class that makes the navigation and
@@ -29,7 +36,7 @@ import java.util.Set;
  * <h3>Graphs</h3>
  * <p/>
  * Graphs are simple structures that model nodes with any number of connections between nodes. The connections are
- * bi-directional and are called Links. A two node graph with a link between the nodes looks like this:
+ * bi-directional and are called Edges. A two node graph with an edge between the nodes looks like this:
  * <p/>
  * <pre>
  * node1 <---> node2
@@ -42,16 +49,16 @@ import java.util.Set;
  * <h3>Generics</h3>
  * <p/>
  * There are two generics for a Graph. The first variable T is the content of the nodes themselves. Each node can stored
- * a single value. The second generic is the value that can be associated with the Link between nodes. This is carried
- * thoroughout the entire graph structure making it very strongly typed.
+ * a single value. The second generic is the value that can be associated with the Edge between nodes. This is carried
+ * throughout the entire graph structure making it very strongly typed.
  * <p/>
  * <h3>Internals</h3>
  * <p/>
  * It is important to understand how the Graph works internally. Nodes are stored in a Map whose key is the value for
  * the node. If the graph is storing Strings then only a single node can exist with the value <em>foo</em>. This means
  * that the graph does not allow duplicates. Therefore it would be impossible to have two nodes whose values are
- * <em>foo</em> with different links. The key of the Map is a {@link org.savantbuild.dep.graph.GraphNode} object. The
- * node stores the value as well as all the links.
+ * <em>foo</em> with different edges. The key of the Map is a {@link HashNode} object. The
+ * node stores the value as well as all the edges.
  * <p/>
  * <h3>Node values</h3>
  * <p/>
@@ -66,36 +73,18 @@ import java.util.Set;
  * @author Brian Pontarelli
  */
 public class HashGraph<T, U> implements Graph<T, U> {
-  private final Map<T, GraphNode<T, U>> nodes = new HashMap<>();
+  private final Map<T, HashNode<T, U>> nodes = new HashMap<>();
 
-  public void addLink(T origin, T destination, U linkValue) {
-    GraphNode<T, U> originNode = addNode(origin);
-    GraphNode<T, U> destinationNode = addNode(destination);
+  @Override
+  public void addEdge(T origin, T destination, U value) {
+    HashNode<T, U> originNode = addNode(origin);
+    HashNode<T, U> destinationNode = addNode(destination);
 
-    originNode.addOutboundLink(destinationNode, linkValue);
-    destinationNode.addInboundLink(originNode, linkValue);
+    originNode.addOutboundEdge(destinationNode, value);
+    destinationNode.addInboundEdge(originNode, value);
   }
 
-  public void addLink(GraphNode<T, U> origin, GraphNode<T, U> destination, U linkValue) {
-    nodes.put(origin.value, origin);
-    nodes.put(destination.value, destination);
-
-    origin.addOutboundLink(destination, linkValue);
-    destination.addInboundLink(origin, linkValue);
-  }
-
-  public GraphNode<T, U> addNode(T value) {
-    GraphNode<T, U> node = nodes.get(value);
-    if (node == null) {
-      node = new GraphNode<>(value);
-      nodes.put(value, node);
-    } else {
-      node.value = value;
-    }
-
-    return node;
-  }
-
+  @Override
   public boolean contains(T value) {
     return nodes.containsKey(value);
   }
@@ -113,64 +102,53 @@ public class HashGraph<T, U> implements Graph<T, U> {
     return nodes.equals(hashGraph.nodes);
   }
 
-  public List<GraphLink<T, U>> getInboundLinks(T value) {
-    GraphNode<T, U> node = getNode(value);
+  @Override
+  public List<Edge<T, U>> getInboundEdges(T value) {
+    HashNode<T, U> node = nodes.get(value);
     if (node == null) {
       return null;
     }
 
-    return node.getInboundLinks();
+    return node.inbound
+               .stream()
+               .map(HashEdge::toEdge)
+               .collect(Collectors.toList());
   }
 
-  public GraphNode<T, U> getNode(T value) {
-    return nodes.get(value);
-  }
-
-  /**
-   * @return Returns all the nodes in the graph.
-   */
-  public Set<GraphNode<T, U>> getNodes() {
-    return new HashSet<>(nodes.values());
-  }
-
-  public List<GraphLink<T, U>> getOutboundLinks(T value) {
-    GraphNode<T, U> node = getNode(value);
+  @Override
+  public List<Edge<T, U>> getOutboundEdges(T value) {
+    HashNode<T, U> node = nodes.get(value);
     if (node == null) {
       return null;
     }
 
-    return node.getOutboundLinks();
+    return node.outbound
+               .stream()
+               .map(HashEdge::toEdge)
+               .collect(Collectors.toList());
   }
 
-  public List<GraphPath<T>> getPaths(T origin, T destination) {
-    GraphNode<T, U> originNode = getNode(origin);
-    if (originNode == null) {
-      return null;
-    }
-
-    GraphNode<T, U> destNode = getNode(destination);
-    if (destNode == null) {
-      return null;
-    }
-
-    List<GraphLink<T, U>> originLinks = originNode.getOutboundLinks();
-    List<GraphPath<T>> list = new ArrayList<>();
-    for (GraphLink<T, U> link : originLinks) {
-      if (link.destination.value.equals(destination)) {
-        GraphPath<T> path = new GraphPath<>();
-        path.addToPath(origin);
-        path.addToPath(destination);
-        list.add(path);
-      } else {
-        List<GraphPath<T>> paths = getPaths(link.destination.value, destination);
-        for (GraphPath<T> path : paths) {
-          path.addToPathHead(origin);
-          list.add(path);
-        }
+  @Override
+  public List<Path<T>> getPaths(T origin, T destination) {
+    List<Path<T>> paths = new ArrayList<>();
+    LinkedList<T> current = new LinkedList<>();
+    traverse(origin, (originValue, destinationValue, edgeValue, depth) -> {
+      if (depth == 1) {
+        current.clear();
+        current.add(origin);
       }
-    }
 
-    return list;
+      current.add(destinationValue);
+
+      boolean finished = destinationValue.equals(destination);
+      if (finished) {
+        paths.add(new BasePath<>(current));
+      }
+
+      return !finished;
+    });
+
+    return paths;
   }
 
   @Override
@@ -178,19 +156,55 @@ public class HashGraph<T, U> implements Graph<T, U> {
     return nodes.hashCode();
   }
 
-  public void remove(T value) throws CyclicException {
-    GraphNode<T, U> node = nodes.remove(value);
+  @Override
+  @SuppressWarnings("unchecked")
+  public void prune(T... excludes) {
+    Set<T> excludeValues = new HashSet<>(asList(excludes));
+    nodes.values().forEach((node) -> {
+      if (!excludeValues.contains(node.value) && node.inbound.isEmpty()) {
+        removeNode(node.value);
+      }
+    });
+  }
+
+  @Override
+  public void removeEdge(T origin, T destination, U value) {
+    HashNode<T, U> originNode = nodes.get(origin);
+    HashNode<T, U> destinationNode = nodes.get(destination);
+
+    HashEdge<T, U> edge = new HashEdge<>(originNode, destinationNode, value);
+    originNode.removeEdge(edge);
+    destinationNode.removeEdge(edge);
+  }
+
+  @Override
+  public void removeNode(T value) throws CyclicException {
+    HashNode<T, U> node = nodes.get(value);
     if (node == null) {
       return;
     }
 
-    // Get the outbound links first and then remove this nodes outbound and inbound links
-    List<GraphLink<T, U>> outboundLinks = node.getOutboundLinks();
-    clearLinks(node);
+    // Get the outbound edges first and then remove this nodes outbound and inbound edges
+    List<HashEdge<T, U>> outboundEdges = new ArrayList<>(node.outbound);
+    clearEdges(node);
 
-    outboundLinks.stream()
-                 .filter((link) -> link.destination.getInboundLinks().isEmpty())
-                 .forEach((link) -> remove(link.destination.value));
+    outboundEdges.stream()
+                 .filter((edge) -> edge.destination.inbound.isEmpty())
+                 .forEach((edge) -> removeNode(edge.destination.value));
+
+    nodes.remove(value);
+  }
+
+  @Override
+  public int size() {
+    return nodes.size();
+  }
+
+  @Override
+  public void traverse(T rootValue, GraphConsumer<T, U> consumer) {
+    HashNode<T, U> rootNode = nodes.get(rootValue);
+    Set<T> visited = new HashSet<>();
+    traverse(rootNode, visited, consumer, 1);
   }
 
   /**
@@ -198,21 +212,171 @@ public class HashGraph<T, U> implements Graph<T, U> {
    *
    * @return All the artifacts.
    */
+  @Override
   public Set<T> values() {
     return new HashSet<>(nodes.keySet());
   }
 
-  private void clearLinks(GraphNode<T, U> node) {
-    List<GraphLink<T, U>> links = node.getOutboundLinks();
-    for (GraphLink<T, U> link : links) {
-      node.removeLink(link);
-      link.destination.getInboundLinks(link.origin).forEach(link.destination::removeLink);
+  private HashNode<T, U> addNode(T value) {
+    HashNode<T, U> node = nodes.get(value);
+    if (node == null) {
+      node = new HashNode<>(value);
+      nodes.put(value, node);
+    } else {
+      node.value = value;
     }
 
-    links = node.getInboundLinks();
-    for (GraphLink<T, U> link : links) {
-      node.removeLink(link);
-      link.origin.getOutboundLinks(link.destination).forEach(link.origin::removeLink);
+    return node;
+  }
+
+  private void clearEdges(HashNode<T, U> node) {
+    // Prevent concurrent modification exceptions by using a new ArrayList
+    new ArrayList<>(node.outbound).forEach((edge) -> removeEdge(edge.origin.value, edge.destination.value, edge.value));
+    node.outbound.clear();
+
+    // Prevent concurrent modification exceptions by using a new ArrayList
+    new ArrayList<>(node.inbound).forEach((edge) -> removeEdge(edge.origin.value, edge.destination.value, edge.value));
+    node.inbound.clear();
+  }
+
+  private void traverse(HashNode<T, U> root, Set<T> visited, GraphConsumer<T, U> consumer, int depth) {
+    root.outbound.forEach((edge) -> {
+      if (visited.contains(edge.destination.value)) {
+        throw new CyclicException("Encountered the graph node [" + edge.destination.value + "] twice. Your graph has a cycle");
+      }
+
+      visited.add(root.value);
+      boolean cont = consumer.consume(root.value, edge.destination.value, edge.value, depth);
+      visited.remove(root.value);
+
+      if (cont) {
+        traverse(edge.destination, visited, consumer, depth + 1);
+      }
+    });
+  }
+
+  /**
+   * This class is a single node in the HashGraph.
+   *
+   * @author Brian Pontarelli
+   */
+  private static class HashNode<T, U> {
+    public final List<HashEdge<T, U>> inbound = new ArrayList<>();
+
+    public final List<HashEdge<T, U>> outbound = new ArrayList<>();
+
+    public T value;
+
+    public HashNode(T value) {
+      this.value = value;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      final HashNode<T, U> that = (HashNode<T, U>) o;
+      if (!value.equals(that.value)) {
+        return false;
+      }
+
+      // Compare the lists brute force (to avoid nasty Comparable infection)
+      if (inbound.size() != that.inbound.size()) {
+        return false;
+      }
+      if (outbound.size() != that.outbound.size()) {
+        return false;
+      }
+      for (HashEdge<T, U> myEdge : outbound) {
+        boolean matches = that.outbound.stream().anyMatch(
+            (HashEdge<T, U> theirEdge) -> myEdge.value.equals(theirEdge.value) && myEdge.destination.value.equals(theirEdge.destination.value)
+        );
+        if (!matches) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      int result = inbound.hashCode();
+      result = 31 * result + outbound.hashCode();
+      result = 31 * result + value.hashCode();
+      return result;
+    }
+
+    /**
+     * @return The toString of the node's value.
+     */
+    public String toString() {
+      return value.toString();
+    }
+
+    void addInboundEdge(HashNode<T, U> origin, U edgeValue) {
+      HashEdge<T, U> edge = new HashEdge<>(origin, this, edgeValue);
+      inbound.add(edge);
+    }
+
+    void addOutboundEdge(HashNode<T, U> destination, U edgeValue) {
+      HashEdge<T, U> edge = new HashEdge<>(this, destination, edgeValue);
+      outbound.add(edge);
+    }
+
+    public void removeEdge(HashEdge<T, U> edge) {
+      outbound.remove(edge);
+      inbound.remove(edge);
+    }
+  }
+
+  /**
+   * This class is the edge between nodes in the graph.
+   *
+   * @author Brian Pontarelli
+   */
+  private static class HashEdge<T, U> {
+    public final HashNode<T, U> destination;
+
+    public final HashNode<T, U> origin;
+
+    public final U value;
+
+    public HashEdge(HashNode<T, U> origin, HashNode<T, U> destination, U value) {
+      this.origin = origin;
+      this.destination = destination;
+      this.value = value;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      final HashEdge hashEdge = (HashEdge) o;
+      return destination.value.equals(hashEdge.destination.value) && origin.value.equals(hashEdge.origin.value) && value.equals(hashEdge.value);
+    }
+
+    @Override
+    public int hashCode() {
+      int result = destination.value.hashCode();
+      result = 31 * result + origin.value.hashCode();
+      result = 31 * result + value.hashCode();
+      return result;
+    }
+
+    public Edge<T, U> toEdge() {
+      return new BaseEdge<>(origin.value, destination.value, value);
     }
   }
 }

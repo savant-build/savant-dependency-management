@@ -24,15 +24,15 @@ import java.nio.file.Path;
  * @author Brian Pontarelli
  */
 public class ResolvedArtifact extends Artifact {
-  public Path file;
+  public final Path file;
 
-  public ResolvedArtifact(ArtifactID id, Version version) {
-    this.id = id;
-    this.version = version;
+  public ResolvedArtifact(ArtifactID id, Version version, License license, Path file) {
+    super(id, version, license);
+    this.file = file;
   }
 
-  public ResolvedArtifact(String spec, Path file) {
-    super(spec);
+  public ResolvedArtifact(String spec, License license, Path file) {
+    super(spec, license);
     this.file = file;
   }
 

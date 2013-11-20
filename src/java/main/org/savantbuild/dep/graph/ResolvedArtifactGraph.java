@@ -29,7 +29,6 @@ public class ResolvedArtifactGraph extends HashGraph<ResolvedArtifact, String> {
 
   public ResolvedArtifactGraph(ResolvedArtifact root) {
     this.root = root;
-    addNode(root);
   }
 
   @Override

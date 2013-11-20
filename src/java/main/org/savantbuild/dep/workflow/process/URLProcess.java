@@ -15,7 +15,7 @@
  */
 package org.savantbuild.dep.workflow.process;
 
-import org.savantbuild.dep.domain.Artifact;
+import org.savantbuild.dep.domain.AbstractArtifact;
 import org.savantbuild.dep.io.IOTools;
 import org.savantbuild.dep.io.MD5;
 import org.savantbuild.dep.io.MD5Exception;
@@ -66,8 +66,8 @@ public class URLProcess implements Process {
    * Throws an exception. This isn't supported yet.
    */
   @Override
-  public void deleteIntegrationBuilds(Artifact artifact) throws ProcessFailureException {
-    throw new ProcessFailureException("The [url] process doesn't support deleting integration builds.");
+  public void deleteIntegrationBuilds(AbstractArtifact artifact) throws ProcessFailureException {
+    throw new ProcessFailureException(artifact, "The [url] process doesn't support deleting integration builds.");
   }
 
   /**
@@ -80,7 +80,7 @@ public class URLProcess implements Process {
    * @return The File of the artifact after it has been published.
    */
   @Override
-  public Path fetch(Artifact artifact, String item, PublishWorkflow publishWorkflow) throws ProcessFailureException {
+  public Path fetch(AbstractArtifact artifact, String item, PublishWorkflow publishWorkflow) throws ProcessFailureException {
     try {
       URI md5URI = NetTools.build(url, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString(), item + ".md5");
       Path md5File = NetTools.downloadToPath(md5URI, username, password, null);
@@ -93,7 +93,7 @@ public class URLProcess implements Process {
         md5 = IOTools.parseMD5(md5File);
       } catch (IOException e) {
         Files.delete(md5File);
-        throw new ProcessFailureException(e);
+        throw new ProcessFailureException(artifact, e);
       }
 
       URI itemURI = NetTools.build(url, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString(), item);
@@ -111,7 +111,7 @@ public class URLProcess implements Process {
           itemFile = publishWorkflow.publish(artifact, item, itemFile);
         } catch (ProcessFailureException e) {
           Files.delete(md5File);
-          throw new ProcessFailureException(e);
+          throw new ProcessFailureException(artifact, e);
         }
       }
 
@@ -120,7 +120,7 @@ public class URLProcess implements Process {
       // Special case for file:// URLs
       return null;
     } catch (IOException | URISyntaxException e) {
-      throw new ProcessFailureException(e);
+      throw new ProcessFailureException(artifact, e);
     }
   }
 
@@ -128,7 +128,7 @@ public class URLProcess implements Process {
    * Throws an exception. This isn't supported yet.
    */
   @Override
-  public Path publish(Artifact artifact, String item, Path file) throws ProcessFailureException {
-    throw new ProcessFailureException("The [url] process doesn't allow publishing.");
+  public Path publish(AbstractArtifact artifact, String item, Path file) throws ProcessFailureException {
+    throw new ProcessFailureException(artifact, "The [url] process doesn't allow publishing.");
   }
 }

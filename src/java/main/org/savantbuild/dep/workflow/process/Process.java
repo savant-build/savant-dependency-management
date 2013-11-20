@@ -15,7 +15,7 @@
  */
 package org.savantbuild.dep.workflow.process;
 
-import org.savantbuild.dep.domain.Artifact;
+import org.savantbuild.dep.domain.AbstractArtifact;
 import org.savantbuild.dep.workflow.PublishWorkflow;
 
 import java.nio.file.Path;
@@ -31,7 +31,7 @@ public interface Process {
    *
    * @param artifact The artifact. This artifacts version is the next integration build version.
    */
-  void deleteIntegrationBuilds(Artifact artifact) throws ProcessFailureException;
+  void deleteIntegrationBuilds(AbstractArtifact artifact) throws ProcessFailureException;
 
   /**
    * Attempts to fetch the given item. The item is normally associated with the artifact, but might be associated with a
@@ -50,7 +50,7 @@ public interface Process {
    * @return The Path to the item on the local disk or null if the item does not exist and there were no failures.
    * @throws ProcessFailureException If the process failed when fetching the artifact.
    */
-  Path fetch(Artifact artifact, String item, PublishWorkflow publishWorkflow) throws ProcessFailureException;
+  Path fetch(AbstractArtifact artifact, String item, PublishWorkflow publishWorkflow) throws ProcessFailureException;
 
   /**
    * Attempts to publish the given item. The item is normally associated with the artifact, but might be associated with
@@ -68,5 +68,5 @@ public interface Process {
    *         should return null.
    * @throws ProcessFailureException If there was any issue publishing.
    */
-  Path publish(Artifact artifact, String item, Path artifactFile) throws ProcessFailureException;
+  Path publish(AbstractArtifact artifact, String item, Path artifactFile) throws ProcessFailureException;
 }

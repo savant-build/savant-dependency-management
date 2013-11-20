@@ -15,6 +15,8 @@
  */
 package org.savantbuild.dep.domain;
 
+import java.util.Objects;
+
 /**
  * This class is contains the properties that define an artifacts identity. Any two artifacts whose identity match are
  * considered the same artifact. All other properties associated with the artifact usually determine the artifacts
@@ -38,17 +40,17 @@ public class ArtifactID {
    * @param project the artifact project
    * @param name    the artifact name
    * @param type    the artifact type
-   * @throws IllegalArgumentException thrown if both name and project are empty string or null
+   * @throws NullPointerException If any of the arguments are null.
    */
-  public ArtifactID(String group, String project, String name, String type) throws IllegalArgumentException {
+  public ArtifactID(String group, String project, String name, String type) throws NullPointerException {
+    Objects.requireNonNull(group, "Artifacts must have a group");
+    Objects.requireNonNull(project, "Artifacts must have a project");
+    Objects.requireNonNull(name, "Artifacts must have a name");
+    Objects.requireNonNull(type, "Artifacts must have a type");
     this.group = group;
     this.project = project == null ? name : project;
     this.name = name == null ? project : name;
     this.type = type == null ? "jar" : type;
-
-    if ((project == null || project.length() == 0) && (name == null || name.length() == 0)) {
-      throw new IllegalArgumentException("artifact project and name undefined");
-    }
   }
 
   public boolean equals(Object o) {

@@ -15,7 +15,7 @@
  */
 package org.savantbuild.dep.workflow;
 
-import org.savantbuild.dep.domain.Artifact;
+import org.savantbuild.dep.domain.AbstractArtifact;
 
 /**
  * Thrown when an artifact is missing an AMD file during the dependency graph building process.
@@ -26,9 +26,9 @@ import org.savantbuild.dep.domain.Artifact;
  * @author Brian Pontarelli
  */
 public class ArtifactMetaDataMissingException extends RuntimeException {
-  public final Artifact artifactMissingAMD;
+  public final AbstractArtifact artifactMissingAMD;
 
-  public ArtifactMetaDataMissingException(Artifact artifactMissingAMD) {
+  public ArtifactMetaDataMissingException(AbstractArtifact artifactMissingAMD) {
     this.artifactMissingAMD = artifactMissingAMD;
   }
 }

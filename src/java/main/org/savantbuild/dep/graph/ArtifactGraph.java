@@ -16,19 +16,18 @@
 package org.savantbuild.dep.graph;
 
 import org.savantbuild.dep.domain.Artifact;
-import org.savantbuild.dep.domain.ArtifactID;
-
-import java.util.Formatter;
 
 /**
- * This class is a artifact and dependency version of the Graph.
+ * This class is an artifact graph that stores the relationship between artifacts. After a DependencyGraph has been
+ * built, the process of upgrading all dependencies to a single version and pruning unused dependencies results in an
+ * ArtifactGraph.
  *
  * @author Brian Pontarelli
  */
-public class DependencyGraph extends HashGraph<ArtifactID, DependencyEdgeValue> {
+public class ArtifactGraph extends HashGraph<Artifact, String> {
   public final Artifact root;
 
-  public DependencyGraph(Artifact root) {
+  public ArtifactGraph(Artifact root) {
     this.root = root;
   }
 
@@ -44,7 +43,7 @@ public class DependencyGraph extends HashGraph<ArtifactID, DependencyEdgeValue> 
       return false;
     }
 
-    final DependencyGraph that = (DependencyGraph) o;
+    final ArtifactGraph that = (ArtifactGraph) o;
     return root.equals(that.root);
   }
 
@@ -53,24 +52,5 @@ public class DependencyGraph extends HashGraph<ArtifactID, DependencyEdgeValue> 
     int result = super.hashCode();
     result = 31 * result + root.hashCode();
     return result;
-  }
-
-  /**
-   * Outputs this DependencyGraph as a GraphViz DOT file.
-   *
-   * @return The DOT file String.
-   */
-  public String toDOT() {
-    StringBuilder build = new StringBuilder();
-    build.append("digraph Dependencies {\n");
-
-    Formatter formatter = new Formatter(build);
-    traverse(root.id, (origin, destination, edge, depth) -> {
-      formatter.format("  \"%s\" -> \"%s\" [label=\"%s\", headlabel=\"%s\", taillabel=\"%s\"];\n", origin, destination, edge.type, edge.dependentVersion, edge.dependencyVersion);
-      return true;
-    });
-
-    build.append("}\n");
-    return build.toString();
   }
 }

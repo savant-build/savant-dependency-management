@@ -23,8 +23,11 @@ package org.savantbuild.dep.domain;
 public class ArtifactMetaData {
   public final Dependencies dependencies;
 
-  public ArtifactMetaData(Dependencies dependencies) {
+  public final License license;
+
+  public ArtifactMetaData(Dependencies dependencies, License license) {
     this.dependencies = dependencies;
+    this.license = license;
   }
 
   @Override
@@ -37,11 +40,17 @@ public class ArtifactMetaData {
     }
 
     final ArtifactMetaData that = (ArtifactMetaData) o;
-    return dependencies.equals(that.dependencies);
+    return dependencies.equals(that.dependencies) && license == that.license;
   }
 
   @Override
   public int hashCode() {
-    return dependencies.hashCode();
+    int result = dependencies.hashCode();
+    result = 31 * result + license.hashCode();
+    return result;
+  }
+
+  public Artifact toLicensedArtifact(Dependency dependency) {
+    return new Artifact(dependency.id, dependency.version, license);
   }
 }

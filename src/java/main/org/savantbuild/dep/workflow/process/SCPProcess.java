@@ -15,7 +15,7 @@
  */
 package org.savantbuild.dep.workflow.process;
 
-import org.savantbuild.dep.domain.Artifact;
+import org.savantbuild.dep.domain.AbstractArtifact;
 import org.savantbuild.dep.net.SSHOptions;
 import org.savantbuild.dep.workflow.PublishWorkflow;
 
@@ -68,16 +68,16 @@ public class SCPProcess implements Process {
    * Not implemented yet.
    */
   @Override
-  public void deleteIntegrationBuilds(Artifact artifact) throws ProcessFailureException {
-    throw new ProcessFailureException("The [scp] process doesn't allow deleting of integration builds.");
+  public void deleteIntegrationBuilds(AbstractArtifact artifact) throws ProcessFailureException {
+    throw new ProcessFailureException(artifact, "The [scp] process doesn't allow deleting of integration builds.");
   }
 
   /**
    * Not supported right now.
    */
   @Override
-  public Path fetch(Artifact artifact, String item, PublishWorkflow publishWorkflow) throws ProcessFailureException {
-    throw new ProcessFailureException("The [scp] workflow process doesn't support fetching.");
+  public Path fetch(AbstractArtifact artifact, String item, PublishWorkflow publishWorkflow) throws ProcessFailureException {
+    throw new ProcessFailureException(artifact, "The [scp] workflow process doesn't support fetching.");
   }
 
   /**
@@ -90,7 +90,7 @@ public class SCPProcess implements Process {
    * @throws ProcessFailureException If the publish fails.
    */
   @Override
-  public Path publish(Artifact artifact, String item, Path artifactFile) throws ProcessFailureException {
+  public Path publish(AbstractArtifact artifact, String item, Path artifactFile) throws ProcessFailureException {
     String path = String.join("/", location, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString());
 
     try {
@@ -113,7 +113,7 @@ public class SCPProcess implements Process {
 
       connection.close();
     } catch (IOException e) {
-      throw new ProcessFailureException(e);
+      throw new ProcessFailureException(artifact, e);
     }
 
     logger.info("Published via SCP to [" + server + ":" + location + "/" + path + "]");

@@ -16,7 +16,7 @@
 package org.savantbuild.dep.net;
 
 import com.sun.net.httpserver.HttpServer;
-import org.savantbuild.dep.BaseUnitTest;
+import org.savantbuild.dep.BaseTest;
 import org.savantbuild.dep.io.MD5;
 import org.savantbuild.dep.io.MD5Exception;
 import org.testng.annotations.Test;
@@ -25,7 +25,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.fail;
@@ -34,7 +33,7 @@ import static org.testng.Assert.fail;
  * The net tools test.
  */
 @Test(groups = "unit")
-public class NetToolsTest extends BaseUnitTest {
+public class NetToolsTest extends BaseTest {
   @Test
   public void build() throws URISyntaxException {
     URI uri = NetTools.build("http://www.example.com", "org/apache/commons", "common-collections", "3.0", "commons-collections-3.0.jar");
@@ -78,7 +77,7 @@ public class NetToolsTest extends BaseUnitTest {
     HttpServer server = makeFileServer(null, null);
 
     try {
-      MD5 md5 = MD5.fromBytes(Files.readAllBytes(Paths.get("src/java/test/org/savantbuild/dep/io/MD5Test.txt")), "MD5Test.txt");
+      MD5 md5 = MD5.fromBytes(Files.readAllBytes(projectDir.resolve("src/java/test/org/savantbuild/dep/io/MD5Test.txt")), "MD5Test.txt");
       Path path = NetTools.downloadToPath(new URI("http://localhost:7000/src/java/test/org/savantbuild/dep/io/MD5Test.txt"), null, null, md5);
       String result = new String(Files.readAllBytes(path), "UTF-8");
       assertEquals(result.trim(), "This file is a test file for copying and writing and such.");

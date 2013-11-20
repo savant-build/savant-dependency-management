@@ -15,13 +15,15 @@
  */
 package org.savantbuild.dep.workflow.process;
 
+import org.savantbuild.dep.BaseTest;
+import org.savantbuild.dep.domain.AbstractArtifact;
 import org.savantbuild.dep.domain.Artifact;
+import org.savantbuild.dep.domain.License;
 import org.savantbuild.dep.io.FileTools;
 import org.testng.annotations.Test;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
@@ -33,28 +35,28 @@ import static org.testng.Assert.assertTrue;
  * @author Brian Pontarelli
  */
 @Test(groups = "unit")
-public class CacheProcessTest {
+public class CacheProcessTest extends BaseTest {
   @Test
   public void deleteIntegration() throws Exception {
-    Path cache = Paths.get("build/test/deps");
+    Path cache = projectDir.resolve("build/test/deps");
     FileTools.prune(cache);
 
-    CacheProcess process = new CacheProcess("build/test/deps");
-    Artifact artifact = new Artifact("org.savantbuild.test:integration-build:integration-build:2.1.1-{integration}:jar");
+    CacheProcess process = new CacheProcess(cache.toString());
+    AbstractArtifact artifact = new Artifact("org.savantbuild.test:integration-build:integration-build:2.1.1-{integration}:jar", License.Apachev2);
 
-    Path artFile = Paths.get("test-deps/savant/org/savantbuild/test/integration-build/2.1.1-{integration}/integration-build-2.1.1-{integration}.jar");
+    Path artFile = projectDir.resolve("test-deps/savant/org/savantbuild/test/integration-build/2.1.1-{integration}/integration-build-2.1.1-{integration}.jar");
     Path file = process.publish(artifact, artifact.getArtifactFile(), artFile);
     assertTrue(Files.isRegularFile(file));
 
-    artifact = new Artifact("org.savantbuild.test:integration-build:integration-build:2.1.1:jar");
+    artifact = new Artifact("org.savantbuild.test:integration-build:integration-build:2.1.1:jar", License.Apachev2);
     process.deleteIntegrationBuilds(artifact);
     assertFalse(Files.isRegularFile(file));
   }
 
   @Test
   public void fetch() {
-    CacheProcess process = new CacheProcess("test-deps/savant");
-    Artifact artifact = new Artifact("org.savantbuild.test:multiple-versions:multiple-versions:1.0.0:jar");
+    CacheProcess process = new CacheProcess(projectDir.resolve("test-deps/savant").toString());
+    AbstractArtifact artifact = new Artifact("org.savantbuild.test:multiple-versions:multiple-versions:1.0.0:jar", License.Apachev2);
 
     Path file = process.fetch(artifact, artifact.getArtifactFile(), null);
     assertNotNull(file);
@@ -64,13 +66,13 @@ public class CacheProcessTest {
 
   @Test
   public void store() throws Exception {
-    Path cache = Paths.get("build/test/deps");
+    Path cache = projectDir.resolve("build/test/deps");
     FileTools.prune(cache);
 
-    CacheProcess process = new CacheProcess("build/test/deps");
-    Artifact artifact = new Artifact("org.savantbuild.test:multiple-versions:multiple-versions:1.0.0:jar");
+    CacheProcess process = new CacheProcess(cache.toString());
+    AbstractArtifact artifact = new Artifact("org.savantbuild.test:multiple-versions:multiple-versions:1.0.0:jar", License.Apachev2);
 
-    Path artFile = Paths.get("test-deps/savant/org/savantbuild/test/multiple-versions/1.0.0/multiple-versions-1.0.0.jar");
+    Path artFile = projectDir.resolve("test-deps/savant/org/savantbuild/test/multiple-versions/1.0.0/multiple-versions-1.0.0.jar");
     Path file = process.publish(artifact, artifact.getArtifactFile(), artFile);
     assertNotNull(file);
     assertTrue(file.toAbsolutePath().toString().replace('\\', '/').endsWith("build/test/deps/org/savantbuild/test/multiple-versions/1.0.0/multiple-versions-1.0.0.jar"));

@@ -18,6 +18,7 @@ package org.savantbuild.dep;
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.CompatibilityException;
 import org.savantbuild.dep.domain.Dependencies;
+import org.savantbuild.dep.graph.ArtifactGraph;
 import org.savantbuild.dep.graph.CyclicException;
 import org.savantbuild.dep.graph.DependencyGraph;
 import org.savantbuild.dep.graph.ResolvedArtifactGraph;
@@ -34,7 +35,7 @@ import java.util.Map;
  * Provides all of the dependency management services. The main workflow for managing dependencies is:
  * <p/>
  * <pre>
- *   1. Download and parse all of the AMD (Artifact Meta Data) files to build a dependency graph.
+ *   1. Download and parse all of the AMD (AbstractArtifact Meta Data) files to build a dependency graph.
  *   2. Traverse the graph and verify that it is a valid graph (doesn't contain conflicting versions of specific
  * artifacts)
  *   3. Traverse the graph and download the dependencies
@@ -58,10 +59,20 @@ public interface DependencyService {
       throws ArtifactMetaDataMissingException, ProcessFailureException;
 
   /**
-   * Resolves the graph by downloading the artifacts. This will use the Workflow to download the artifacts in the graph
-   * using the latest version for each artifact. This does not check version compatibility.
+   * Reduces the DependencyGraph by ensuring that each dependency only has one version. This also prunes unused
+   * dependencies and ensures there are no compatibility issues in the graph.
    *
-   * @param graph         The DependencyGraph to resolve.
+   * @param graph The dependency graph.
+   * @return The reduced graph.
+   * @throws CompatibilityException If an dependency has incompatible versions.
+   */
+  ArtifactGraph reduce(DependencyGraph graph) throws CompatibilityException;
+
+  /**
+   * Resolves the graph by downloading the artifacts. This will use the Workflow to download the artifacts in the graph.
+   * This does not check version compatibility. That is done in the {@link #reduce(DependencyGraph)} method.
+   *
+   * @param graph         The ArtifactGraph to resolve.
    * @param workflow      THe workflow used to resolve the artifacts.
    * @param configuration The resolution configuration that controls which artifact groups to resolve and how they are
    *                      resolved.
@@ -69,21 +80,12 @@ public interface DependencyService {
    * @return The resolved graph.
    * @throws ProcessFailureException  If a workflow process failed while fetching an artifact or its source.
    * @throws ArtifactMissingException If any of the required artifacts are missing.
-   * @throws CyclicException If any of the artifact graph has any cycles in it.
-   * @throws MD5Exception If the item's MD5 file did not match the item.
+   * @throws CyclicException          If any of the artifact graph has any cycles in it.
+   * @throws MD5Exception             If the item's MD5 file did not match the item.
    */
-  ResolvedArtifactGraph resolve(DependencyGraph graph, Workflow workflow, ResolveConfiguration configuration,
+  ResolvedArtifactGraph resolve(ArtifactGraph graph, Workflow workflow, ResolveConfiguration configuration,
                                 DependencyListener... listeners)
       throws CyclicException, ArtifactMissingException, ProcessFailureException, MD5Exception;
-
-  /**
-   * Verifies that the given graph contains compatible versions of each artifact. This does not modify the graph in any
-   * way.
-   *
-   * @param graph The graph.
-   * @throws CompatibilityException If an dependency has incompatible versions.
-   */
-  void verifyCompatibility(DependencyGraph graph) throws CompatibilityException;
 
   /**
    * Controls how resolution functions for each dependency-group. This determines if sources are fetched or if

@@ -18,6 +18,7 @@ package org.savantbuild.dep.domain;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * This class defines a group of artifacts that the project depends on.
@@ -27,16 +28,22 @@ import java.util.List;
 public class DependencyGroup {
   public final List<Dependency> dependencies = new ArrayList<>();
 
+  public final boolean export;
+
   public final String type;
 
-  public boolean export;
-
-  public DependencyGroup(String type) {
+  /**
+   * Constructs a Dependency group.
+   *
+   * @param type         The type (compile, run, etc).
+   * @param export       Whether or not this group is exported or not.
+   * @param dependencies The initial dependencies of the group.
+   * @throws NullPointerException If the type parameter is null.
+   */
+  public DependencyGroup(String type, boolean export, Dependency... dependencies) throws NullPointerException {
+    Objects.requireNonNull(type, "DependencyGroups must have a type specified (i.e. compile, run, test, etc.)");
     this.type = type;
-  }
-
-  public DependencyGroup(String type, Dependency... dependencies) {
-    this.type = type;
+    this.export = export;
     Collections.addAll(this.dependencies, dependencies);
   }
 

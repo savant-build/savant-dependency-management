@@ -16,6 +16,12 @@
 package org.savantbuild.dep;
 
 import com.sun.net.httpserver.HttpServer;
+import org.savantbuild.dep.workflow.FetchWorkflow;
+import org.savantbuild.dep.workflow.PublishWorkflow;
+import org.savantbuild.dep.workflow.Workflow;
+import org.savantbuild.dep.workflow.process.CacheProcess;
+import org.savantbuild.dep.workflow.process.URLProcess;
+import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
@@ -33,8 +39,29 @@ import static org.testng.AssertJUnit.fail;
  *
  * @author Brian Pontarelli
  */
-@Test(groups = "unit")
-public abstract class BaseUnitTest {
+@Test(groups = {"unit", "integration", "acceptance", "functional"})
+public abstract class BaseTest {
+  public static Path projectDir;
+
+  public static Path cache;
+
+  public static Workflow workflow;
+
+  @BeforeSuite
+  public static void setup() {
+    projectDir = Paths.get("");
+    if (!Files.isRegularFile(projectDir.resolve("LICENSE"))) {
+      projectDir = projectDir.resolve("savant-dependency-management");
+    }
+
+    cache = projectDir.resolve("build/test/cache");
+
+    workflow = new Workflow(
+        new FetchWorkflow(new CacheProcess(cache.toString()), new URLProcess("http://localhost:7000/test-deps/savant", null, null)),
+        new PublishWorkflow(new CacheProcess(cache.toString()))
+    );
+  }
+
   /**
    * Creates a file server that will accept HTTP connections on localhost:7000 and return the bytes of the file in the
    * request starting from the project directory.
@@ -63,7 +90,7 @@ public abstract class BaseUnitTest {
       httpExchange.getRequestBody().close();
 
       String path = httpExchange.getRequestURI().getPath();
-      Path file = Paths.get(path.substring(1));
+      Path file = projectDir.resolve(path.substring(1));
       if (Files.isRegularFile(file)) {
         httpExchange.sendResponseHeaders(200, Files.size(file));
         byte[] bytes = Files.readAllBytes(file);

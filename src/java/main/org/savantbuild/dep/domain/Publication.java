@@ -25,7 +25,7 @@ import java.nio.file.Path;
  * @author Brian Pontarelli
  */
 public class Publication {
-  public Artifact artifact;
+  public AbstractArtifact artifact;
 
   public Dependencies dependencies;
 

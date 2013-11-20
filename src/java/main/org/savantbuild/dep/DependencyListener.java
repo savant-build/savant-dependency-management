@@ -15,7 +15,7 @@
  */
 package org.savantbuild.dep;
 
-import org.savantbuild.dep.domain.Artifact;
+import org.savantbuild.dep.domain.AbstractArtifact;
 import org.savantbuild.dep.domain.ResolvedArtifact;
 
 /**
@@ -36,5 +36,5 @@ public interface DependencyListener {
    *
    * @param artifact The artifact being published.
    */
-  void artifactPublished(Artifact artifact);
+  void artifactPublished(AbstractArtifact artifact);
 }

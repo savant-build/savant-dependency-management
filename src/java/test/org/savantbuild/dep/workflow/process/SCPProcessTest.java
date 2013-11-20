@@ -15,13 +15,15 @@
  */
 package org.savantbuild.dep.workflow.process;
 
+import org.savantbuild.dep.BaseTest;
+import org.savantbuild.dep.domain.AbstractArtifact;
 import org.savantbuild.dep.domain.Artifact;
+import org.savantbuild.dep.domain.License;
 import org.savantbuild.dep.net.SSHOptions;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -38,7 +40,7 @@ import static org.testng.Assert.assertTrue;
  * @author Brian Pontarelli
  */
 @Test(groups = "functional")
-public class SCPProcessTest {
+public class SCPProcessTest extends BaseTest {
   @BeforeMethod
   public void deleteFile() throws Exception {
     if (Files.isDirectory(Paths.get("/tmp/savant-test"))) {
@@ -59,14 +61,14 @@ public class SCPProcessTest {
   public Object[][] options() {
     SSHOptions trust = new SSHOptions();
     trust.username = "savanttest";
-    trust.identity = new File("src/java/test/org/savantbuild/dep/net/test_id_dsa");
+    trust.identity = projectDir.resolve("src/java/test/org/savantbuild/dep/net/test_id_dsa").toFile();
     trust.knownHosts = null;
     trust.trustUnknownHosts = true;
 
     SSHOptions identity = new SSHOptions();
     identity.identity = null;
     identity.username = "savanttest";
-    identity.identity = new File("src/java/test/org/savantbuild/dep/net/test_id_dsa");
+    identity.identity = projectDir.resolve("src/java/test/org/savantbuild/dep/net/test_id_dsa").toFile();
 
     SSHOptions username = new SSHOptions();
     username.identity = null;
@@ -81,8 +83,8 @@ public class SCPProcessTest {
   @Test(dataProvider = "options")
   public void run(SSHOptions options) throws IOException {
     SCPProcess process = new SCPProcess("localhost", "/tmp/savant-test", options);
-    Path path = Paths.get("src/java/test/org/savantbuild/dep/net/test_id_dsa");
-    Artifact artifact = new Artifact("org.savantbuild.test:scp-test:1.0");
+    Path path = projectDir.resolve("src/java/test/org/savantbuild/dep/net/test_id_dsa");
+    AbstractArtifact artifact = new Artifact("org.savantbuild.test:scp-test:1.0", License.Apachev2);
     process.publish(artifact, artifact.getArtifactFile(), path);
 
     Path result = Paths.get("/tmp/savant-test/org/savantbuild/test/scp-test/1.0.0/scp-test-1.0.0.jar");

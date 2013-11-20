@@ -15,7 +15,7 @@
  */
 package org.savantbuild.dep.workflow.process;
 
-import org.savantbuild.dep.domain.Artifact;
+import org.savantbuild.dep.domain.AbstractArtifact;
 import org.savantbuild.dep.io.FileTools;
 import org.savantbuild.dep.workflow.PublishWorkflow;
 
@@ -50,7 +50,7 @@ public class CacheProcess implements Process {
    * @throws ProcessFailureException If the integration builds could not be deleted.
    */
   @Override
-  public void deleteIntegrationBuilds(Artifact artifact) throws ProcessFailureException {
+  public void deleteIntegrationBuilds(AbstractArtifact artifact) throws ProcessFailureException {
     String path = String.join("/", dir, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version + "-{integration}");
     Path dir = Paths.get(path);
     if (!Files.isDirectory(dir)) {
@@ -60,7 +60,7 @@ public class CacheProcess implements Process {
     try {
       FileTools.prune(dir);
     } catch (IOException e) {
-      throw new ProcessFailureException("Unable to delete integration builds from [" + dir.toAbsolutePath() + "]", e);
+      throw new ProcessFailureException(artifact, "Unable to delete integration builds from [" + dir.toAbsolutePath() + "]", e);
     }
   }
 
@@ -75,13 +75,13 @@ public class CacheProcess implements Process {
    *                                in the world.
    */
   @Override
-  public Path fetch(Artifact artifact, String item, PublishWorkflow publishWorkflow) throws NegativeCacheException {
+  public Path fetch(AbstractArtifact artifact, String item, PublishWorkflow publishWorkflow) throws NegativeCacheException {
     String path = String.join("/", dir, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString(), item);
     Path file = Paths.get(path);
     if (!Files.isRegularFile(file)) {
       file = Paths.get(path + ".neg");
       if (Files.isRegularFile(file)) {
-        throw new NegativeCacheException();
+        throw new NegativeCacheException(artifact);
       } else {
         file = null;
       }
@@ -100,24 +100,24 @@ public class CacheProcess implements Process {
    * @throws ProcessFailureException If the publish fails.
    */
   @Override
-  public Path publish(Artifact artifact, String item, Path artifactFile) throws ProcessFailureException {
+  public Path publish(AbstractArtifact artifact, String item, Path artifactFile) throws ProcessFailureException {
     String cachePath = String.join("/", dir, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString(), item);
     Path cacheFile = Paths.get(cachePath);
     if (Files.isDirectory(cacheFile)) {
-      throw new ProcessFailureException("An Artifact cache location is a directory [" + cacheFile.toAbsolutePath() + "]");
+      throw new ProcessFailureException(artifact, "An AbstractArtifact cache location is a directory [" + cacheFile.toAbsolutePath() + "]");
     }
 
     if (Files.isRegularFile(cacheFile)) {
       try {
         Files.delete(cacheFile);
       } catch (IOException e) {
-        throw new ProcessFailureException("Unable to clean out old file to replace [" + cacheFile.toAbsolutePath() + "]", e);
+        throw new ProcessFailureException(artifact, "Unable to clean out old file to replace [" + cacheFile.toAbsolutePath() + "]", e);
       }
     } else if (!Files.exists(cacheFile)) {
       try {
         Files.createDirectories(cacheFile.getParent());
       } catch (IOException e) {
-        throw new ProcessFailureException("Unable to create cache directory [" + cacheFile.getParent().toAbsolutePath() + "]");
+        throw new ProcessFailureException(artifact, "Unable to create cache directory [" + cacheFile.getParent().toAbsolutePath() + "]");
       }
     }
 
@@ -133,7 +133,7 @@ public class CacheProcess implements Process {
         }
       }
 
-      throw new ProcessFailureException(e);
+      throw new ProcessFailureException(artifact, e);
     }
 
     logger.fine("Cached at [" + cacheFile + "]");

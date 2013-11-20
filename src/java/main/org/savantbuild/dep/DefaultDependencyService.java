@@ -24,24 +24,26 @@ import org.savantbuild.dep.domain.Dependencies;
 import org.savantbuild.dep.domain.Dependency;
 import org.savantbuild.dep.domain.ResolvedArtifact;
 import org.savantbuild.dep.domain.Version;
+import org.savantbuild.dep.graph.ArtifactGraph;
 import org.savantbuild.dep.graph.CyclicException;
+import org.savantbuild.dep.graph.DependencyEdgeValue;
 import org.savantbuild.dep.graph.DependencyGraph;
-import org.savantbuild.dep.graph.DependencyLinkValue;
-import org.savantbuild.dep.graph.GraphLink;
+import org.savantbuild.dep.graph.Graph.Edge;
 import org.savantbuild.dep.graph.ResolvedArtifactGraph;
 import org.savantbuild.dep.io.MD5Exception;
-import org.savantbuild.dep.util.MinMax;
 import org.savantbuild.dep.workflow.ArtifactMetaDataMissingException;
 import org.savantbuild.dep.workflow.ArtifactMissingException;
 import org.savantbuild.dep.workflow.Workflow;
 import org.savantbuild.dep.workflow.process.ProcessFailureException;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
+import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static java.util.Arrays.asList;
 
@@ -61,7 +63,7 @@ public class DefaultDependencyService implements DependencyService {
       throws ArtifactMetaDataMissingException, ProcessFailureException {
     logger.fine("Building DependencyGraph");
     DependencyGraph graph = new DependencyGraph(project);
-    populateGraph(graph, new Dependency(project.id, project.version, false), dependencies, workflow, new HashSet<>());
+    populateGraph(graph, project, dependencies, workflow, new HashSet<>());
     return graph;
   }
 
@@ -69,56 +71,85 @@ public class DefaultDependencyService implements DependencyService {
    * {@inheritDoc}
    */
   @Override
-  public ResolvedArtifactGraph resolve(DependencyGraph graph, Workflow workflow, ResolveConfiguration configuration,
-                                       DependencyListener... listeners)
-      throws CyclicException, ArtifactMissingException, ProcessFailureException, MD5Exception {
-    ResolvedArtifact root = new ResolvedArtifact(graph.root.id, graph.root.version);
-    ResolvedArtifactGraph resolvedGraph = new ResolvedArtifactGraph(root);
-    Deque<ArtifactID> visited = new ArrayDeque<>();
-    visited.push(root.id);
-    Deque<ArtifactID> resolved = new ArrayDeque<>();
-    resolved.push(root.id);
-    resolve(graph, resolvedGraph, workflow, configuration, root, visited, resolved, listeners);
-    return resolvedGraph;
+  public ArtifactGraph reduce(DependencyGraph graph) throws CompatibilityException {
+
+    // Traverse graph. At each node, if the node's parents haven't all been checked. Skip it.
+    // If the node's parents have all been checked, for each parent, get the version of the node for the version of the
+    // parent that was kept. Ensure all these versions are compatible. Select the highest one. Add that to the
+    // ArtifactGraph. Store the kept version. Continue.
+
+    ArtifactGraph artifactGraph = new ArtifactGraph(graph.root);
+    Map<ArtifactID, Artifact> artifacts = new HashMap<>();
+    graph.traverse(graph.root.id, (origin, destination, edgeValue, depth) -> {
+      // If this edge is not the correct version of the parent or it is optional, bail
+      if (!edgeValue.dependentVersion.equals(artifacts.get(origin).version) || edgeValue.optional) {
+        return true;
+      }
+
+      List<Edge<ArtifactID, DependencyEdgeValue>> inbound = graph.getInboundEdges(destination);
+      boolean alreadyCheckedAllParents = inbound.size() > 0 && inbound.stream().allMatch((edge) -> artifacts.containsKey(edge.getOrigin()));
+      if (alreadyCheckedAllParents) {
+        // This is the complex part, for each inbound edge, grab the one where the origin is the correct version (based
+        // on the versions we have already kept). Then for each of those, map to the dependency version (the version of
+        // the destination node). Then get the min and max.
+        Stream<Version> filteredEdgeVersions =
+            inbound.stream()
+                   .filter((edge) -> edge.getValue().dependentVersion.equals(artifacts.get(edge.getOrigin()).version))
+                   .map((edge) -> edge.getValue().dependencyVersion);
+        Version min = filteredEdgeVersions.min(Version::compareTo).get();
+        Version max = filteredEdgeVersions.max(Version::compareTo).get();
+
+        // Ensure min and max are compatible
+        if (!min.isCompatibleWith(max)) {
+          throw new CompatibilityException(destination, min, max);
+        }
+
+        // Build the artifact for this node, save it in the Map and put it in the ArtifactGraph
+        Artifact destinationArtifact = new Artifact(destination, max, edgeValue.license);
+        Artifact originArtifact = artifacts.get(origin);
+        artifacts.put(destination, destinationArtifact);
+        artifactGraph.addEdge(originArtifact, destinationArtifact, edgeValue.type);
+      }
+
+      return true; // Always continue traversal
+    });
+
+    return artifactGraph;
   }
 
   /**
    * {@inheritDoc}
    */
   @Override
-  public void verifyCompatibility(DependencyGraph graph) throws CompatibilityException {
-    graph.getNodes().forEach((node) -> {
-      if (node.getInboundLinks().isEmpty()) {
-        System.out.println("Node [" + node.value + "] is empty");
-        return;
+  public ResolvedArtifactGraph resolve(ArtifactGraph graph, Workflow workflow, ResolveConfiguration configuration,
+                                       DependencyListener... listeners)
+      throws CyclicException, ArtifactMissingException, ProcessFailureException, MD5Exception {
+    ResolvedArtifact root = new ResolvedArtifact(graph.root.id, graph.root.version, graph.root.license, null);
+    ResolvedArtifactGraph resolvedGraph = new ResolvedArtifactGraph(root);
+
+    Map<Artifact, ResolvedArtifact> map = new HashMap<>();
+    map.put(graph.root, root);
+
+    graph.traverse(graph.root, (origin, destination, group, depth) -> {
+      Path file = workflow.fetchArtifact(destination);
+      ResolvedArtifact resolvedArtifact = new ResolvedArtifact(destination.id, destination.version, destination.license, file);
+      resolvedGraph.addEdge(map.get(origin), resolvedArtifact, group);
+      map.put(destination, resolvedArtifact);
+
+      // Optionally fetch the source
+      TypeResolveConfiguration typeResolveConfiguration = configuration.groupConfigurations.get(group);
+      if (typeResolveConfiguration.fetchSource) {
+        workflow.fetchSource(resolvedArtifact);
       }
 
-      MinMax<Version> minMax = new MinMax<>();
-      Set<ArtifactID> dependents = node.getInboundLinks().stream().map((link) -> link.origin.value).collect(Collectors.toSet());
-      System.out.println("Node [" + node.value + "] dependents " + dependents);
-      dependents.forEach((dependent) -> {
-        Version maxDependentVersion = node.getInboundLinks()
-                                          .stream()
-                                          .filter((link) -> link.origin.equals(graph.getNode(dependent)))
-                                          .map((link) -> link.value.dependentVersion)
-                                          .max(Version::compareTo)
-                                          .get();
+      // Call the listeners
+      asList(listeners).forEach((listener) -> listener.artifactFetched(resolvedArtifact));
 
-        Version dependentMax = node.getInboundLinks(graph.getNode(dependent))
-                                   .stream()
-                                   .filter((link) -> link.value.dependentVersion.equals(maxDependentVersion))
-                                   .map((link) -> link.value.dependencyVersion)
-                                   .findFirst()
-                                   .get();
-        minMax.add(dependentMax);
-
-        System.out.println("Dependent [" + dependent + "] max version [" + maxDependentVersion + "] dependent max [" + dependentMax + "]");
-      });
-
-      if (!minMax.min.isCompatibleWith(minMax.max)) {
-        throw new CompatibilityException(node.value, minMax.min, minMax.max);
-      }
+      // Recurse if the configuration is set to transitive
+      return typeResolveConfiguration.transitive;
     });
+
+    return resolvedGraph;
   }
 
   /**
@@ -133,13 +164,16 @@ public class DefaultDependencyService implements DependencyService {
    * @param workflow          The workflow used to fetch the AMD files.
    * @param artifactsRecursed The set of artifacts already resolved and recursed for.
    */
-  private void populateGraph(DependencyGraph graph, Dependency origin, Dependencies dependencies, Workflow workflow,
-                             Set<Artifact> artifactsRecursed) throws ArtifactMetaDataMissingException, ProcessFailureException {
+  private void populateGraph(DependencyGraph graph, Artifact origin, Dependencies dependencies, Workflow workflow,
+                             Set<Dependency> artifactsRecursed)
+      throws ArtifactMetaDataMissingException, ProcessFailureException {
     dependencies.groups.forEach((type, group) -> {
       for (Dependency dependency : group.dependencies) {
-        // Create a link using nodes so that we can be explicit
-        DependencyLinkValue link = new DependencyLinkValue(origin.version, dependency.version, type, dependency.optional);
-        graph.addLink(origin.id, dependency.id, link);
+        ArtifactMetaData amd = workflow.fetchMetaData(dependency);
+
+        // Create an edge using nodes so that we can be explicit
+        DependencyEdgeValue edge = new DependencyEdgeValue(origin.version, dependency.version, type, dependency.optional, amd.license);
+        graph.addEdge(origin.id, dependency.id, edge);
 
         // If we have already recursed this artifact, skip it.
         if (artifactsRecursed.contains(dependency)) {
@@ -147,60 +181,14 @@ public class DefaultDependencyService implements DependencyService {
         }
 
         // Recurse
-        ArtifactMetaData amd = workflow.fetchMetaData(dependency);
         if (amd.dependencies != null) {
-          populateGraph(graph, dependency, amd.dependencies, workflow, artifactsRecursed);
+          Artifact artifact = amd.toLicensedArtifact(dependency);
+          populateGraph(graph, artifact, amd.dependencies, workflow, artifactsRecursed);
         }
 
         // Add the artifact to the list
         artifactsRecursed.add(dependency);
       }
-    });
-  }
-
-  private void resolve(DependencyGraph graph, ResolvedArtifactGraph resolvedGraph, Workflow workflow,
-                       ResolveConfiguration configuration, ResolvedArtifact origin, Deque<ArtifactID> visited,
-                       Deque<ArtifactID> resolved, DependencyListener... listeners)
-  throws CyclicException, ArtifactMissingException, ProcessFailureException {
-    Dependencies dependencies = graph.getDependencies(origin);
-    dependencies.groups.forEach((type, group) -> {
-      if (!configuration.groupConfigurations.containsKey(type)) {
-        return;
-      }
-
-      group.dependencies.forEach((dependency) -> {
-        if (dependency.optional) {
-          return;
-        }
-
-        if (visited.contains(dependency.id)) {
-          throw new CyclicException("The dependency [" + dependency + "] was encountered twice. This means you have a cyclic in your dependencies");
-        }
-
-        Version latest = graph.getLatestVersion(dependency.id);
-        ResolvedArtifact resolvedArtifact = new ResolvedArtifact(dependency.id, latest);
-        resolvedArtifact.file = workflow.fetchArtifact(resolvedArtifact);
-        resolvedGraph.addLink(origin, resolvedArtifact, type);
-
-        // Optionally fetch the source
-        TypeResolveConfiguration typeResolveConfiguration = configuration.groupConfigurations.get(type);
-        if (typeResolveConfiguration.fetchSource) {
-          workflow.fetchSource(resolvedArtifact);
-        }
-
-        // Call the listeners
-        asList(listeners).forEach((listener) -> {
-          listener.artifactFetched(resolvedArtifact);
-        });
-
-        // Recurse if the configuration is set to transitive and this dependency hasn't been recursed yet
-        if (typeResolveConfiguration.transitive && !resolved.contains(resolvedArtifact.id)) {
-          visited.push(resolvedArtifact.id);
-          resolve(graph, resolvedGraph, workflow, configuration, resolvedArtifact, visited, resolved, listeners);
-          resolved.add(resolvedArtifact.id);
-          visited.pop();
-        }
-      });
     });
   }
 }

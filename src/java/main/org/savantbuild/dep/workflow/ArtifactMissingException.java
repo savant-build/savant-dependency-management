@@ -15,7 +15,7 @@
  */
 package org.savantbuild.dep.workflow;
 
-import org.savantbuild.dep.domain.Artifact;
+import org.savantbuild.dep.domain.AbstractArtifact;
 
 /**
  * Thrown when an artifact is missing.
@@ -26,9 +26,9 @@ import org.savantbuild.dep.domain.Artifact;
  * @author Brian Pontarelli
  */
 public class ArtifactMissingException extends RuntimeException {
-  public final Artifact artifact;
+  public final AbstractArtifact artifact;
 
-  public ArtifactMissingException(Artifact artifact) {
+  public ArtifactMissingException(AbstractArtifact artifact) {
     this.artifact = artifact;
   }
 }

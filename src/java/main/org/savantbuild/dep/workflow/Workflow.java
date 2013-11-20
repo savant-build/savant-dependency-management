@@ -15,7 +15,7 @@
  */
 package org.savantbuild.dep.workflow;
 
-import org.savantbuild.dep.domain.Artifact;
+import org.savantbuild.dep.domain.AbstractArtifact;
 import org.savantbuild.dep.domain.ArtifactMetaData;
 import org.savantbuild.dep.domain.VersionException;
 import org.savantbuild.dep.io.MD5Exception;
@@ -55,7 +55,7 @@ public class Workflow {
    *                                  artifact.
    * @throws MD5Exception If the item's MD5 file did not match the item.
    */
-  public Path fetchArtifact(Artifact artifact) throws ArtifactMissingException, ProcessFailureException, MD5Exception {
+  public Path fetchArtifact(AbstractArtifact artifact) throws ArtifactMissingException, ProcessFailureException, MD5Exception {
     Path file = fetchWorkflow.fetchItem(artifact, artifact.getArtifactFile(), publishWorkflow);
     if (file == null) {
       throw new ArtifactMissingException(artifact);
@@ -77,7 +77,7 @@ public class Workflow {
    *                                 file.
    * @throws MD5Exception If the item's MD5 file did not match the item.
    */
-  public ArtifactMetaData fetchMetaData(Artifact artifact)
+  public ArtifactMetaData fetchMetaData(AbstractArtifact artifact)
       throws ArtifactMetaDataMissingException, ProcessFailureException, MD5Exception {
     Path file = fetchWorkflow.fetchItem(artifact, artifact.getArtifactMetaDataFile(), publishWorkflow);
     if (file == null) {
@@ -86,8 +86,8 @@ public class Workflow {
 
     try {
       return ArtifactTools.parseArtifactMetaData(file);
-    } catch (SAXException | ParserConfigurationException | IOException | VersionException e) {
-      throw new ProcessFailureException(e);
+    } catch (IllegalArgumentException | NullPointerException | SAXException | ParserConfigurationException | IOException | VersionException e) {
+      throw new ProcessFailureException(artifact, e);
     }
   }
 
@@ -102,7 +102,7 @@ public class Workflow {
    *                                 file.
    * @throws MD5Exception If the item's MD5 file did not match the item.
    */
-  public Path fetchSource(Artifact artifact) throws ProcessFailureException, MD5Exception {
+  public Path fetchSource(AbstractArtifact artifact) throws ProcessFailureException, MD5Exception {
     try {
       Path file = fetchWorkflow.fetchItem(artifact, artifact.getArtifactSourceFile(), publishWorkflow);
       if (file == null) {
@@ -115,13 +115,5 @@ public class Workflow {
       // search for the source JAR should stop immediately.
       return null;
     }
-  }
-
-  public FetchWorkflow getFetchWorkflow() {
-    return fetchWorkflow;
-  }
-
-  public PublishWorkflow getPublishWorkflow() {
-    return publishWorkflow;
   }
 }

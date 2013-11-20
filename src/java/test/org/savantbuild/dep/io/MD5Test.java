@@ -15,11 +15,11 @@
  */
 package org.savantbuild.dep.io;
 
+import org.savantbuild.dep.BaseTest;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
@@ -30,10 +30,10 @@ import static org.testng.Assert.assertNotNull;
  * @author Brian Pontarelli
  */
 @Test(groups = "unit")
-public class MD5Test {
+public class MD5Test extends BaseTest {
   @Test
   public void md5() throws IOException {
-    Path f = Paths.get("src/java/test/org/savantbuild/dep/io/MD5Test.txt");
+    Path f = projectDir.resolve("src/java/test/org/savantbuild/dep/io/MD5Test.txt");
     MD5 md5 = MD5.fromPath(f);
     assertNotNull(md5);
     assertEquals(md5.fileName, "MD5Test.txt");

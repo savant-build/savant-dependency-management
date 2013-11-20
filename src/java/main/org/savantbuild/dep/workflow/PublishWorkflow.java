@@ -15,7 +15,7 @@
  */
 package org.savantbuild.dep.workflow;
 
-import org.savantbuild.dep.domain.Artifact;
+import org.savantbuild.dep.domain.AbstractArtifact;
 import org.savantbuild.dep.workflow.process.Process;
 import org.savantbuild.dep.workflow.process.ProcessFailureException;
 
@@ -45,7 +45,7 @@ public class PublishWorkflow {
    *
    * @param artifact The artifact information used to publish.
    */
-  public void deleteIntegrationBuilds(Artifact artifact) {
+  public void deleteIntegrationBuilds(AbstractArtifact artifact) {
     for (Process process : processes) {
       process.deleteIntegrationBuilds(artifact);
     }
@@ -67,7 +67,7 @@ public class PublishWorkflow {
    * @return A file that can be used to reference the artifact for paths and other constructs.
    * @throws ProcessFailureException If the artifact could not be published for any reason.
    */
-  public Path publish(Artifact artifact, String item, Path file) throws ProcessFailureException {
+  public Path publish(AbstractArtifact artifact, String item, Path file) throws ProcessFailureException {
     Path result = null;
     for (Process process : processes) {
       Path temp = process.publish(artifact, item, file);
@@ -86,7 +86,7 @@ public class PublishWorkflow {
    * @param artifact The artifact information used to publish.
    * @param item     The item that the negative is being published for.
    */
-  public void publishNegative(Artifact artifact, String item) {
+  public void publishNegative(AbstractArtifact artifact, String item) {
     Path itemFile;
     try {
       File tempFile = File.createTempFile("savant-item", "neg");

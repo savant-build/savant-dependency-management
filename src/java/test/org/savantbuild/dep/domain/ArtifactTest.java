@@ -18,6 +18,7 @@ package org.savantbuild.dep.domain;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotEquals;
 
 /**
  * Tests the artifact domain object.
@@ -28,15 +29,16 @@ import static org.testng.Assert.assertEquals;
 public class ArtifactTest {
   @Test
   public void construct() {
-    assertEquals(new Artifact("group:name:2.0"), new Artifact(new ArtifactID("group", "name", "name", "jar"), new Version("2.0")));
-    assertEquals(new Artifact("group:name:2.0:zip"), new Artifact(new ArtifactID("group", "name", "name", "zip"), new Version("2.0")));
-    assertEquals(new Artifact("group:project:name:2.0:zip"), new Artifact(new ArtifactID("group", "project", "name", "zip"), new Version("2.0")));
+    assertEquals(new Artifact("group:name:2.0", License.Apachev1), new Artifact(new ArtifactID("group", "name", "name", "jar"), new Version("2.0"), License.Apachev1));
+    assertEquals(new Artifact("group:name:2.0:zip", License.Apachev2), new Artifact(new ArtifactID("group", "name", "name", "zip"), new Version("2.0"), License.Apachev2));
+    assertEquals(new Artifact("group:project:name:2.0:zip", License.Commercial), new Artifact(new ArtifactID("group", "project", "name", "zip"), new Version("2.0"), License.Commercial));
+    assertNotEquals(new Artifact("group:project:name:1.0:zip", License.Apachev1), new Artifact(new ArtifactID("group", "project", "name", "zip"), new Version("1.0"), License.Commercial));
   }
 
   @Test
   public void syntheticMethods() {
-    assertEquals(new Artifact("group:name:2.0").getArtifactFile(), "name-2.0.0.jar");
-    assertEquals(new Artifact("group:name:2.0").getArtifactMetaDataFile(), "name-2.0.0.jar.amd");
-    assertEquals(new Artifact("group:name:2.0").getArtifactSourceFile(), "name-2.0.0-src.jar");
+    assertEquals(new Artifact("group:name:2.0", License.Apachev2).getArtifactFile(), "name-2.0.0.jar");
+    assertEquals(new Artifact("group:name:2.0", License.Apachev2).getArtifactMetaDataFile(), "name-2.0.0.jar.amd");
+    assertEquals(new Artifact("group:name:2.0", License.Apachev2).getArtifactSourceFile(), "name-2.0.0-src.jar");
   }
 }

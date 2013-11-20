@@ -21,12 +21,8 @@ package org.savantbuild.dep.domain;
  *
  * @author Brian Pontarelli
  */
-public class Dependency extends Artifact {
-  public boolean optional;
-
-  public Dependency() {
-    super();
-  }
+public class Dependency extends AbstractArtifact {
+  public final boolean optional;
 
   public Dependency(ArtifactID id, Version version, boolean optional) {
     super(id, version);

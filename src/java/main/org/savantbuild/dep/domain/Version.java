@@ -76,8 +76,9 @@ public class Version implements Comparable<Version> {
    * Constructs a version by parsing the given String.
    *
    * @param version The version String to parse.
-   * @throws VersionException If the string starts or ends with a delimiter (. or -) or contains two delimiters in a
-   *                          row.
+   * @throws VersionException If the string is incorrectly formatted and does not conform to the semantic versioning
+   *                          scheme (starts with a delimiter (. or -), contains two delimiters in a row, doesn't have
+   *                          proper pre-release or meta-data information).
    */
   public Version(String version) {
     char start = version.charAt(0);
