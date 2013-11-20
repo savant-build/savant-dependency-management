@@ -63,6 +63,24 @@ public class DefaultDependencyServiceTest extends BaseTest {
 
   public ArtifactGraph goodReducedGraph;
 
+  public Artifact integrationBuild = new Artifact(new ArtifactID("org.savantbuild.test", "integration-build", "integration-build", "jar"), new Version("2.1.1-{integration}"), License.Apachev2);
+
+  public Artifact intermediate = new Artifact(new ArtifactID("org.savantbuild.test", "intermediate", "intermediate", "jar"), new Version("1.0.0"), License.Apachev2);
+
+  public Artifact leaf1 = new Artifact(new ArtifactID("org.savantbuild.test", "leaf", "leaf1", "jar"), new Version("1.0.0"), License.GPL);
+
+  public Artifact leaf1_1 = new Artifact(new ArtifactID("org.savantbuild.test", "leaf1", "leaf1", "jar"), new Version("1.0.0"), License.Commercial);
+
+  public Artifact leaf2 = new Artifact(new ArtifactID("org.savantbuild.test", "leaf", "leaf2", "jar"), new Version("1.0.0"), License.LGPL);
+
+  public Artifact leaf2_2 = new Artifact(new ArtifactID("org.savantbuild.test", "leaf2", "leaf2", "jar"), new Version("1.0.0"), License.OtherNonDistributableOpenSource);
+
+  public Artifact leaf3_3 = new Artifact(new ArtifactID("org.savantbuild.test", "leaf3", "leaf3", "jar"), new Version("1.0.0"), License.Apachev2);
+
+  public Artifact multipleVersions = new Artifact(new ArtifactID("org.savantbuild.test", "multiple-versions", "multiple-versions", "jar"), new Version("1.1.0"), License.Apachev2);
+
+  public Artifact multipleVersionsDifferentDeps = new Artifact(new ArtifactID("org.savantbuild.test", "multiple-versions-different-dependencies", "multiple-versions-different-dependencies", "jar"), new Version("1.1.0"), License.Apachev2);
+
   public Artifact project = new Artifact("org.savantbuild.test:project:1.0", License.Apachev2);
 
   public ResolvedArtifact projectResolved = new ResolvedArtifact(project.id, project.version, License.Apachev2, null);
@@ -97,16 +115,6 @@ public class DefaultDependencyServiceTest extends BaseTest {
    */
   @BeforeClass
   public void beforeClass() {
-    Artifact leaf1 = new Artifact(new ArtifactID("org.savantbuild.test", "leaf", "leaf1", "jar"), new Version("1.0.0"), License.GPL);
-    Artifact leaf2 = new Artifact(new ArtifactID("org.savantbuild.test", "leaf", "leaf2", "jar"), new Version("1.0.0"), License.LGPL);
-    Artifact leaf1_1 = new Artifact(new ArtifactID("org.savantbuild.test", "leaf1", "leaf1", "jar"), new Version("1.0.0"), License.Commercial);
-    Artifact leaf2_2 = new Artifact(new ArtifactID("org.savantbuild.test", "leaf2", "leaf2", "jar"), new Version("1.0.0"), License.OtherNonDistributableOpenSource);
-    Artifact leaf3_3 = new Artifact(new ArtifactID("org.savantbuild.test", "leaf3", "leaf3", "jar"), new Version("1.0.0"), License.Apachev2);
-    Artifact integrationBuild = new Artifact(new ArtifactID("org.savantbuild.test", "integration-build", "integration-build", "jar"), new Version("2.1.1-{integration}"), License.Apachev2);
-    Artifact intermediate = new Artifact(new ArtifactID("org.savantbuild.test", "intermediate", "intermediate", "jar"), new Version("1.0.0"), License.Apachev2);
-    Artifact multipleVersions = new Artifact(new ArtifactID("org.savantbuild.test", "multiple-versions", "multiple-versions", "jar"), new Version("1.1.0"), License.Apachev2);
-    Artifact multipleVersionsDifferentDeps = new Artifact(new ArtifactID("org.savantbuild.test", "multiple-versions-different-dependencies", "multiple-versions-different-dependencies", "jar"), new Version("1.1.0"), License.Apachev2);
-
     goodGraph = new DependencyGraph(project);
     goodGraph.addEdge(project.id, multipleVersions.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", false, License.Apachev1));
     goodGraph.addEdge(project.id, intermediate.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "run", false, License.Apachev2));
@@ -516,6 +524,19 @@ public class DefaultDependencyServiceTest extends BaseTest {
   }
 
   @Test
+  public void resolveGraphFailureBadLicense() throws Exception {
+    ArtifactGraph artifactGraph = service.reduce(goodGraph);
+    try {
+      service.resolve(artifactGraph, workflow,
+          new ResolveConfiguration().with("compile", new TypeResolveConfiguration(true, true, License.GPL))
+                                    .with("run", new TypeResolveConfiguration(true, true))
+      );
+    } catch (LicenseException e) {
+      assertEquals(e.artifact, leaf1);
+    }
+  }
+
+  @Test
   public void resolveGraphFailureMD5() throws Exception {
     DependencyGraph graph = makeSimpleGraph("org.savantbuild.test:bad-md5:1.0.0");
     try {
@@ -536,6 +557,28 @@ public class DefaultDependencyServiceTest extends BaseTest {
       assertEquals(e.artifact, new AbstractArtifact("org.savantbuild.test:missing-item:1.0.0") {
       });
     }
+  }
+
+  @Test
+  public void resolveGraphNonTransitiveSpecificGroups() throws Exception {
+    ResolvedArtifactGraph expected = new ResolvedArtifactGraph(projectResolved);
+    ResolvedArtifact multipleVersions = new ResolvedArtifact("org.savantbuild.test:multiple-versions:1.1.0", License.Apachev2, cache.resolve("org/savantbuild/test/multiple-versions/1.1.0/multiple-versions-1.1.0.jar"));
+    ResolvedArtifact multipleVersionsDifferentDeps = new ResolvedArtifact("org.savantbuild.test:multiple-versions-different-dependencies:1.1.0", License.Apachev2, cache.resolve("org/savantbuild/test/multiple-versions-different-dependencies/1.1.0/multiple-versions-different-dependencies-1.1.0.jar"));
+
+    expected.addEdge(projectResolved, multipleVersions, "compile");
+    expected.addEdge(projectResolved, multipleVersionsDifferentDeps, "compile");
+
+    ArtifactGraph artifactGraph = service.reduce(goodGraph);
+    ResolvedArtifactGraph actual = service.resolve(artifactGraph, workflow,
+        new ResolveConfiguration().with("compile", new TypeResolveConfiguration(true, false))
+    );
+
+    assertEquals(actual, expected);
+
+    // Verify that all the artifacts have files and they all exist (except for the project)
+    Set<ResolvedArtifact> artifacts = actual.values();
+    artifacts.remove(projectResolved);
+    artifacts.forEach((artifact) -> assertTrue(Files.isRegularFile(artifact.file)));
   }
 
   private Dependencies makeSimpleDependencies(String dependency) {

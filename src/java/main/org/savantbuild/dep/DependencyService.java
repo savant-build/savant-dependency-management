@@ -18,6 +18,7 @@ package org.savantbuild.dep;
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.CompatibilityException;
 import org.savantbuild.dep.domain.Dependencies;
+import org.savantbuild.dep.domain.License;
 import org.savantbuild.dep.graph.ArtifactGraph;
 import org.savantbuild.dep.graph.CyclicException;
 import org.savantbuild.dep.graph.DependencyGraph;
@@ -28,8 +29,11 @@ import org.savantbuild.dep.workflow.ArtifactMissingException;
 import org.savantbuild.dep.workflow.Workflow;
 import org.savantbuild.dep.workflow.process.ProcessFailureException;
 
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Provides all of the dependency management services. The main workflow for managing dependencies is:
@@ -82,10 +86,11 @@ public interface DependencyService {
    * @throws ArtifactMissingException If any of the required artifacts are missing.
    * @throws CyclicException          If any of the artifact graph has any cycles in it.
    * @throws MD5Exception             If the item's MD5 file did not match the item.
+   * @throws LicenseException         If an invalid license is encountered during the resolution process.
    */
   ResolvedArtifactGraph resolve(ArtifactGraph graph, Workflow workflow, ResolveConfiguration configuration,
                                 DependencyListener... listeners)
-      throws CyclicException, ArtifactMissingException, ProcessFailureException, MD5Exception;
+      throws CyclicException, ArtifactMissingException, ProcessFailureException, MD5Exception, LicenseException;
 
   /**
    * Controls how resolution functions for each dependency-group. This determines if sources are fetched or if
@@ -100,11 +105,14 @@ public interface DependencyService {
     }
 
     public static class TypeResolveConfiguration {
+      public final Set<License> disallowedLicenses = new HashSet<>();
+
       public final boolean fetchSource;
 
       public final boolean transitive;
 
-      public TypeResolveConfiguration(boolean fetchSource, boolean transitive) {
+      public TypeResolveConfiguration(boolean fetchSource, boolean transitive, License... disallowedLicenses) {
+        Collections.addAll(this.disallowedLicenses, disallowedLicenses);
         this.fetchSource = fetchSource;
         this.transitive = transitive;
       }

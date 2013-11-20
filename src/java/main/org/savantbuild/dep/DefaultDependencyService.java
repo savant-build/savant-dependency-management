@@ -140,7 +140,7 @@ public class DefaultDependencyService implements DependencyService {
   @Override
   public ResolvedArtifactGraph resolve(ArtifactGraph graph, Workflow workflow, ResolveConfiguration configuration,
                                        DependencyListener... listeners)
-      throws CyclicException, ArtifactMissingException, ProcessFailureException, MD5Exception {
+      throws CyclicException, ArtifactMissingException, ProcessFailureException, MD5Exception, LicenseException {
     ResolvedArtifact root = new ResolvedArtifact(graph.root.id, graph.root.version, graph.root.license, null);
     ResolvedArtifactGraph resolvedGraph = new ResolvedArtifactGraph(root);
 
@@ -148,13 +148,22 @@ public class DefaultDependencyService implements DependencyService {
     map.put(graph.root, root);
 
     graph.traverse(graph.root, (origin, destination, group, depth) -> {
+      // Only resolve specified types
+      TypeResolveConfiguration typeResolveConfiguration = configuration.groupConfigurations.get(group);
+      if (typeResolveConfiguration == null) {
+        return false;
+      }
+
+      if (typeResolveConfiguration.disallowedLicenses.contains(destination.license)) {
+        throw new LicenseException("Invalid license encountered", destination);
+      }
+
       Path file = workflow.fetchArtifact(destination);
       ResolvedArtifact resolvedArtifact = new ResolvedArtifact(destination.id, destination.version, destination.license, file);
       resolvedGraph.addEdge(map.get(origin), resolvedArtifact, group);
       map.put(destination, resolvedArtifact);
 
       // Optionally fetch the source
-      TypeResolveConfiguration typeResolveConfiguration = configuration.groupConfigurations.get(group);
       if (typeResolveConfiguration.fetchSource) {
         workflow.fetchSource(resolvedArtifact);
       }
@@ -162,7 +171,7 @@ public class DefaultDependencyService implements DependencyService {
       // Call the listeners
       asList(listeners).forEach((listener) -> listener.artifactFetched(resolvedArtifact));
 
-      // Recurse if the configuration is set to transitive
+      // Recurse if the configuration is set to transitive (or not set)
       return typeResolveConfiguration.transitive;
     });
 
