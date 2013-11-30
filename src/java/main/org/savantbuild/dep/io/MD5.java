@@ -88,10 +88,59 @@ public final class MD5 {
    */
   public static MD5 fromPath(Path path) throws IOException {
     if (!Files.isRegularFile(path)) {
-      throw new IllegalArgumentException("Invalid file to MD5 [" + path.toAbsolutePath() + "]");
+      throw new IllegalArgumentException("File to MD5 doesn't exist [" + path.toAbsolutePath() + "]");
     }
 
     return MD5.fromBytes(Files.readAllBytes(path), path.getFileName().toString());
+  }
+
+  /**
+   * Loads the MD5 file at the given Path. This doesn't calculate the MD5 for the given path. The given path must be an
+   * MD5 file.
+   *
+   * @param path The path to parse the MD5 sum from.
+   * @return The MD5.
+   * @throws IOException If the MD5 file is not a valid MD5 file or was unreadable.
+   */
+  public static MD5 load(Path path) throws IOException {
+    if (path == null || !Files.isRegularFile(path)) {
+      return null;
+    }
+
+    String str = new String(Files.readAllBytes(path), "UTF-8").trim();
+
+    // Validate format (should be either only the md5sum or the sum plus the file name)
+    if (str.length() < 32) {
+      throw new MD5Exception("Invalid md5sum [" + str + "]");
+    }
+
+    String name = null;
+    String sum;
+    if (str.length() == 32) {
+      sum = str;
+    } else if (str.length() > 33) {
+      int index = str.indexOf(" ");
+      if (index == 32) {
+        sum = str.substring(0, 32);
+
+        // Find file name and verify
+        while (str.charAt(index) == ' ') {
+          index++;
+        }
+
+        if (index == str.length()) {
+          throw new MD5Exception("Invalid md5sum [" + str + "]");
+        }
+
+        name = str.substring(index);
+      } else {
+        throw new MD5Exception("Invalid md5sum [" + str + "]");
+      }
+    } else {
+      throw new MD5Exception("Invalid md5sum [" + str + "]. It has a length of [" + str.length() + "] and it should be 32");
+    }
+
+    return new MD5(sum, StringTools.fromHex(sum), name);
   }
 
   /**

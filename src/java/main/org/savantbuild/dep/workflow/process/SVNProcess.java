@@ -17,7 +17,6 @@ package org.savantbuild.dep.workflow.process;
 
 import org.savantbuild.dep.domain.AbstractArtifact;
 import org.savantbuild.dep.io.FileTools;
-import org.savantbuild.dep.io.IOTools;
 import org.savantbuild.dep.io.MD5;
 import org.savantbuild.dep.io.MD5Exception;
 import org.savantbuild.dep.net.NetTools;
@@ -88,7 +87,7 @@ public class SVNProcess implements Process {
 
       MD5 md5;
       try {
-        md5 = IOTools.parseMD5(md5File);
+        md5 = MD5.load(md5File);
       } catch (IOException e) {
         Files.delete(md5File);
         throw new ProcessFailureException(artifact, e);

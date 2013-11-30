@@ -19,6 +19,7 @@ import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.CompatibilityException;
 import org.savantbuild.dep.domain.Dependencies;
 import org.savantbuild.dep.domain.License;
+import org.savantbuild.dep.domain.Publication;
 import org.savantbuild.dep.graph.ArtifactGraph;
 import org.savantbuild.dep.graph.CyclicException;
 import org.savantbuild.dep.graph.DependencyGraph;
@@ -26,6 +27,7 @@ import org.savantbuild.dep.graph.ResolvedArtifactGraph;
 import org.savantbuild.dep.io.MD5Exception;
 import org.savantbuild.dep.workflow.ArtifactMetaDataMissingException;
 import org.savantbuild.dep.workflow.ArtifactMissingException;
+import org.savantbuild.dep.workflow.PublishWorkflow;
 import org.savantbuild.dep.workflow.Workflow;
 import org.savantbuild.dep.workflow.process.ProcessFailureException;
 
@@ -61,6 +63,15 @@ public interface DependencyService {
    */
   DependencyGraph buildGraph(Artifact project, Dependencies dependencies, Workflow workflow)
       throws ArtifactMetaDataMissingException, ProcessFailureException;
+
+  /**
+   * Publishes the given Publication (artifact, meta-data, source file, etc) with the given workflow.
+   *
+   * @param publication The publication to publish.
+   * @param workflow    The workflow to publish with.
+   * @throws PublishException If the publication failed.
+   */
+  void publish(Publication publication, PublishWorkflow workflow) throws PublishException;
 
   /**
    * Reduces the DependencyGraph by ensuring that each dependency only has one version. This also prunes unused

@@ -21,11 +21,13 @@ import org.savantbuild.dep.DependencyService.ResolveConfiguration.TypeResolveCon
 import org.savantbuild.dep.domain.AbstractArtifact;
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.ArtifactID;
+import org.savantbuild.dep.domain.ArtifactMetaData;
 import org.savantbuild.dep.domain.CompatibilityException;
 import org.savantbuild.dep.domain.Dependencies;
 import org.savantbuild.dep.domain.Dependency;
 import org.savantbuild.dep.domain.DependencyGroup;
 import org.savantbuild.dep.domain.License;
+import org.savantbuild.dep.domain.Publication;
 import org.savantbuild.dep.domain.ResolvedArtifact;
 import org.savantbuild.dep.domain.Version;
 import org.savantbuild.dep.graph.ArtifactGraph;
@@ -33,9 +35,12 @@ import org.savantbuild.dep.graph.DependencyEdgeValue;
 import org.savantbuild.dep.graph.DependencyGraph;
 import org.savantbuild.dep.graph.ResolvedArtifactGraph;
 import org.savantbuild.dep.io.FileTools;
+import org.savantbuild.dep.io.MD5;
 import org.savantbuild.dep.io.MD5Exception;
 import org.savantbuild.dep.workflow.ArtifactMetaDataMissingException;
 import org.savantbuild.dep.workflow.ArtifactMissingException;
+import org.savantbuild.dep.workflow.PublishWorkflow;
+import org.savantbuild.dep.workflow.process.CacheProcess;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
@@ -212,6 +217,52 @@ public class DefaultDependencyServiceTest extends BaseTest {
       assertEquals(e.artifactMissingAMD, new AbstractArtifact("org.savantbuild.test:missing-md5:1.0.0") {
       });
     }
+  }
+
+  @Test
+  public void publishWithSource() throws IOException {
+    FileTools.prune(projectDir.resolve("build/test/publish"));
+
+    AbstractArtifact artifact = new AbstractArtifact("org.savantbuild.test:publication-with-source:1.0.0") {};
+    ArtifactMetaData amd = new ArtifactMetaData(dependencies, License.BSD);
+    Publication publication = new Publication(artifact, amd, projectDir.resolve("src/java/test/org/savantbuild/dep/io/MD5Test.txt"), projectDir.resolve("src/java/test/org/savantbuild/dep/io/MD5Test.txt"));
+    PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(projectDir.resolve("build/test/publish").toString()));
+    service.publish(publication, workflow);
+
+    assertTrue(Files.isRegularFile(projectDir.resolve("build/test/publish/org/savantbuild/test/publication-with-source/1.0.0/publication-with-source-1.0.0.jar.amd.md5")));
+    assertTrue(Files.isRegularFile(projectDir.resolve("build/test/publish/org/savantbuild/test/publication-with-source/1.0.0/publication-with-source-1.0.0.jar.amd")));
+    assertTrue(Files.isRegularFile(projectDir.resolve("build/test/publish/org/savantbuild/test/publication-with-source/1.0.0/publication-with-source-1.0.0.jar.md5")));
+    assertTrue(Files.isRegularFile(projectDir.resolve("build/test/publish/org/savantbuild/test/publication-with-source/1.0.0/publication-with-source-1.0.0.jar")));
+    assertTrue(Files.isRegularFile(projectDir.resolve("build/test/publish/org/savantbuild/test/publication-with-source/1.0.0/publication-with-source-1.0.0-src.jar.md5")));
+    assertTrue(Files.isRegularFile(projectDir.resolve("build/test/publish/org/savantbuild/test/publication-with-source/1.0.0/publication-with-source-1.0.0-src.jar")));
+
+    // Ensure the MD5 files are correct (these methods throw exceptions if they aren't
+    MD5.load(projectDir.resolve("build/test/publish/org/savantbuild/test/publication-with-source/1.0.0/publication-with-source-1.0.0.jar.amd.md5"));
+    MD5.load(projectDir.resolve("build/test/publish/org/savantbuild/test/publication-with-source/1.0.0/publication-with-source-1.0.0.jar.md5"));
+    MD5.load(projectDir.resolve("build/test/publish/org/savantbuild/test/publication-with-source/1.0.0/publication-with-source-1.0.0-src.jar.md5"));
+  }
+
+  @Test
+  public void publishWithoutSource() throws IOException {
+    FileTools.prune(projectDir.resolve("build/test/publish"));
+
+    AbstractArtifact artifact = new AbstractArtifact("org.savantbuild.test:publication-without-source:1.0.0") {
+    };
+    ArtifactMetaData amd = new ArtifactMetaData(dependencies, License.BSD);
+    Publication publication = new Publication(artifact, amd, projectDir.resolve("src/java/test/org/savantbuild/dep/io/MD5Test.txt"), null);
+    PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(projectDir.resolve("build/test/publish").toString()));
+    service.publish(publication, workflow);
+
+    assertTrue(Files.isRegularFile(projectDir.resolve("build/test/publish/org/savantbuild/test/publication-without-source/1.0.0/publication-without-source-1.0.0.jar.amd.md5")));
+    assertTrue(Files.isRegularFile(projectDir.resolve("build/test/publish/org/savantbuild/test/publication-without-source/1.0.0/publication-without-source-1.0.0.jar.amd")));
+    assertTrue(Files.isRegularFile(projectDir.resolve("build/test/publish/org/savantbuild/test/publication-without-source/1.0.0/publication-without-source-1.0.0.jar.md5")));
+    assertTrue(Files.isRegularFile(projectDir.resolve("build/test/publish/org/savantbuild/test/publication-without-source/1.0.0/publication-without-source-1.0.0.jar")));
+    assertFalse(Files.isRegularFile(projectDir.resolve("build/test/publish/org/savantbuild/test/publication-without-source/1.0.0/publication-without-source-1.0.0-src.jar.md5")));
+    assertFalse(Files.isRegularFile(projectDir.resolve("build/test/publish/org/savantbuild/test/publication-without-source/1.0.0/publication-without-source-1.0.0-src.jar")));
+
+    // Ensure the MD5 files are correct (these methods throw exceptions if they aren't
+    MD5.load(projectDir.resolve("build/test/publish/org/savantbuild/test/publication-without-source/1.0.0/publication-without-source-1.0.0.jar.amd.md5"));
+    MD5.load(projectDir.resolve("build/test/publish/org/savantbuild/test/publication-without-source/1.0.0/publication-without-source-1.0.0.jar.md5"));
   }
 
   /**

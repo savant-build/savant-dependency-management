@@ -22,8 +22,6 @@ import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -35,54 +33,6 @@ import java.util.Arrays;
  * @author Brian Pontarelli
  */
 public class IOTools {
-  /**
-   * Parses an MD5 from the given Path.
-   *
-   * @param path The path to parse the MD5 sum from.
-   * @return The MD5.
-   * @throws IOException If the MD5 file is not a valid MD5 file or was unreadable.
-   */
-  public static MD5 parseMD5(Path path) throws IOException {
-    if (path == null || !Files.isRegularFile(path)) {
-      return null;
-    }
-
-    String str = new String(Files.readAllBytes(path), "UTF-8").trim();
-
-    // Validate format (should be either only the md5sum or the sum plus the file name)
-    if (str.length() < 32) {
-      throw new MD5Exception("Invalid md5sum [" + str + "]");
-    }
-
-    String name = null;
-    String sum;
-    if (str.length() == 32) {
-      sum = str;
-    } else if (str.length() > 33) {
-      int index = str.indexOf(" ");
-      if (index == 32) {
-        sum = str.substring(0, 32);
-
-        // Find file name and verify
-        while (str.charAt(index) == ' ') {
-          index++;
-        }
-
-        if (index == str.length()) {
-          throw new MD5Exception("Invalid md5sum [" + str + "]");
-        }
-
-        name = str.substring(index);
-      } else {
-        throw new MD5Exception("Invalid md5sum [" + str + "]");
-      }
-    } else {
-      throw new MD5Exception("Invalid md5sum [" + str + "]. It has a length of [" + str.length() + "] and it should be 32");
-    }
-
-    return new MD5(sum, StringTools.fromHex(sum), name);
-  }
-
   /**
    * Reads from the given input stream and writes the contents out to the given OutputStream. During the write, the MD5
    * sum from input stream is calculated and compared with the given MD5 sum. This does not close the InputStream but
@@ -121,7 +71,7 @@ public class IOTools {
     if (md5 != null && md5.bytes != null) {
       byte[] localMD5 = digest.digest();
       if (localMD5 != null && !Arrays.equals(localMD5, md5.bytes)) {
-        throw new MD5Exception("MD5 mismatch when writing from the InputStream to the OutputStream.");
+        throw new MD5Exception("MD5 mismatch when writing from the InputStream to the OutputStream. Expected MD5 [" + StringTools.toHex(md5.bytes) + "] but was [" + StringTools.toHex(localMD5) + "]");
       }
     }
 

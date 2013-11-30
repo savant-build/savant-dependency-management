@@ -16,6 +16,7 @@
 package org.savantbuild.dep.domain;
 
 import java.nio.file.Path;
+import java.util.Objects;
 
 /**
  * This class is a publishable artifact for a project. This is similar to an artifact, but doesn't have the group,
@@ -25,15 +26,22 @@ import java.nio.file.Path;
  * @author Brian Pontarelli
  */
 public class Publication {
-  public AbstractArtifact artifact;
+  public final AbstractArtifact artifact;
 
-  public Dependencies dependencies;
+  public final ArtifactMetaData metaData;
 
-  public Path file;
+  public final Path file;
 
-  public Path sourceFile;
+  public final Path sourceFile;
 
-  public Publication() {
+  public Publication(AbstractArtifact artifact, ArtifactMetaData metaData, Path file, Path sourceFile) {
+    Objects.requireNonNull(artifact, "Publications must have an Artifact");
+    Objects.requireNonNull(metaData, "Publications must have ArtifactMetaData");
+    Objects.requireNonNull(file, "Publications must have a file");
+    this.sourceFile = sourceFile;
+    this.file = file;
+    this.metaData = metaData;
+    this.artifact = artifact;
   }
 
   @Override
@@ -46,13 +54,16 @@ public class Publication {
     }
 
     final Publication that = (Publication) o;
-    return artifact.equals(that.artifact) &&
-        file.equals(that.file) &&
-        (dependencies == null ? that.dependencies == null : dependencies.equals(that.dependencies));
+    return artifact.equals(that.artifact) && file.equals(that.file) && metaData.equals(that.metaData) &&
+        (sourceFile != null ? sourceFile.equals(that.sourceFile) : that.sourceFile == null);
   }
 
   @Override
   public int hashCode() {
-    return artifact.hashCode();
+    int result = artifact.hashCode();
+    result = 31 * result + metaData.hashCode();
+    result = 31 * result + file.hashCode();
+    result = 31 * result + (sourceFile != null ? sourceFile.hashCode() : 0);
+    return result;
   }
 }

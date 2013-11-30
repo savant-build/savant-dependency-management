@@ -53,9 +53,10 @@ public class Workflow {
    * @throws ArtifactMissingException If the artifact could not be found.
    * @throws ProcessFailureException  If any of the processes encountered a failure while attempting to fetch the
    *                                  artifact.
-   * @throws MD5Exception If the item's MD5 file did not match the item.
+   * @throws MD5Exception             If the item's MD5 file did not match the item.
    */
-  public Path fetchArtifact(AbstractArtifact artifact) throws ArtifactMissingException, ProcessFailureException, MD5Exception {
+  public Path fetchArtifact(AbstractArtifact artifact)
+      throws ArtifactMissingException, ProcessFailureException, MD5Exception {
     Path file = fetchWorkflow.fetchItem(artifact, artifact.getArtifactFile(), publishWorkflow);
     if (file == null) {
       throw new ArtifactMissingException(artifact);
@@ -75,7 +76,7 @@ public class Workflow {
    *                                 If the AMD file could not be found.
    * @throws ProcessFailureException If any of the processes encountered a failure while attempting to fetch the AMD
    *                                 file.
-   * @throws MD5Exception If the item's MD5 file did not match the item.
+   * @throws MD5Exception            If the item's MD5 file did not match the item.
    */
   public ArtifactMetaData fetchMetaData(AbstractArtifact artifact)
       throws ArtifactMetaDataMissingException, ProcessFailureException, MD5Exception {
@@ -100,7 +101,7 @@ public class Workflow {
    * @return The Path of the source or null if it doesn't exist.
    * @throws ProcessFailureException If any of the processes encountered a failure while attempting to fetch the source
    *                                 file.
-   * @throws MD5Exception If the item's MD5 file did not match the item.
+   * @throws MD5Exception            If the item's MD5 file did not match the item.
    */
   public Path fetchSource(AbstractArtifact artifact) throws ProcessFailureException, MD5Exception {
     try {
