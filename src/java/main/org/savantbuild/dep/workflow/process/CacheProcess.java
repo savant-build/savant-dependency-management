@@ -33,7 +33,7 @@ import java.util.logging.Logger;
 public class CacheProcess implements Process {
   private final static Logger logger = Logger.getLogger(CacheProcess.class.getName());
 
-  private String dir;
+  public final String dir;
 
   public CacheProcess(String dir) {
     if (dir == null) {

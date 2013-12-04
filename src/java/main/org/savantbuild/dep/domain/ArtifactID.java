@@ -22,7 +22,7 @@ import java.util.Objects;
  * considered the same artifact. All other properties associated with the artifact usually determine the artifacts
  * variant (such as version).
  *
- * @author Brian Pontarelli and James Humphrey
+ * @author Brian Pontarelli
  */
 public class ArtifactID {
   public final String group;

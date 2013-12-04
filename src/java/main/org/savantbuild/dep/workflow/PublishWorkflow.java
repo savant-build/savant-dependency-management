@@ -34,7 +34,7 @@ import java.util.List;
  * @author Brian Pontarelli
  */
 public class PublishWorkflow {
-  private final List<Process> processes = new ArrayList<>();
+  public final List<Process> processes = new ArrayList<>();
 
   public PublishWorkflow(Process... processes) {
     Collections.addAll(this.processes, processes);

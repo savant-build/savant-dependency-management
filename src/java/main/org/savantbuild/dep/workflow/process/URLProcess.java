@@ -43,11 +43,11 @@ import java.util.logging.Logger;
 public class URLProcess implements Process {
   private final static Logger logger = Logger.getLogger(URLProcess.class.getName());
 
-  private final String password;
+  public final String password;
 
-  private final String url;
+  public final String url;
 
-  private final String username;
+  public final String username;
 
   public URLProcess(String url, String username, String password) {
     Objects.requireNonNull(url, "The [url] attribute is required for the [url] workflow process");

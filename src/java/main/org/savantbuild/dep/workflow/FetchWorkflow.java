@@ -35,7 +35,7 @@ import java.util.logging.Logger;
 public class FetchWorkflow {
   private final static Logger logger = Logger.getLogger(FetchWorkflow.class.getName());
 
-  private final List<Process> processes = new ArrayList<>();
+  public final List<Process> processes = new ArrayList<>();
 
   public FetchWorkflow(Process... processes) {
     Collections.addAll(this.processes, processes);

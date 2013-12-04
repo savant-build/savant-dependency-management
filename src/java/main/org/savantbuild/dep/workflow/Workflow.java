@@ -34,9 +34,9 @@ import java.nio.file.Path;
  * @author Brian Pontarelli
  */
 public class Workflow {
-  private final FetchWorkflow fetchWorkflow;
+  public final FetchWorkflow fetchWorkflow;
 
-  private final PublishWorkflow publishWorkflow;
+  public final PublishWorkflow publishWorkflow;
 
   public Workflow(FetchWorkflow fetchWorkflow, PublishWorkflow publishWorkflow) {
     this.fetchWorkflow = fetchWorkflow;
