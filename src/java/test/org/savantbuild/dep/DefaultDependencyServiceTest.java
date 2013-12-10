@@ -46,6 +46,7 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Set;
@@ -572,6 +573,12 @@ public class DefaultDependencyServiceTest extends BaseTest {
     Set<ResolvedArtifact> artifacts = actual.values();
     artifacts.remove(projectResolved);
     artifacts.forEach((artifact) -> assertTrue(Files.isRegularFile(artifact.file)));
+
+    String expectedClasspath = String.join(File.pathSeparator, intermediate.file.toAbsolutePath().toString(),
+        multipleVersions.file.toAbsolutePath().toString(), leaf1.file.toAbsolutePath().toString(),
+        integrationBuild.file.toAbsolutePath().toString(), multipleVersionsDifferentDeps.file.toAbsolutePath().toString(),
+        leaf1_1.file.toAbsolutePath().toString(), leaf2_2.file.toAbsolutePath().toString());
+    assertEquals(actual.toClasspath(), expectedClasspath);
   }
 
   @Test

@@ -17,6 +17,12 @@ package org.savantbuild.dep.graph;
 
 import org.savantbuild.dep.domain.ResolvedArtifact;
 
+import java.io.File;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 /**
  * This class is a resolved artifact and dependency version of the Graph. The link between graph nodes is the artifact
  * group type as a String. The nodes contain the resolved artifact's, which include the Path of the artifact on the
@@ -52,5 +58,21 @@ public class ResolvedArtifactGraph extends HashGraph<ResolvedArtifact, String> {
     int result = super.hashCode();
     result = 31 * result + root.hashCode();
     return result;
+  }
+
+  public String toClasspath() {
+    List<String> entries = new ArrayList<>();
+    Set<ResolvedArtifact> visited = new HashSet<>();
+    traverse(root, (origin, destination, value, depth) -> {
+      if (visited.contains(destination)) {
+        return false;
+      }
+
+      entries.add(destination.file.toAbsolutePath().toString());
+      visited.add(destination);
+      return true;
+    });
+
+    return String.join(File.pathSeparator, entries);
   }
 }

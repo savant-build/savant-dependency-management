@@ -28,15 +28,6 @@ import java.util.Set;
 public class Dependencies {
   public final Map<String, DependencyGroup> groups = new LinkedHashMap<>();
 
-  public String name;
-
-  public Dependencies() {
-  }
-
-  public Dependencies(String name) {
-    this.name = name;
-  }
-
   public Dependencies(DependencyGroup... groups) {
     for (DependencyGroup group : groups) {
       this.groups.put(group.type, group);
@@ -53,8 +44,7 @@ public class Dependencies {
     }
 
     final Dependencies that = (Dependencies) o;
-    return groups.equals(that.groups) && !(name != null ? !name.equals(that.name) : that.name != null);
-
+    return groups.equals(that.groups);
   }
 
   /**
@@ -70,8 +60,6 @@ public class Dependencies {
 
   @Override
   public int hashCode() {
-    int result = groups.hashCode();
-    result = 31 * result + (name != null ? name.hashCode() : 0);
-    return result;
+    return groups.hashCode();
   }
 }
