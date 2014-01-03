@@ -27,10 +27,10 @@ import org.savantbuild.dep.domain.Publication;
 import org.savantbuild.dep.domain.ResolvedArtifact;
 import org.savantbuild.dep.domain.Version;
 import org.savantbuild.dep.graph.ArtifactGraph;
-import org.savantbuild.dep.graph.CyclicException;
+import org.savantbuild.util.CyclicException;
 import org.savantbuild.dep.graph.DependencyEdgeValue;
 import org.savantbuild.dep.graph.DependencyGraph;
-import org.savantbuild.dep.graph.Graph.Edge;
+import org.savantbuild.util.Graph.Edge;
 import org.savantbuild.dep.graph.ResolvedArtifactGraph;
 import org.savantbuild.dep.io.MD5;
 import org.savantbuild.dep.io.MD5Exception;
@@ -117,14 +117,14 @@ public class DefaultDependencyService implements DependencyService {
         return false;
       }
 
-      List<Edge<ArtifactID, DependencyEdgeValue>> inbound = graph.getInboundEdges(destination);
-      boolean alreadyCheckedAllParents = inbound.size() > 0 && inbound.stream().allMatch((
+      List<Edge<ArtifactID, DependencyEdgeValue>> inboundEdges = graph.getInboundEdges(destination);
+      boolean alreadyCheckedAllParents = inboundEdges.size() > 0 && inboundEdges.stream().allMatch((
           edge) -> artifacts.containsKey(edge.getOrigin()));
       if (alreadyCheckedAllParents) {
-        List<Edge<ArtifactID, DependencyEdgeValue>> significantInbound = inbound.stream()
-                                                                                .filter((
-                                                                                    edge) -> edge.getValue().dependentVersion.equals(artifacts.get(edge.getOrigin()).version))
-                                                                                .collect(Collectors.toList());
+        List<Edge<ArtifactID, DependencyEdgeValue>> significantInbound =
+            inboundEdges.stream()
+                        .filter((edge) -> edge.getValue().dependentVersion.equals(artifacts.get(edge.getOrigin()).version))
+                        .collect(Collectors.toList());
 
         // This is the complex part, for each inbound edge, grab the one where the origin is the correct version (based
         // on the versions we have already kept). Then for each of those, map to the dependency version (the version of

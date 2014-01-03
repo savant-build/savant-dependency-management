@@ -17,6 +17,7 @@ package org.savantbuild.dep.graph;
 
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.ArtifactID;
+import org.savantbuild.util.HashGraph;
 
 import java.util.Formatter;
 

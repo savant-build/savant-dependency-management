@@ -16,11 +16,10 @@
 package org.savantbuild.dep.graph;
 
 import org.savantbuild.dep.domain.ResolvedArtifact;
+import org.savantbuild.lang.Classpath;
+import org.savantbuild.util.HashGraph;
 
-import java.io.File;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -60,23 +59,23 @@ public class ResolvedArtifactGraph extends HashGraph<ResolvedArtifact, String> {
     return result;
   }
 
-  public String toClasspath() {
+  public Classpath toClasspath() {
     if (size() == 0) {
-      return "";
+      return new Classpath();
     }
 
-    List<String> entries = new ArrayList<>();
+    Classpath classpath = new Classpath();
     Set<ResolvedArtifact> visited = new HashSet<>();
     traverse(root, (origin, destination, value, depth) -> {
       if (visited.contains(destination)) {
         return false;
       }
 
-      entries.add(destination.file.toAbsolutePath().toString());
+      classpath.add(destination.file);
       visited.add(destination);
       return true;
     });
 
-    return String.join(File.pathSeparator, entries);
+    return classpath;
   }
 }

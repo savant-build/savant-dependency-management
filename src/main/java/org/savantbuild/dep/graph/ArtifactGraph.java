@@ -16,6 +16,7 @@
 package org.savantbuild.dep.graph;
 
 import org.savantbuild.dep.domain.Artifact;
+import org.savantbuild.util.HashGraph;
 
 /**
  * This class is an artifact graph that stores the relationship between artifacts. After a DependencyGraph has been

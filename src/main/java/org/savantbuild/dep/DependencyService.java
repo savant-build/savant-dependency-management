@@ -21,7 +21,7 @@ import org.savantbuild.dep.domain.Dependencies;
 import org.savantbuild.dep.domain.License;
 import org.savantbuild.dep.domain.Publication;
 import org.savantbuild.dep.graph.ArtifactGraph;
-import org.savantbuild.dep.graph.CyclicException;
+import org.savantbuild.util.CyclicException;
 import org.savantbuild.dep.graph.DependencyGraph;
 import org.savantbuild.dep.graph.ResolvedArtifactGraph;
 import org.savantbuild.dep.io.MD5Exception;
