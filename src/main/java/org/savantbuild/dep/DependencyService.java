@@ -24,7 +24,7 @@ import org.savantbuild.dep.graph.ArtifactGraph;
 import org.savantbuild.util.CyclicException;
 import org.savantbuild.dep.graph.DependencyGraph;
 import org.savantbuild.dep.graph.ResolvedArtifactGraph;
-import org.savantbuild.dep.io.MD5Exception;
+import org.savantbuild.security.MD5Exception;
 import org.savantbuild.dep.workflow.ArtifactMetaDataMissingException;
 import org.savantbuild.dep.workflow.ArtifactMissingException;
 import org.savantbuild.dep.workflow.PublishWorkflow;

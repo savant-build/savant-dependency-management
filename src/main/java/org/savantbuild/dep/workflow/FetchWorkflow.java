@@ -16,7 +16,7 @@
 package org.savantbuild.dep.workflow;
 
 import org.savantbuild.dep.domain.AbstractArtifact;
-import org.savantbuild.dep.io.MD5Exception;
+import org.savantbuild.security.MD5Exception;
 import org.savantbuild.dep.workflow.process.Process;
 import org.savantbuild.dep.workflow.process.ProcessFailureException;
 import org.savantbuild.output.Output;

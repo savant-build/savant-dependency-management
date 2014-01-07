@@ -16,6 +16,7 @@
 package org.savantbuild.dep.io;
 
 import org.savantbuild.dep.BaseTest;
+import org.savantbuild.security.MD5;
 import org.testng.annotations.Test;
 
 import java.io.IOException;

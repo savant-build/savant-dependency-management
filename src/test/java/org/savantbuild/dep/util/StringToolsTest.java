@@ -15,6 +15,7 @@
  */
 package org.savantbuild.dep.util;
 
+import org.savantbuild.lang.StringTools;
 import org.testng.annotations.Test;
 
 import java.util.Arrays;

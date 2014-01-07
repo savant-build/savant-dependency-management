@@ -16,9 +16,9 @@
 package org.savantbuild.dep.workflow.process;
 
 import org.savantbuild.dep.domain.AbstractArtifact;
-import org.savantbuild.dep.io.MD5;
-import org.savantbuild.dep.io.MD5Exception;
-import org.savantbuild.dep.net.NetTools;
+import org.savantbuild.security.MD5;
+import org.savantbuild.security.MD5Exception;
+import org.savantbuild.net.NetTools;
 import org.savantbuild.dep.workflow.PublishWorkflow;
 import org.savantbuild.output.Output;
 

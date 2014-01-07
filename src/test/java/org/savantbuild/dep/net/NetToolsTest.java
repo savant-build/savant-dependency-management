@@ -17,8 +17,9 @@ package org.savantbuild.dep.net;
 
 import com.sun.net.httpserver.HttpServer;
 import org.savantbuild.dep.BaseTest;
-import org.savantbuild.dep.io.MD5;
-import org.savantbuild.dep.io.MD5Exception;
+import org.savantbuild.net.NetTools;
+import org.savantbuild.security.MD5;
+import org.savantbuild.security.MD5Exception;
 import org.testng.annotations.Test;
 
 import java.net.URI;

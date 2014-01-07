@@ -15,6 +15,7 @@
  */
 package org.savantbuild.dep.graph;
 
+import org.savantbuild.dep.domain.ArtifactID;
 import org.savantbuild.dep.domain.ResolvedArtifact;
 import org.savantbuild.lang.Classpath;
 import org.savantbuild.util.HashGraph;
@@ -34,6 +35,22 @@ public class ResolvedArtifactGraph extends HashGraph<ResolvedArtifact, String> {
 
   public ResolvedArtifactGraph(ResolvedArtifact root) {
     this.root = root;
+  }
+
+  /**
+   * Brute force traverses the graph and locates the Path for the given artifact. This only needs the ArtifactID because
+   * this graph will never contain two versions of the same artifact.
+   *
+   * @param id The id.
+   * @return The Path or null if the graph doesn't contain the given Artifact.
+   */
+  public java.nio.file.Path getPath(ArtifactID id) {
+    ResolvedArtifact match = find(root, (artifact) -> artifact.id.equals(id));
+    if (match != null) {
+      return match.file;
+    }
+
+    return null;
   }
 
   @Override

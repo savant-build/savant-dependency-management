@@ -18,7 +18,7 @@ package org.savantbuild.dep.workflow;
 import org.savantbuild.dep.domain.AbstractArtifact;
 import org.savantbuild.dep.domain.ArtifactMetaData;
 import org.savantbuild.dep.domain.VersionException;
-import org.savantbuild.dep.io.MD5Exception;
+import org.savantbuild.security.MD5Exception;
 import org.savantbuild.dep.workflow.process.NegativeCacheException;
 import org.savantbuild.dep.workflow.process.ProcessFailureException;
 import org.savantbuild.dep.xml.ArtifactTools;
