@@ -189,7 +189,7 @@ public class DefaultDependencyService implements DependencyService {
         throw new LicenseException("Invalid license encountered", destination);
       }
 
-      Path file = workflow.fetchArtifact(destination);
+      Path file = workflow.fetchArtifact(destination).toAbsolutePath();
       ResolvedArtifact resolvedArtifact = new ResolvedArtifact(destination.id, destination.version, destination.license, file);
       resolvedGraph.addEdge(map.get(origin), resolvedArtifact, group);
       map.put(destination, resolvedArtifact);

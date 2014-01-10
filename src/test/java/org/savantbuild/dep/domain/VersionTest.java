@@ -26,6 +26,7 @@ import java.util.List;
 
 import static java.util.Arrays.asList;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
@@ -52,6 +53,7 @@ public class VersionTest {
     assertCompareTo("1.8.0-beta.2.build.2", "1.8.0-beta");
     assertCompareTo("1.8.0-beta.2.build.2", "1.8.0-beta.1");
     assertCompareTo("1.8.0-beta.2.build.2", "1.8.0-beta.2.build.1");
+    assertCompareTo("1.8.0-beta.3-{integration}", "1.8.0-beta.2-{integration}");
 
     assertCompareTo("1.8.0-b", "1.8.0-a");
     assertCompareTo("1.8.0-b.b", "1.8.0-a.a");
@@ -92,6 +94,26 @@ public class VersionTest {
     assertVersionEquals("1.2.6-1.2", 1, 2, 6, new PreRelease(new NumberPreReleasePart(1), new NumberPreReleasePart(2)));
     assertVersionEquals("1.2.6-1.2.3", 1, 2, 6, new PreRelease(new NumberPreReleasePart(1), new NumberPreReleasePart(2), new NumberPreReleasePart(3)));
     assertVersionEquals("1.2.6-alpha.1.build.2", 1, 2, 6, new PreRelease(new StringPreReleasePart("alpha"), new NumberPreReleasePart(1), new StringPreReleasePart("build"), new NumberPreReleasePart(2)));
+  }
+
+  @Test
+  public void isIntegration() {
+    assertTrue(new Version("1.2.3-{integration}").isIntegration());
+    assertTrue(new Version("1.2.3-beta.{integration}").isIntegration());
+    assertFalse(new Version("1.2.3-beta-{integration}").isIntegration());
+    assertTrue(new Version("1.2.3-beta.2.{integration}").isIntegration());
+    assertFalse(new Version("1.2.3-beta.2-{integration}").isIntegration());
+    assertFalse(new Version("1.2.3-beta.2+{integration}").isIntegration());
+  }
+
+  @Test
+  public void toIntegration() {
+    assertTrue(new Version("1.2.3").toIntegrationVersion().isIntegration());
+    assertEquals(new Version("1.2.3").toIntegrationVersion(), new Version("1.2.3-{integration}"));
+    assertTrue(new Version("1.2.3-beta").toIntegrationVersion().isIntegration());
+    assertEquals(new Version("1.2.3-beta").toIntegrationVersion(), new Version("1.2.3-beta.{integration}"));
+    assertTrue(new Version("1.2.3-beta.2").toIntegrationVersion().isIntegration());
+    assertEquals(new Version("1.2.3-beta.2").toIntegrationVersion(), new Version("1.2.3-beta.2.{integration}"));
   }
 
   private void assertVersionEquals(String spec1, int major, int minor, int patch, PreRelease preRelease) {

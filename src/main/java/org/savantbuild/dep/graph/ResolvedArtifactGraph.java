@@ -88,7 +88,7 @@ public class ResolvedArtifactGraph extends HashGraph<ResolvedArtifact, String> {
         return false;
       }
 
-      classpath.add(destination.file);
+      classpath.path(destination.file);
       visited.add(destination);
       return true;
     });

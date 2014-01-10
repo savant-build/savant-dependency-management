@@ -15,6 +15,7 @@
  */
 package org.savantbuild.dep.domain;
 
+import org.savantbuild.dep.domain.Version.PreRelease.PreReleasePart;
 import org.savantbuild.dep.domain.Version.PreRelease.PreReleasePart.NumberPreReleasePart;
 import org.savantbuild.dep.domain.Version.PreRelease.PreReleasePart.StringPreReleasePart;
 
@@ -41,6 +42,8 @@ import java.util.stream.Collectors;
  * @author Brian Pontarelli
  */
 public class Version implements Comparable<Version> {
+  public static final String INTEGRATION = "{integration}";
+
   public final int major;
 
   public final String metaData;
@@ -270,6 +273,23 @@ public class Version implements Comparable<Version> {
     return preRelease != null;
   }
 
+  public Version toIntegrationVersion() {
+    if (isIntegration()) {
+      return this;
+    }
+
+    PreRelease integrationPreRelease = new PreRelease();
+    if (preRelease != null) {
+      for (PreReleasePart part : preRelease.parts) {
+        integrationPreRelease.parts.add(part);
+      }
+    }
+
+    integrationPreRelease.parts.add(new StringPreReleasePart(INTEGRATION));
+
+    return new Version(major, minor, patch, integrationPreRelease, metaData);
+  }
+
   /**
    * Converts the version number to a string suitable for debugging.
    *
@@ -281,6 +301,8 @@ public class Version implements Comparable<Version> {
 
   /**
    * Models the PreRelease portion of the Semantic Version String.
+   *
+   * @author Brian Pontarelli
    */
   public static class PreRelease implements Comparable<PreRelease> {
     public final List<PreReleasePart> parts = new ArrayList<>();
@@ -302,7 +324,11 @@ public class Version implements Comparable<Version> {
         char c = spec.charAt(i);
         if (c == '.') {
           if (part.length() == 0) {
-            throw new VersionException("Invalid Semantic Version PreRelease string [" + spec + "]. Two version (.)should not be next to each other.");
+            throw new VersionException("Invalid Semantic Version PreRelease string [" + spec + "]. Two version separators (.) should not be next to each other.");
+          }
+
+          if (part.toString().equals(INTEGRATION)) {
+            throw new VersionException("Invalid Semantic Version PreRelease string [" + spec + "]. The {integration} indicator must be the last PreRelease part.");
           }
 
           addPart(part);
@@ -358,8 +384,11 @@ public class Version implements Comparable<Version> {
       return parts.hashCode();
     }
 
+    /**
+     * @return True if the PreRelease contains a part that is an integration indicator. This part must be the last part.
+     */
     public boolean isIntegration() {
-      return parts.size() == 1 && !parts.get(0).isNumber() && ((StringPreReleasePart) parts.get(0)).value.equals("{integration}");
+      return parts.size() > 0 && parts.get(parts.size() - 1).isIntegration();
     }
 
     @Override
@@ -383,7 +412,20 @@ public class Version implements Comparable<Version> {
       part.setLength(0);
     }
 
+    /**
+     * Defines parts of a PreRelease version string.
+     *
+     * @author Brian Pontarelli
+     */
     public static interface PreReleasePart extends Comparable<PreReleasePart> {
+      /**
+       * @return True if this PreReleasePart is an integration build indicator.
+       */
+      boolean isIntegration();
+
+      /**
+       * @return True if this PreReleasePart is a numeric part.
+       */
       boolean isNumber();
 
       /**
@@ -421,6 +463,11 @@ public class Version implements Comparable<Version> {
         @Override
         public int hashCode() {
           return value;
+        }
+
+        @Override
+        public boolean isIntegration() {
+          return false;
         }
 
         @Override
@@ -469,6 +516,11 @@ public class Version implements Comparable<Version> {
         @Override
         public int hashCode() {
           return value.hashCode();
+        }
+
+        @Override
+        public boolean isIntegration() {
+          return value.equals(INTEGRATION);
         }
 
         @Override
