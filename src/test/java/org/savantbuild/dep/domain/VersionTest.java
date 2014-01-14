@@ -15,14 +15,15 @@
  */
 package org.savantbuild.dep.domain;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+import org.savantbuild.dep.BaseUnitTest;
 import org.savantbuild.dep.domain.Version.PreRelease;
 import org.savantbuild.dep.domain.Version.PreRelease.PreReleasePart.NumberPreReleasePart;
 import org.savantbuild.dep.domain.Version.PreRelease.PreReleasePart.StringPreReleasePart;
 import org.testng.annotations.Test;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 import static java.util.Arrays.asList;
 import static org.testng.Assert.assertEquals;
@@ -35,8 +36,7 @@ import static org.testng.Assert.fail;
  *
  * @author Brian Pontarelli
  */
-@Test(groups = "unit")
-public class VersionTest {
+public class VersionTest extends BaseUnitTest {
   @Test
   public void compare() throws Exception {
     assertCompareTo("2", "1");

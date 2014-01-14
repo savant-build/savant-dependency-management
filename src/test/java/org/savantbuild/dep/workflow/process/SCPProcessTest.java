@@ -15,7 +15,12 @@
  */
 package org.savantbuild.dep.workflow.process;
 
-import org.savantbuild.dep.BaseTest;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
+import org.savantbuild.dep.BaseUnitTest;
 import org.savantbuild.dep.domain.AbstractArtifact;
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.License;
@@ -23,11 +28,6 @@ import org.savantbuild.dep.net.SSHOptions;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
 import ch.ethz.ssh2.Connection;
 import ch.ethz.ssh2.Session;
@@ -39,8 +39,7 @@ import static org.testng.Assert.assertTrue;
  *
  * @author Brian Pontarelli
  */
-@Test(groups = "functional")
-public class SCPProcessTest extends BaseTest {
+public class SCPProcessTest extends BaseUnitTest {
   @BeforeMethod
   public void deleteFile() throws Exception {
     if (Files.isDirectory(Paths.get("/tmp/savant-test"))) {
@@ -61,14 +60,14 @@ public class SCPProcessTest extends BaseTest {
   public Object[][] options() {
     SSHOptions trust = new SSHOptions();
     trust.username = "savanttest";
-    trust.identity = projectDir.resolve("src/java/test/org/savantbuild/dep/net/test_id_dsa").toFile();
+    trust.identity = projectDir.resolve("src/test/java/org/savantbuild/dep/net/test_id_dsa").toFile();
     trust.knownHosts = null;
     trust.trustUnknownHosts = true;
 
     SSHOptions identity = new SSHOptions();
     identity.identity = null;
     identity.username = "savanttest";
-    identity.identity = projectDir.resolve("src/java/test/org/savantbuild/dep/net/test_id_dsa").toFile();
+    identity.identity = projectDir.resolve("src/test/java/org/savantbuild/dep/net/test_id_dsa").toFile();
 
     SSHOptions username = new SSHOptions();
     username.identity = null;
@@ -83,7 +82,7 @@ public class SCPProcessTest extends BaseTest {
   @Test(dataProvider = "options")
   public void run(SSHOptions options) throws IOException {
     SCPProcess process = new SCPProcess(output, "localhost", "/tmp/savant-test", options);
-    Path path = projectDir.resolve("src/java/test/org/savantbuild/dep/net/test_id_dsa");
+    Path path = projectDir.resolve("src/test/java/org/savantbuild/dep/net/test_id_dsa");
     AbstractArtifact artifact = new Artifact("org.savantbuild.test:scp-test:1.0", License.Apachev2);
     process.publish(artifact, artifact.getArtifactFile(), path);
 

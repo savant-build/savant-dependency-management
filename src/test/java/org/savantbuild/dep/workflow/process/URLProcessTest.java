@@ -15,8 +15,10 @@
  */
 package org.savantbuild.dep.workflow.process;
 
-import com.sun.net.httpserver.HttpServer;
-import org.savantbuild.dep.BaseTest;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
+import org.savantbuild.dep.BaseUnitTest;
 import org.savantbuild.dep.domain.AbstractArtifact;
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.License;
@@ -27,9 +29,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
-
+import com.sun.net.httpserver.HttpServer;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
@@ -39,8 +39,7 @@ import static org.testng.Assert.assertNull;
  *
  * @author Brian Pontarelli
  */
-@Test(groups = "unit")
-public class URLProcessTest extends BaseTest {
+public class URLProcessTest extends BaseUnitTest {
   private HttpServer server;
 
   @Test(dataProvider = "fetchData")

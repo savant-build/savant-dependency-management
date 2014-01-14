@@ -15,20 +15,18 @@
  */
 package org.savantbuild.dep.workflow.process;
 
-import org.savantbuild.dep.BaseTest;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import org.savantbuild.dep.BaseUnitTest;
 import org.savantbuild.dep.domain.AbstractArtifact;
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.License;
-import org.savantbuild.security.MD5;
-import org.savantbuild.lang.RuntimeTools;
 import org.savantbuild.dep.workflow.PublishWorkflow;
 import org.savantbuild.io.FileTools;
+import org.savantbuild.lang.RuntimeTools;
+import org.savantbuild.security.MD5;
 import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
@@ -38,8 +36,7 @@ import static org.testng.Assert.assertTrue;
  *
  * @author Brian Pontarelli
  */
-@Test(groups = "unit")
-public class SVNProcessTest extends BaseTest {
+public class SVNProcessTest extends BaseUnitTest {
   @BeforeMethod
   public void deleteRepository() throws Exception {
     if (Files.isDirectory(projectDir.resolve("build/test/svn-repository"))) {
@@ -56,14 +53,14 @@ public class SVNProcessTest extends BaseTest {
     assertTrue(Files.exists(projectDir.resolve("build/test/svn-repository")));
   }
 
-  public void run() throws IOException {
+  public void run() throws Exception {
     AbstractArtifact artifact = new Artifact("org.savantbuild.test:svn-process-test:1.0", License.Apachev2);
 
     Path md5File = FileTools.createTempPath("savant-process", "md5", true);
-    Path file = projectDir.resolve("src/java/test/org/savantbuild/dep/io/MD5Test.txt");
-    MD5.writeMD5(MD5.fromBytes(Files.readAllBytes(file), "MD5Test.txt"), md5File);
+    Path file = projectDir.resolve("src/test/java/org/savantbuild/dep/BaseTest.java").toRealPath();
+    MD5.writeMD5(MD5.fromBytes(Files.readAllBytes(file), "BaseTest.java"), md5File);
 
-    SVNProcess process = new SVNProcess(output, "file:///" + projectDir.resolve("build/test/svn-repository").toAbsolutePath().toString(), null, null);
+    SVNProcess process = new SVNProcess(output, "file:///" + projectDir.resolve("build/test/svn-repository").toRealPath(), null, null);
     process.publish(artifact, artifact.getArtifactFile() + ".md5", md5File);
     process.publish(artifact, artifact.getArtifactFile(), file);
 

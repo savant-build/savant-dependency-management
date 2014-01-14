@@ -15,7 +15,12 @@
  */
 package org.savantbuild.dep.xml;
 
-import org.savantbuild.dep.BaseTest;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import org.savantbuild.dep.BaseUnitTest;
 import org.savantbuild.dep.domain.ArtifactMetaData;
 import org.savantbuild.dep.domain.Dependencies;
 import org.savantbuild.dep.domain.Dependency;
@@ -26,11 +31,6 @@ import org.testng.annotations.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import java.nio.file.Files;
-import java.nio.file.Path;
-
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
@@ -40,8 +40,7 @@ import static org.testng.Assert.assertTrue;
  *
  * @author Brian Pontarelli
  */
-@Test(groups = "unit")
-public class ArtifactToolsTest extends BaseTest {
+public class ArtifactToolsTest extends BaseUnitTest {
   /**
    * Tests that the XML generation works correctly.
    */
@@ -121,7 +120,7 @@ public class ArtifactToolsTest extends BaseTest {
 
   @Test
   public void parse() throws Exception {
-    ArtifactMetaData amd = ArtifactTools.parseArtifactMetaData(projectDir.resolve("src/java/test/org/savantbuild/dep/xml/amd.xml"));
+    ArtifactMetaData amd = ArtifactTools.parseArtifactMetaData(projectDir.resolve("src/test/java/org/savantbuild/dep/xml/amd.xml"));
     assertEquals(amd.license, License.Apachev2);
     assertEquals(amd.dependencies.groups.size(), 2);
     assertEquals(amd.dependencies.groups.get("run").dependencies.size(), 2);

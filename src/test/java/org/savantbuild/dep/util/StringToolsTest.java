@@ -15,10 +15,11 @@
  */
 package org.savantbuild.dep.util;
 
+import java.util.Arrays;
+
+import org.savantbuild.dep.BaseUnitTest;
 import org.savantbuild.lang.StringTools;
 import org.testng.annotations.Test;
-
-import java.util.Arrays;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
@@ -28,8 +29,7 @@ import static org.testng.Assert.assertTrue;
  *
  * @author Brian Pontarelli
  */
-@Test(groups = "unit")
-public class StringToolsTest {
+public class StringToolsTest extends BaseUnitTest {
   @Test
   public void toHex() {
     assertEquals(StringTools.toHex((byte) 0), "00");

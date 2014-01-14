@@ -15,6 +15,7 @@
  */
 package org.savantbuild.dep.domain;
 
+import org.savantbuild.dep.BaseUnitTest;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;
@@ -25,8 +26,7 @@ import static org.testng.Assert.assertNotEquals;
  *
  * @author Brian Pontarelli
  */
-@Test(groups = "unit")
-public class ArtifactTest {
+public class ArtifactTest extends BaseUnitTest {
   @Test
   public void construct() {
     assertEquals(new Artifact("group:name:2.0", License.Apachev1), new Artifact(new ArtifactID("group", "name", "name", "jar"), new Version("2.0"), License.Apachev1));

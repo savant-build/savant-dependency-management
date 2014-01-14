@@ -15,7 +15,11 @@
  */
 package org.savantbuild.dep;
 
-import com.sun.net.httpserver.HttpServer;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.Set;
+
 import org.savantbuild.dep.DependencyService.ResolveConfiguration;
 import org.savantbuild.dep.DependencyService.ResolveConfiguration.TypeResolveConfiguration;
 import org.savantbuild.dep.domain.AbstractArtifact;
@@ -34,23 +38,19 @@ import org.savantbuild.dep.graph.ArtifactGraph;
 import org.savantbuild.dep.graph.DependencyEdgeValue;
 import org.savantbuild.dep.graph.DependencyGraph;
 import org.savantbuild.dep.graph.ResolvedArtifactGraph;
-import org.savantbuild.security.MD5;
-import org.savantbuild.security.MD5Exception;
 import org.savantbuild.dep.workflow.ArtifactMetaDataMissingException;
 import org.savantbuild.dep.workflow.ArtifactMissingException;
 import org.savantbuild.dep.workflow.PublishWorkflow;
 import org.savantbuild.dep.workflow.process.CacheProcess;
 import org.savantbuild.io.FileTools;
+import org.savantbuild.security.MD5;
+import org.savantbuild.security.MD5Exception;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.util.Set;
-
+import com.sun.net.httpserver.HttpServer;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
@@ -62,7 +62,7 @@ import static org.testng.Assert.fail;
  * @author Brian Pontarelli
  */
 @Test(groups = "unit")
-public class DefaultDependencyServiceTest extends BaseTest {
+public class DefaultDependencyServiceTest extends BaseUnitTest {
   public Dependencies dependencies;
 
   public DependencyGraph goodGraph;
@@ -226,7 +226,7 @@ public class DefaultDependencyServiceTest extends BaseTest {
 
     AbstractArtifact artifact = new AbstractArtifact("org.savantbuild.test:publication-with-source:1.0.0") {};
     ArtifactMetaData amd = new ArtifactMetaData(dependencies, License.BSD);
-    Publication publication = new Publication(artifact, amd, projectDir.resolve("src/java/test/org/savantbuild/dep/io/MD5Test.txt"), projectDir.resolve("src/java/test/org/savantbuild/dep/io/MD5Test.txt"));
+    Publication publication = new Publication(artifact, amd, projectDir.resolve("src/test/java/org/savantbuild/dep/TestFile.txt"), projectDir.resolve("src/test/java/org/savantbuild/dep/TestFile.txt"));
     PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, projectDir.resolve("build/test/publish").toString()));
     service.publish(publication, workflow);
 
@@ -250,7 +250,7 @@ public class DefaultDependencyServiceTest extends BaseTest {
     AbstractArtifact artifact = new AbstractArtifact("org.savantbuild.test:publication-without-source:1.0.0") {
     };
     ArtifactMetaData amd = new ArtifactMetaData(dependencies, License.BSD);
-    Publication publication = new Publication(artifact, amd, projectDir.resolve("src/java/test/org/savantbuild/dep/io/MD5Test.txt"), null);
+    Publication publication = new Publication(artifact, amd, projectDir.resolve("src/test/java/org/savantbuild/dep/TestFile.txt"), null);
     PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, projectDir.resolve("build/test/publish").toString()));
     service.publish(publication, workflow);
 
@@ -542,14 +542,20 @@ public class DefaultDependencyServiceTest extends BaseTest {
 
   @Test
   public void resolveGraph() throws Exception {
+    ArtifactGraph artifactGraph = service.reduce(goodGraph);
+    ResolvedArtifactGraph actual = service.resolve(artifactGraph, workflow,
+        new ResolveConfiguration().with("compile", new TypeResolveConfiguration(true, true))
+                                  .with("run", new TypeResolveConfiguration(true, true))
+    );
+
     ResolvedArtifactGraph expected = new ResolvedArtifactGraph(projectResolved);
-    ResolvedArtifact intermediate = new ResolvedArtifact("org.savantbuild.test:intermediate:1.0.0", License.Apachev2, cache.resolve("org/savantbuild/test/intermediate/1.0.0/intermediate-1.0.0.jar"));
-    ResolvedArtifact multipleVersions = new ResolvedArtifact("org.savantbuild.test:multiple-versions:1.1.0", License.Apachev2, cache.resolve("org/savantbuild/test/multiple-versions/1.1.0/multiple-versions-1.1.0.jar"));
-    ResolvedArtifact multipleVersionsDifferentDeps = new ResolvedArtifact("org.savantbuild.test:multiple-versions-different-dependencies:1.1.0", License.Apachev2, cache.resolve("org/savantbuild/test/multiple-versions-different-dependencies/1.1.0/multiple-versions-different-dependencies-1.1.0.jar"));
-    ResolvedArtifact leaf1 = new ResolvedArtifact("org.savantbuild.test:leaf:leaf1:1.0.0:jar", License.GPL, cache.resolve("org/savantbuild/test/leaf/1.0.0/leaf1-1.0.0.jar"));
-    ResolvedArtifact leaf1_1 = new ResolvedArtifact("org.savantbuild.test:leaf1:1.0.0", License.Commercial, cache.resolve("org/savantbuild/test/leaf1/1.0.0/leaf1-1.0.0.jar"));
-    ResolvedArtifact leaf2_2 = new ResolvedArtifact("org.savantbuild.test:leaf2:1.0.0", License.OtherNonDistributableOpenSource, cache.resolve("org/savantbuild/test/leaf2/1.0.0/leaf2-1.0.0.jar"));
-    ResolvedArtifact integrationBuild = new ResolvedArtifact("org.savantbuild.test:integration-build:2.1.1-{integration}", License.Apachev2, cache.resolve("org/savantbuild/test/integration-build/2.1.1-{integration}/integration-build-2.1.1-{integration}.jar"));
+    ResolvedArtifact intermediate = new ResolvedArtifact("org.savantbuild.test:intermediate:1.0.0", License.Apachev2, cache.resolve("org/savantbuild/test/intermediate/1.0.0/intermediate-1.0.0.jar").toAbsolutePath());
+    ResolvedArtifact multipleVersions = new ResolvedArtifact("org.savantbuild.test:multiple-versions:1.1.0", License.Apachev2, cache.resolve("org/savantbuild/test/multiple-versions/1.1.0/multiple-versions-1.1.0.jar").toAbsolutePath());
+    ResolvedArtifact multipleVersionsDifferentDeps = new ResolvedArtifact("org.savantbuild.test:multiple-versions-different-dependencies:1.1.0", License.Apachev2, cache.resolve("org/savantbuild/test/multiple-versions-different-dependencies/1.1.0/multiple-versions-different-dependencies-1.1.0.jar").toAbsolutePath());
+    ResolvedArtifact leaf1 = new ResolvedArtifact("org.savantbuild.test:leaf:leaf1:1.0.0:jar", License.GPL, cache.resolve("org/savantbuild/test/leaf/1.0.0/leaf1-1.0.0.jar").toAbsolutePath());
+    ResolvedArtifact leaf1_1 = new ResolvedArtifact("org.savantbuild.test:leaf1:1.0.0", License.Commercial, cache.resolve("org/savantbuild/test/leaf1/1.0.0/leaf1-1.0.0.jar").toAbsolutePath());
+    ResolvedArtifact leaf2_2 = new ResolvedArtifact("org.savantbuild.test:leaf2:1.0.0", License.OtherNonDistributableOpenSource, cache.resolve("org/savantbuild/test/leaf2/1.0.0/leaf2-1.0.0.jar").toAbsolutePath());
+    ResolvedArtifact integrationBuild = new ResolvedArtifact("org.savantbuild.test:integration-build:2.1.1-{integration}", License.Apachev2, cache.resolve("org/savantbuild/test/integration-build/2.1.1-{integration}/integration-build-2.1.1-{integration}.jar").toAbsolutePath());
 
     expected.addEdge(projectResolved, multipleVersions, "compile");
     expected.addEdge(projectResolved, intermediate, "run");
@@ -560,12 +566,6 @@ public class DefaultDependencyServiceTest extends BaseTest {
     expected.addEdge(multipleVersions, integrationBuild, "compile");
     expected.addEdge(multipleVersionsDifferentDeps, leaf1_1, "compile");
     expected.addEdge(multipleVersionsDifferentDeps, leaf2_2, "compile");
-
-    ArtifactGraph artifactGraph = service.reduce(goodGraph);
-    ResolvedArtifactGraph actual = service.resolve(artifactGraph, workflow,
-        new ResolveConfiguration().with("compile", new TypeResolveConfiguration(true, true))
-                                  .with("run", new TypeResolveConfiguration(true, true))
-    );
 
     assertEquals(actual, expected);
 
@@ -578,7 +578,7 @@ public class DefaultDependencyServiceTest extends BaseTest {
         multipleVersions.file.toAbsolutePath().toString(), leaf1.file.toAbsolutePath().toString(),
         integrationBuild.file.toAbsolutePath().toString(), multipleVersionsDifferentDeps.file.toAbsolutePath().toString(),
         leaf1_1.file.toAbsolutePath().toString(), leaf2_2.file.toAbsolutePath().toString());
-    assertEquals(actual.toClasspath(), expectedClasspath);
+    assertEquals(actual.toClasspath().toString(), expectedClasspath);
   }
 
   @Test
@@ -619,17 +619,17 @@ public class DefaultDependencyServiceTest extends BaseTest {
 
   @Test
   public void resolveGraphNonTransitiveSpecificGroups() throws Exception {
-    ResolvedArtifactGraph expected = new ResolvedArtifactGraph(projectResolved);
-    ResolvedArtifact multipleVersions = new ResolvedArtifact("org.savantbuild.test:multiple-versions:1.1.0", License.Apachev2, cache.resolve("org/savantbuild/test/multiple-versions/1.1.0/multiple-versions-1.1.0.jar"));
-    ResolvedArtifact multipleVersionsDifferentDeps = new ResolvedArtifact("org.savantbuild.test:multiple-versions-different-dependencies:1.1.0", License.Apachev2, cache.resolve("org/savantbuild/test/multiple-versions-different-dependencies/1.1.0/multiple-versions-different-dependencies-1.1.0.jar"));
-
-    expected.addEdge(projectResolved, multipleVersions, "compile");
-    expected.addEdge(projectResolved, multipleVersionsDifferentDeps, "compile");
-
     ArtifactGraph artifactGraph = service.reduce(goodGraph);
     ResolvedArtifactGraph actual = service.resolve(artifactGraph, workflow,
         new ResolveConfiguration().with("compile", new TypeResolveConfiguration(true, false))
     );
+
+    ResolvedArtifactGraph expected = new ResolvedArtifactGraph(projectResolved);
+    ResolvedArtifact multipleVersions = new ResolvedArtifact("org.savantbuild.test:multiple-versions:1.1.0", License.Apachev2, cache.resolve("org/savantbuild/test/multiple-versions/1.1.0/multiple-versions-1.1.0.jar").toAbsolutePath());
+    ResolvedArtifact multipleVersionsDifferentDeps = new ResolvedArtifact("org.savantbuild.test:multiple-versions-different-dependencies:1.1.0", License.Apachev2, cache.resolve("org/savantbuild/test/multiple-versions-different-dependencies/1.1.0/multiple-versions-different-dependencies-1.1.0.jar").toAbsolutePath());
+
+    expected.addEdge(projectResolved, multipleVersions, "compile");
+    expected.addEdge(projectResolved, multipleVersionsDifferentDeps, "compile");
 
     assertEquals(actual, expected);
 

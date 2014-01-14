@@ -15,15 +15,15 @@
  */
 package org.savantbuild.dep.workflow.process;
 
-import org.savantbuild.dep.BaseTest;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import org.savantbuild.dep.BaseUnitTest;
 import org.savantbuild.dep.domain.AbstractArtifact;
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.License;
 import org.savantbuild.io.FileTools;
 import org.testng.annotations.Test;
-
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
@@ -34,8 +34,7 @@ import static org.testng.Assert.assertTrue;
  *
  * @author Brian Pontarelli
  */
-@Test(groups = "unit")
-public class CacheProcessTest extends BaseTest {
+public class CacheProcessTest extends BaseUnitTest {
   @Test
   public void deleteIntegration() throws Exception {
     Path cache = projectDir.resolve("build/test/deps");

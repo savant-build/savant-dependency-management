@@ -15,6 +15,7 @@
  */
 package org.savantbuild.dep.graph;
 
+import org.savantbuild.dep.BaseUnitTest;
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.License;
 import org.testng.annotations.Test;
@@ -26,8 +27,7 @@ import static org.testng.Assert.assertEquals;
  *
  * @author Brian Pontarelli
  */
-@Test(groups = "unit")
-public class DependencyGraphTest {
+public class DependencyGraphTest extends BaseUnitTest {
   @Test
   public void equals() {
     Artifact one = new Artifact("group:project:artifact1:1.0:jar", License.Apachev2);
