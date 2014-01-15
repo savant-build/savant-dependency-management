@@ -15,6 +15,15 @@
  */
 package org.savantbuild.dep;
 
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.savantbuild.dep.DependencyService.ResolveConfiguration.TypeResolveConfiguration;
 import org.savantbuild.dep.domain.AbstractArtifact;
 import org.savantbuild.dep.domain.Artifact;
@@ -27,13 +36,9 @@ import org.savantbuild.dep.domain.Publication;
 import org.savantbuild.dep.domain.ResolvedArtifact;
 import org.savantbuild.dep.domain.Version;
 import org.savantbuild.dep.graph.ArtifactGraph;
-import org.savantbuild.util.CyclicException;
 import org.savantbuild.dep.graph.DependencyEdgeValue;
 import org.savantbuild.dep.graph.DependencyGraph;
-import org.savantbuild.util.Graph.Edge;
 import org.savantbuild.dep.graph.ResolvedArtifactGraph;
-import org.savantbuild.security.MD5;
-import org.savantbuild.security.MD5Exception;
 import org.savantbuild.dep.workflow.ArtifactMetaDataMissingException;
 import org.savantbuild.dep.workflow.ArtifactMissingException;
 import org.savantbuild.dep.workflow.PublishWorkflow;
@@ -42,15 +47,10 @@ import org.savantbuild.dep.workflow.process.ProcessFailureException;
 import org.savantbuild.dep.xml.ArtifactTools;
 import org.savantbuild.io.FileTools;
 import org.savantbuild.output.Output;
-
-import java.io.IOException;
-import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
+import org.savantbuild.security.MD5;
+import org.savantbuild.security.MD5Exception;
+import org.savantbuild.util.CyclicException;
+import org.savantbuild.util.Graph.Edge;
 
 import static java.util.Arrays.asList;
 
@@ -72,7 +72,7 @@ public class DefaultDependencyService implements DependencyService {
   @Override
   public DependencyGraph buildGraph(Artifact project, Dependencies dependencies, Workflow workflow)
       throws ArtifactMetaDataMissingException, ProcessFailureException {
-    output.debug("Building DependencyGraph");
+    output.debug("Building DependencyGraph with a root of [%s]", project);
     DependencyGraph graph = new DependencyGraph(project);
     populateGraph(graph, project, dependencies, workflow, new HashSet<>());
     return graph;
@@ -101,6 +101,7 @@ public class DefaultDependencyService implements DependencyService {
    */
   @Override
   public ArtifactGraph reduce(DependencyGraph graph) throws CompatibilityException {
+    output.debug("Reducing DependencyGraph with a root of [%s]", graph.root);
 
     // Traverse graph. At each node, if the node's parents haven't all been checked. Skip it.
     // If the node's parents have all been checked, for each parent, get the version of the node for the version of the
@@ -172,6 +173,8 @@ public class DefaultDependencyService implements DependencyService {
   public ResolvedArtifactGraph resolve(ArtifactGraph graph, Workflow workflow, ResolveConfiguration configuration,
                                        DependencyListener... listeners)
       throws CyclicException, ArtifactMissingException, ProcessFailureException, MD5Exception, LicenseException {
+    output.debug("Resolving ArtifactGraph with a root of [%s]", graph.root);
+
     ResolvedArtifact root = new ResolvedArtifact(graph.root.id, graph.root.version, graph.root.license, null);
     ResolvedArtifactGraph resolvedGraph = new ResolvedArtifactGraph(root);
 
