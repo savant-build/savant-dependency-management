@@ -66,4 +66,8 @@ public class Publication {
     result = 31 * result + (sourceFile != null ? sourceFile.hashCode() : 0);
     return result;
   }
+
+  public String toString() {
+    return artifact.toString() + "{license:" + metaData.license + "}{file:" + file.toString() + "}{source:" + sourceFile.toString() + "}";
+  }
 }

@@ -83,6 +83,8 @@ public class DefaultDependencyService implements DependencyService {
    */
   @Override
   public void publish(Publication publication, PublishWorkflow workflow) throws PublishException {
+    output.info("Publishing [%s]", publication);
+
     try {
       Path amdFile = ArtifactTools.generateXML(publication.metaData);
       publishItem(publication.artifact, publication.artifact.getArtifactMetaDataFile(), amdFile, workflow);
@@ -261,8 +263,7 @@ public class DefaultDependencyService implements DependencyService {
    * @param workflow The publish workflow.
    * @throws IOException If the publication fails.
    */
-  private void publishItem(AbstractArtifact artifact, String item, Path file, PublishWorkflow workflow)
-      throws IOException {
+  private void publishItem(AbstractArtifact artifact, String item, Path file, PublishWorkflow workflow) throws IOException {
     MD5 md5 = MD5.fromPath(file);
     Path md5File = FileTools.createTempPath("artifact-item", "md5", true);
     MD5.writeMD5(md5, md5File);
