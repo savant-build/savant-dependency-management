@@ -15,27 +15,27 @@
  */
 package org.savantbuild.dep;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.CompatibilityException;
 import org.savantbuild.dep.domain.Dependencies;
 import org.savantbuild.dep.domain.License;
 import org.savantbuild.dep.domain.Publication;
 import org.savantbuild.dep.graph.ArtifactGraph;
-import org.savantbuild.util.CyclicException;
 import org.savantbuild.dep.graph.DependencyGraph;
 import org.savantbuild.dep.graph.ResolvedArtifactGraph;
-import org.savantbuild.security.MD5Exception;
 import org.savantbuild.dep.workflow.ArtifactMetaDataMissingException;
 import org.savantbuild.dep.workflow.ArtifactMissingException;
 import org.savantbuild.dep.workflow.PublishWorkflow;
 import org.savantbuild.dep.workflow.Workflow;
 import org.savantbuild.dep.workflow.process.ProcessFailureException;
-
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import org.savantbuild.security.MD5Exception;
+import org.savantbuild.util.CyclicException;
 
 /**
  * Provides all of the dependency management services. The main workflow for managing dependencies is:
@@ -60,9 +60,10 @@ public interface DependencyService {
    * @throws ArtifactMetaDataMissingException
    *                                 If any artifacts AMD files could not be downloaded or found locally.
    * @throws ProcessFailureException If a workflow process failed while fetching the meta-data.
+   * @throws MD5Exception If any MD5 files didn't match the AMD file when downloading.
    */
   DependencyGraph buildGraph(Artifact project, Dependencies dependencies, Workflow workflow)
-      throws ArtifactMetaDataMissingException, ProcessFailureException;
+      throws ArtifactMetaDataMissingException, ProcessFailureException, MD5Exception;
 
   /**
    * Publishes the given Publication (artifact, meta-data, source file, etc) with the given workflow.
@@ -80,8 +81,9 @@ public interface DependencyService {
    * @param graph The dependency graph.
    * @return The reduced graph.
    * @throws CompatibilityException If an dependency has incompatible versions.
+   * @throws CyclicException If the graph has a cycle in it.
    */
-  ArtifactGraph reduce(DependencyGraph graph) throws CompatibilityException;
+  ArtifactGraph reduce(DependencyGraph graph) throws CompatibilityException, CyclicException;
 
   /**
    * Resolves the graph by downloading the artifacts. This will use the Workflow to download the artifacts in the graph.

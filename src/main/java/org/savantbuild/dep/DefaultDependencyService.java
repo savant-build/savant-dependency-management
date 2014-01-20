@@ -71,7 +71,7 @@ public class DefaultDependencyService implements DependencyService {
    */
   @Override
   public DependencyGraph buildGraph(Artifact project, Dependencies dependencies, Workflow workflow)
-      throws ArtifactMetaDataMissingException, ProcessFailureException {
+      throws ArtifactMetaDataMissingException, ProcessFailureException, MD5Exception {
     output.debug("Building DependencyGraph with a root of [%s]", project);
     DependencyGraph graph = new DependencyGraph(project);
     populateGraph(graph, project, dependencies, workflow, new HashSet<>());
@@ -102,7 +102,7 @@ public class DefaultDependencyService implements DependencyService {
    * {@inheritDoc}
    */
   @Override
-  public ArtifactGraph reduce(DependencyGraph graph) throws CompatibilityException {
+  public ArtifactGraph reduce(DependencyGraph graph) throws CompatibilityException, CyclicException {
     output.debug("Reducing DependencyGraph with a root of [%s]", graph.root);
 
     // Traverse graph. At each node, if the node's parents haven't all been checked. Skip it.
@@ -228,7 +228,7 @@ public class DefaultDependencyService implements DependencyService {
    */
   private void populateGraph(DependencyGraph graph, Artifact origin, Dependencies dependencies, Workflow workflow,
                              Set<Dependency> artifactsRecursed)
-      throws ArtifactMetaDataMissingException, ProcessFailureException {
+      throws ArtifactMetaDataMissingException, ProcessFailureException, MD5Exception {
     dependencies.groups.forEach((type, group) -> {
       for (Dependency dependency : group.dependencies) {
         ArtifactMetaData amd = workflow.fetchMetaData(dependency);
