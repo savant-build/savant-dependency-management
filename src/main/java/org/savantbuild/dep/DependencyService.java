@@ -39,7 +39,7 @@ import org.savantbuild.util.CyclicException;
 
 /**
  * Provides all of the dependency management services. The main workflow for managing dependencies is:
- * <p/>
+ * <p>
  * <pre>
  *   1. Download and parse all of the AMD (AbstractArtifact Meta Data) files to build a dependency graph.
  *   2. Traverse the graph and verify that it is a valid graph (doesn't contain conflicting versions of specific
@@ -57,10 +57,9 @@ public interface DependencyService {
    * @param dependencies The declared dependencies of the project.
    * @param workflow     The workflow to use for downloading and caching the AMD files.
    * @return The dependency graph.
-   * @throws ArtifactMetaDataMissingException
-   *                                 If any artifacts AMD files could not be downloaded or found locally.
-   * @throws ProcessFailureException If a workflow process failed while fetching the meta-data.
-   * @throws MD5Exception If any MD5 files didn't match the AMD file when downloading.
+   * @throws ArtifactMetaDataMissingException If any artifacts AMD files could not be downloaded or found locally.
+   * @throws ProcessFailureException          If a workflow process failed while fetching the meta-data.
+   * @throws MD5Exception                     If any MD5 files didn't match the AMD file when downloading.
    */
   DependencyGraph buildGraph(Artifact project, Dependencies dependencies, Workflow workflow)
       throws ArtifactMetaDataMissingException, ProcessFailureException, MD5Exception;
@@ -81,7 +80,7 @@ public interface DependencyService {
    * @param graph The dependency graph.
    * @return The reduced graph.
    * @throws CompatibilityException If an dependency has incompatible versions.
-   * @throws CyclicException If the graph has a cycle in it.
+   * @throws CyclicException        If the graph has a cycle in it.
    */
   ArtifactGraph reduce(DependencyGraph graph) throws CompatibilityException, CyclicException;
 
@@ -124,10 +123,33 @@ public interface DependencyService {
 
       public final boolean transitive;
 
+      public final Set<String> transitiveGroups = new HashSet<>();
+
+      public TypeResolveConfiguration(boolean fetchSource, boolean transitive) {
+        this.fetchSource = fetchSource;
+        this.transitive = transitive;
+      }
+
       public TypeResolveConfiguration(boolean fetchSource, boolean transitive, License... disallowedLicenses) {
         Collections.addAll(this.disallowedLicenses, disallowedLicenses);
         this.fetchSource = fetchSource;
         this.transitive = transitive;
+      }
+
+      public TypeResolveConfiguration(boolean fetchSource, String... transitiveGroups) {
+        Collections.addAll(this.transitiveGroups, transitiveGroups);
+        this.fetchSource = fetchSource;
+        this.transitive = true;
+      }
+
+      public TypeResolveConfiguration withDisallowedLicenses(License... disallowedLicenses) {
+        Collections.addAll(this.disallowedLicenses, disallowedLicenses);
+        return this;
+      }
+
+      public TypeResolveConfiguration withTransitiveGroups(String... transitiveGroups) {
+        Collections.addAll(this.transitiveGroups, transitiveGroups);
+        return this;
       }
     }
   }

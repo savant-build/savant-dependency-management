@@ -15,11 +15,11 @@
  */
 package org.savantbuild.dep.graph;
 
+import java.util.Formatter;
+
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.ArtifactID;
 import org.savantbuild.util.HashGraph;
-
-import java.util.Formatter;
 
 /**
  * This class is a artifact and dependency version of the Graph.
@@ -66,7 +66,7 @@ public class DependencyGraph extends HashGraph<ArtifactID, DependencyEdgeValue> 
     build.append("digraph Dependencies {\n");
 
     Formatter formatter = new Formatter(build);
-    traverse(root.id, (origin, destination, edge, depth) -> {
+    traverse(root.id, false, (origin, destination, edge, depth) -> {
       formatter.format("  \"%s\" -> \"%s\" [label=\"%s\", headlabel=\"%s\", taillabel=\"%s\"];\n", origin, destination, edge.type, edge.dependentVersion, edge.dependencyVersion);
       return true;
     });

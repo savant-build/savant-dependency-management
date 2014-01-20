@@ -55,7 +55,7 @@ public class ArtifactToolsTest extends BaseUnitTest {
     group.dependencies.add(d1);
     group.dependencies.add(d2);
 
-    DependencyGroup group1 = new DependencyGroup("run", true);
+    DependencyGroup group1 = new DependencyGroup("runtime", true);
     group1.dependencies.add(d3);
 
     // Not exported
@@ -64,7 +64,7 @@ public class ArtifactToolsTest extends BaseUnitTest {
 
     Dependencies deps = new Dependencies();
     deps.groups.put("compile", group);
-    deps.groups.put("run", group1);
+    deps.groups.put("runtime", group1);
     deps.groups.put("test", group2);
 
     ArtifactMetaData amd = new ArtifactMetaData(deps, License.Apachev2);
@@ -123,19 +123,19 @@ public class ArtifactToolsTest extends BaseUnitTest {
     ArtifactMetaData amd = ArtifactTools.parseArtifactMetaData(projectDir.resolve("src/test/java/org/savantbuild/dep/xml/amd.xml"));
     assertEquals(amd.license, License.Apachev2);
     assertEquals(amd.dependencies.groups.size(), 2);
-    assertEquals(amd.dependencies.groups.get("run").dependencies.size(), 2);
-    assertEquals(amd.dependencies.groups.get("run").type, "run");
-    assertEquals(amd.dependencies.groups.get("run").dependencies.get(0).id.group, "org.example.test");
-    assertEquals(amd.dependencies.groups.get("run").dependencies.get(0).id.project, "test-project");
-    assertEquals(amd.dependencies.groups.get("run").dependencies.get(0).id.name, "test-project");
-    assertEquals(amd.dependencies.groups.get("run").dependencies.get(0).version, new Version("1.0.0"));
-    assertEquals(amd.dependencies.groups.get("run").dependencies.get(0).id.type, "jar");
+    assertEquals(amd.dependencies.groups.get("runtime").dependencies.size(), 2);
+    assertEquals(amd.dependencies.groups.get("runtime").type, "runtime");
+    assertEquals(amd.dependencies.groups.get("runtime").dependencies.get(0).id.group, "org.example.test");
+    assertEquals(amd.dependencies.groups.get("runtime").dependencies.get(0).id.project, "test-project");
+    assertEquals(amd.dependencies.groups.get("runtime").dependencies.get(0).id.name, "test-project");
+    assertEquals(amd.dependencies.groups.get("runtime").dependencies.get(0).version, new Version("1.0.0"));
+    assertEquals(amd.dependencies.groups.get("runtime").dependencies.get(0).id.type, "jar");
 
-    assertEquals(amd.dependencies.groups.get("run").dependencies.get(1).id.group, "org.example.test");
-    assertEquals(amd.dependencies.groups.get("run").dependencies.get(1).id.project, "test-project2");
-    assertEquals(amd.dependencies.groups.get("run").dependencies.get(1).id.name, "test-project2");
-    assertEquals(amd.dependencies.groups.get("run").dependencies.get(1).version, new Version("2.0.0"));
-    assertEquals(amd.dependencies.groups.get("run").dependencies.get(1).id.type, "jar");
+    assertEquals(amd.dependencies.groups.get("runtime").dependencies.get(1).id.group, "org.example.test");
+    assertEquals(amd.dependencies.groups.get("runtime").dependencies.get(1).id.project, "test-project2");
+    assertEquals(amd.dependencies.groups.get("runtime").dependencies.get(1).id.name, "test-project2");
+    assertEquals(amd.dependencies.groups.get("runtime").dependencies.get(1).version, new Version("2.0.0"));
+    assertEquals(amd.dependencies.groups.get("runtime").dependencies.get(1).id.type, "jar");
 
     assertEquals(amd.dependencies.groups.get("compile").dependencies.size(), 2);
     assertEquals(amd.dependencies.groups.get("compile").type, "compile");

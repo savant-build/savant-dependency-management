@@ -26,14 +26,18 @@ import java.nio.file.Path;
 public class ResolvedArtifact extends Artifact {
   public final Path file;
 
-  public ResolvedArtifact(ArtifactID id, Version version, License license, Path file) {
+  public final Path sourceFile;
+
+  public ResolvedArtifact(ArtifactID id, Version version, License license, Path file, Path sourceFile) {
     super(id, version, license);
     this.file = file;
+    this.sourceFile = sourceFile;
   }
 
-  public ResolvedArtifact(String spec, License license, Path file) {
+  public ResolvedArtifact(String spec, License license, Path file, Path sourceFile) {
     super(spec, license);
     this.file = file;
+    this.sourceFile = sourceFile;
   }
 
   @Override
@@ -57,5 +61,13 @@ public class ResolvedArtifact extends Artifact {
     int result = super.hashCode();
     result = 31 * result + (file != null ? file.hashCode() : 0);
     return result;
+  }
+
+  /**
+   * @return This ResolvedArtifact as a Dependency. This is useful for comparing ResolvedArtifacts to {@link
+   * Dependency}s.
+   */
+  public Dependency toDependency() {
+    return new Dependency(id, version, false);
   }
 }

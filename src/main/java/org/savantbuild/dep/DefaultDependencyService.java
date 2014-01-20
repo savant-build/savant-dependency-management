@@ -22,6 +22,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import org.savantbuild.dep.DependencyService.ResolveConfiguration.TypeResolveConfiguration;
@@ -114,7 +115,7 @@ public class DefaultDependencyService implements DependencyService {
     Map<ArtifactID, Artifact> artifacts = new HashMap<>();
     artifacts.put(graph.root.id, graph.root);
 
-    graph.traverse(graph.root.id, (origin, destination, edgeValue, depth) -> {
+    graph.traverse(graph.root.id, false, (origin, destination, edgeValue, depth) -> {
       // If this edge optional, skip it and don't continue traversal down
       if (edgeValue.optional) {
         return false;
@@ -177,17 +178,30 @@ public class DefaultDependencyService implements DependencyService {
       throws CyclicException, ArtifactMissingException, ProcessFailureException, MD5Exception, LicenseException {
     output.debug("Resolving ArtifactGraph with a root of [%s]", graph.root);
 
-    ResolvedArtifact root = new ResolvedArtifact(graph.root.id, graph.root.version, graph.root.license, null);
+    ResolvedArtifact root = new ResolvedArtifact(graph.root.id, graph.root.version, graph.root.license, null, null);
     ResolvedArtifactGraph resolvedGraph = new ResolvedArtifactGraph(root);
 
     Map<Artifact, ResolvedArtifact> map = new HashMap<>();
     map.put(graph.root, root);
 
-    graph.traverse(graph.root, (origin, destination, group, depth) -> {
-      // Only resolve specified types
-      TypeResolveConfiguration typeResolveConfiguration = configuration.groupConfigurations.get(group);
-      if (typeResolveConfiguration == null) {
-        return false;
+    AtomicReference<TypeResolveConfiguration> rootTypeResolveConfiguration = new AtomicReference<>();
+
+    graph.traverse(graph.root, false, (origin, destination, group, depth) -> {
+      // If we are at the root, check if the group is to be resolved. If we are below the root, then we need to ensure
+      // that the root was setup to fetch the group transitively
+      TypeResolveConfiguration typeResolveConfiguration;
+      if (origin.equals(graph.root)) {
+        typeResolveConfiguration = configuration.groupConfigurations.get(group);
+        if (typeResolveConfiguration == null) {
+          return false;
+        }
+
+        rootTypeResolveConfiguration.set(typeResolveConfiguration);
+      } else {
+        typeResolveConfiguration = rootTypeResolveConfiguration.get();
+        if (typeResolveConfiguration.transitiveGroups.size() > 0 && !typeResolveConfiguration.transitiveGroups.contains(group)) {
+          return false;
+        }
       }
 
       if (typeResolveConfiguration.disallowedLicenses.contains(destination.license)) {
@@ -195,14 +209,17 @@ public class DefaultDependencyService implements DependencyService {
       }
 
       Path file = workflow.fetchArtifact(destination).toAbsolutePath();
-      ResolvedArtifact resolvedArtifact = new ResolvedArtifact(destination.id, destination.version, destination.license, file);
-      resolvedGraph.addEdge(map.get(origin), resolvedArtifact, group);
-      map.put(destination, resolvedArtifact);
 
       // Optionally fetch the source
+      Path sourceFile = null;
       if (typeResolveConfiguration.fetchSource) {
-        workflow.fetchSource(resolvedArtifact);
+        sourceFile = workflow.fetchSource(destination);
       }
+
+      // Add to the graph
+      ResolvedArtifact resolvedArtifact = new ResolvedArtifact(destination.id, destination.version, destination.license, file, sourceFile);
+      resolvedGraph.addEdge(map.get(origin), resolvedArtifact, group);
+      map.put(destination, resolvedArtifact);
 
       // Call the listeners
       asList(listeners).forEach((listener) -> listener.artifactFetched(resolvedArtifact));

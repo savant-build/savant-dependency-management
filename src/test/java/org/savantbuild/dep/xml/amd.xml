@@ -15,7 +15,7 @@
   -->
 <artifact-meta-data license="Apachev2">
   <dependencies>
-    <dependency-group type="run">
+    <dependency-group type="runtime">
       <dependency group="org.example.test" project="test-project" name="test-project" version="1.0" type="jar" optional="false"/>
       <dependency group="org.example.test" project="test-project2" name="test-project2" version="2.0" type="jar" optional="true"/>
     </dependency-group>

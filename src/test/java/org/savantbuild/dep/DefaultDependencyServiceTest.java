@@ -89,7 +89,21 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
 
   public Artifact project = new Artifact("org.savantbuild.test:project:1.0", License.Apachev2);
 
-  public ResolvedArtifact projectResolved = new ResolvedArtifact(project.id, project.version, License.Apachev2, null);
+  public ResolvedArtifact projectResolved = new ResolvedArtifact(project.id, project.version, License.Apachev2, null, null);
+
+  public ResolvedArtifact resolvedIntegrationBuild;
+
+  public ResolvedArtifact resolvedIntermediate;
+
+  public ResolvedArtifact resolvedLeaf1;
+
+  public ResolvedArtifact resolvedLeaf1_1;
+
+  public ResolvedArtifact resolvedLeaf2_2;
+
+  public ResolvedArtifact resolvedMultipleVersions;
+
+  public ResolvedArtifact resolvedMultipleVersionsDifferentDeps;
 
   public HttpServer server;
 
@@ -102,7 +116,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
 
   /**
    * Graph:
-   * <p/>
+   * <p>
    * <pre>
    *   root(1.0.0)-->(1.0.0)multiple-versions(1.0.0)-->(1.0.0)leaf:leaf1
    *              |            (1.1.0)       (1.1.0)-->(1.0.0)leaf:leaf1
@@ -123,26 +137,26 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
   public void beforeClass() {
     goodGraph = new DependencyGraph(project);
     goodGraph.addEdge(project.id, multipleVersions.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", false, License.Apachev1));
-    goodGraph.addEdge(project.id, intermediate.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "run", false, License.Apachev2));
+    goodGraph.addEdge(project.id, intermediate.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", false, License.Apachev2));
     goodGraph.addEdge(project.id, multipleVersionsDifferentDeps.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", false, License.Apachev2));
     goodGraph.addEdge(intermediate.id, multipleVersions.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "compile", false, License.Apachev2));
-    goodGraph.addEdge(intermediate.id, multipleVersionsDifferentDeps.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "run", false, License.Apachev2));
+    goodGraph.addEdge(intermediate.id, multipleVersionsDifferentDeps.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "runtime", false, License.Apachev2));
     goodGraph.addEdge(multipleVersions.id, leaf1.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", false, License.GPL));
     goodGraph.addEdge(multipleVersions.id, leaf1.id, new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", false, License.GPL));
     goodGraph.addEdge(multipleVersions.id, integrationBuild.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("2.1.1-{integration}"), "compile", false, License.Apachev2));
     goodGraph.addEdge(multipleVersions.id, integrationBuild.id, new DependencyEdgeValue(new Version("1.1.0"), new Version("2.1.1-{integration}"), "compile", false, License.Apachev2));
-    goodGraph.addEdge(multipleVersionsDifferentDeps.id, leaf2.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "run", false, License.LGPL));
+    goodGraph.addEdge(multipleVersionsDifferentDeps.id, leaf2.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", false, License.LGPL));
     goodGraph.addEdge(multipleVersionsDifferentDeps.id, leaf1_1.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", false, License.Commercial));
     goodGraph.addEdge(multipleVersionsDifferentDeps.id, leaf1_1.id, new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", false, License.Commercial));
     goodGraph.addEdge(multipleVersionsDifferentDeps.id, leaf2_2.id, new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", false, License.OtherNonDistributableOpenSource));
-    goodGraph.addEdge(multipleVersionsDifferentDeps.id, leaf3_3.id, new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "run", true, License.Apachev2));
+    goodGraph.addEdge(multipleVersionsDifferentDeps.id, leaf3_3.id, new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "runtime", true, License.Apachev2));
 
     goodReducedGraph = new ArtifactGraph(project);
     goodReducedGraph.addEdge(project, multipleVersions, "compile");
-    goodReducedGraph.addEdge(project, intermediate, "run");
+    goodReducedGraph.addEdge(project, intermediate, "runtime");
     goodReducedGraph.addEdge(project, multipleVersionsDifferentDeps, "compile");
     goodReducedGraph.addEdge(intermediate, multipleVersions, "compile");
-    goodReducedGraph.addEdge(intermediate, multipleVersionsDifferentDeps, "run");
+    goodReducedGraph.addEdge(intermediate, multipleVersionsDifferentDeps, "runtime");
     goodReducedGraph.addEdge(multipleVersions, leaf1, "compile");
     goodReducedGraph.addEdge(multipleVersions, integrationBuild, "compile");
     goodReducedGraph.addEdge(multipleVersionsDifferentDeps, leaf1_1, "compile");
@@ -154,10 +168,19 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
             new Dependency(multipleVersions.id, new Version("1.0.0"), false),
             new Dependency(multipleVersionsDifferentDeps.id, new Version("1.0.0"), false)
         ),
-        new DependencyGroup("run", true,
+        new DependencyGroup("runtime", true,
             new Dependency(intermediate.id, new Version("1.0.0"), false)
         )
     );
+
+
+    resolvedIntermediate = new ResolvedArtifact("org.savantbuild.test:intermediate:1.0.0", License.Apachev2, cache.resolve("org/savantbuild/test/intermediate/1.0.0/intermediate-1.0.0.jar").toAbsolutePath(), null);
+    resolvedMultipleVersions = new ResolvedArtifact("org.savantbuild.test:multiple-versions:1.1.0", License.Apachev2, cache.resolve("org/savantbuild/test/multiple-versions/1.1.0/multiple-versions-1.1.0.jar").toAbsolutePath(), null);
+    resolvedMultipleVersionsDifferentDeps = new ResolvedArtifact("org.savantbuild.test:multiple-versions-different-dependencies:1.1.0", License.Apachev2, cache.resolve("org/savantbuild/test/multiple-versions-different-dependencies/1.1.0/multiple-versions-different-dependencies-1.1.0.jar").toAbsolutePath(), null);
+    resolvedLeaf1 = new ResolvedArtifact("org.savantbuild.test:leaf:leaf1:1.0.0:jar", License.GPL, cache.resolve("org/savantbuild/test/leaf/1.0.0/leaf1-1.0.0.jar").toAbsolutePath(), null);
+    resolvedLeaf1_1 = new ResolvedArtifact("org.savantbuild.test:leaf1:1.0.0", License.Commercial, cache.resolve("org/savantbuild/test/leaf1/1.0.0/leaf1-1.0.0.jar").toAbsolutePath(), null);
+    resolvedLeaf2_2 = new ResolvedArtifact("org.savantbuild.test:leaf2:1.0.0", License.OtherNonDistributableOpenSource, cache.resolve("org/savantbuild/test/leaf2/1.0.0/leaf2-1.0.0.jar").toAbsolutePath(), null);
+    resolvedIntegrationBuild = new ResolvedArtifact("org.savantbuild.test:integration-build:2.1.1-{integration}", License.Apachev2, cache.resolve("org/savantbuild/test/integration-build/2.1.1-{integration}/integration-build-2.1.1-{integration}.jar").toAbsolutePath(), null);
   }
 
   @BeforeMethod
@@ -224,7 +247,8 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
   public void publishWithSource() throws IOException {
     FileTools.prune(projectDir.resolve("build/test/publish"));
 
-    AbstractArtifact artifact = new AbstractArtifact("org.savantbuild.test:publication-with-source:1.0.0") {};
+    AbstractArtifact artifact = new AbstractArtifact("org.savantbuild.test:publication-with-source:1.0.0") {
+    };
     ArtifactMetaData amd = new ArtifactMetaData(dependencies, License.BSD);
     Publication publication = new Publication(artifact, amd, projectDir.resolve("src/test/java/org/savantbuild/dep/TestFile.txt"), projectDir.resolve("src/test/java/org/savantbuild/dep/TestFile.txt"));
     PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, projectDir.resolve("build/test/publish").toString()));
@@ -268,7 +292,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
 
   /**
    * Graph:
-   * <p/>
+   * <p>
    * <pre>
    *   root(1.0.0)-->(1.0.0)multiple-versions(1.0.0)-->(1.0.0)leaf:leaf1
    *              |            (1.1.0)       (1.1.0)-->(1.0.0)leaf:leaf1
@@ -286,7 +310,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
    *              |                                                 (1.1.0)-->(1.0.0)leaf2:leaf2
    *              |                                                 (1.1.0)-->(1.0.0)leaf3:leaf3 (optional)
    * </pre>
-   * <p/>
+   * <p>
    * Notice that the leaf1:leaf1 node gets upgrade across a major version. This is allowed because the
    * multiple-versions-different-dependencies node gets upgrade to 1.1.0 and therefore all of the dependencies below it
    * are from the 1.1.0 version.
@@ -305,26 +329,26 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
 
     DependencyGraph graph = new DependencyGraph(project);
     graph.addEdge(project.id, multipleVersions.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", false, License.Commercial));
-    graph.addEdge(project.id, intermediate.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "run", false, License.Commercial));
+    graph.addEdge(project.id, intermediate.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", false, License.Commercial));
     graph.addEdge(project.id, multipleVersionsDifferentDeps.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", false, License.Commercial));
     graph.addEdge(intermediate.id, multipleVersions.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "compile", false, License.Commercial));
-    graph.addEdge(intermediate.id, multipleVersionsDifferentDeps.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "run", false, License.Commercial));
+    graph.addEdge(intermediate.id, multipleVersionsDifferentDeps.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "runtime", false, License.Commercial));
     graph.addEdge(multipleVersions.id, leaf1.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", false, License.Commercial));
     graph.addEdge(multipleVersions.id, leaf1.id, new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", false, License.Commercial));
     graph.addEdge(multipleVersions.id, integrationBuild.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("2.1.1-{integration}"), "compile", false, License.Commercial));
     graph.addEdge(multipleVersions.id, integrationBuild.id, new DependencyEdgeValue(new Version("1.1.0"), new Version("2.1.1-{integration}"), "compile", false, License.Commercial));
-    graph.addEdge(multipleVersionsDifferentDeps.id, leaf2.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "run", false, License.Commercial));
+    graph.addEdge(multipleVersionsDifferentDeps.id, leaf2.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", false, License.Commercial));
     graph.addEdge(multipleVersionsDifferentDeps.id, leaf1_1.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", false, License.Commercial));
     graph.addEdge(multipleVersionsDifferentDeps.id, leaf1_1.id, new DependencyEdgeValue(new Version("1.1.0"), new Version("2.0.0"), "compile", false, License.Commercial));
     graph.addEdge(multipleVersionsDifferentDeps.id, leaf2_2.id, new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", false, License.Commercial));
-    graph.addEdge(multipleVersionsDifferentDeps.id, leaf3_3.id, new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "run", true, License.Commercial));
+    graph.addEdge(multipleVersionsDifferentDeps.id, leaf3_3.id, new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "runtime", true, License.Commercial));
 
     ArtifactGraph expected = new ArtifactGraph(project);
     expected.addEdge(project, multipleVersions, "compile");
-    expected.addEdge(project, intermediate, "run");
+    expected.addEdge(project, intermediate, "runtime");
     expected.addEdge(project, multipleVersionsDifferentDeps, "compile");
     expected.addEdge(intermediate, multipleVersions, "compile");
-    expected.addEdge(intermediate, multipleVersionsDifferentDeps, "run");
+    expected.addEdge(intermediate, multipleVersionsDifferentDeps, "runtime");
     expected.addEdge(multipleVersions, leaf1, "compile");
     expected.addEdge(multipleVersions, integrationBuild, "compile");
     expected.addEdge(multipleVersionsDifferentDeps, leaf1_1, "compile");
@@ -336,7 +360,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
 
   /**
    * Graph:
-   * <p/>
+   * <p>
    * <pre>
    *   root(1.0.0)-->(1.0.0)multiple-versions(1.0.0)-->(1.0.0)leaf:leaf
    *              |            (1.1.0)       (1.1.0)-->(2.0.0)leaf:leaf
@@ -352,7 +376,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
    *              |
    *              |
    * </pre>
-   * <p/>
+   * <p>
    * Notice that the leaf has two versions, 1.0.0 and 2.0.0. Since the first visit to this node from the
    * multiple-versions node will upgrade leaf to 2.0.0, it should ignore the 1.0.0 version of it and not generate an
    * error.
@@ -366,23 +390,23 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
 
     DependencyGraph graph = new DependencyGraph(project);
     graph.addEdge(project.id, multipleVersions.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", false, License.Commercial));
-    graph.addEdge(project.id, intermediate.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "run", false, License.Commercial));
+    graph.addEdge(project.id, intermediate.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", false, License.Commercial));
     graph.addEdge(project.id, multipleVersionsDifferentDeps.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", false, License.Commercial));
     graph.addEdge(intermediate.id, multipleVersions.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "compile", false, License.Commercial));
-    graph.addEdge(intermediate.id, multipleVersionsDifferentDeps.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "run", false, License.Commercial));
+    graph.addEdge(intermediate.id, multipleVersionsDifferentDeps.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "runtime", false, License.Commercial));
     graph.addEdge(multipleVersions.id, leaf.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", false, License.Commercial));
     graph.addEdge(multipleVersions.id, leaf.id, new DependencyEdgeValue(new Version("1.1.0"), new Version("2.0.0"), "compile", false, License.Commercial));
-    graph.addEdge(multipleVersionsDifferentDeps.id, leaf.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "run", false, License.Commercial));
-    graph.addEdge(multipleVersionsDifferentDeps.id, leaf.id, new DependencyEdgeValue(new Version("1.1.0"), new Version("2.0.0"), "run", false, License.Commercial));
+    graph.addEdge(multipleVersionsDifferentDeps.id, leaf.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", false, License.Commercial));
+    graph.addEdge(multipleVersionsDifferentDeps.id, leaf.id, new DependencyEdgeValue(new Version("1.1.0"), new Version("2.0.0"), "runtime", false, License.Commercial));
 
     ArtifactGraph expected = new ArtifactGraph(project);
     expected.addEdge(project, multipleVersions, "compile");
-    expected.addEdge(project, intermediate, "run");
+    expected.addEdge(project, intermediate, "runtime");
     expected.addEdge(project, multipleVersionsDifferentDeps, "compile");
     expected.addEdge(intermediate, multipleVersions, "compile");
-    expected.addEdge(intermediate, multipleVersionsDifferentDeps, "run");
+    expected.addEdge(intermediate, multipleVersionsDifferentDeps, "runtime");
     expected.addEdge(multipleVersions, leaf, "compile");
-    expected.addEdge(multipleVersionsDifferentDeps, leaf, "run");
+    expected.addEdge(multipleVersionsDifferentDeps, leaf, "runtime");
 
     ArtifactGraph actual = service.reduce(graph);
     assertEquals(actual, expected);
@@ -390,7 +414,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
 
   /**
    * Graph:
-   * <p/>
+   * <p>
    * <pre>
    *   root(1.0.0)-->(1.0.0)multiple-versions(1.0.0)-->(1.0.0)intermediate2:intermediate2(2.0.0)-->(2.0.0)leaf
    *              |            (1.1.0)       (1.1.0)-->(1.0.0)intermediate2:intermediate2                (1.0.0)
@@ -406,7 +430,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
    *              |
    *              |
    * </pre>
-   * <p/>
+   * <p>
    * Notice that the intermediate2 has two versions, 1.0.0 and 2.0.0. However, multiple-versions-different-dependencies
    * gets upgraded to 1.1.0, which means that intermediate2 gets downgraded to 1.0.0. This also means that leaf should
    * be downgraded to 1.0.0 since the dependency from intermediate2(2.0.0) should be ignored since that version is never
@@ -422,23 +446,23 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
 
     DependencyGraph graph = new DependencyGraph(project);
     graph.addEdge(project.id, multipleVersions.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", false, License.Commercial));
-    graph.addEdge(project.id, intermediate.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "run", false, License.Commercial));
+    graph.addEdge(project.id, intermediate.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", false, License.Commercial));
     graph.addEdge(project.id, multipleVersionsDifferentDeps.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", false, License.Commercial));
     graph.addEdge(intermediate.id, multipleVersions.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "compile", false, License.Commercial));
-    graph.addEdge(intermediate.id, multipleVersionsDifferentDeps.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "run", false, License.Commercial));
-    graph.addEdge(intermediate2.id, leaf.id, new DependencyEdgeValue(new Version("2.0.0"), new Version("2.0.0"), "run", false, License.Commercial));
+    graph.addEdge(intermediate.id, multipleVersionsDifferentDeps.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "runtime", false, License.Commercial));
+    graph.addEdge(intermediate2.id, leaf.id, new DependencyEdgeValue(new Version("2.0.0"), new Version("2.0.0"), "runtime", false, License.Commercial));
     graph.addEdge(multipleVersions.id, intermediate2.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", false, License.Commercial));
     graph.addEdge(multipleVersions.id, intermediate2.id, new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", false, License.Commercial));
-    graph.addEdge(multipleVersionsDifferentDeps.id, intermediate2.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("2.0.0"), "run", false, License.Commercial));
+    graph.addEdge(multipleVersionsDifferentDeps.id, intermediate2.id, new DependencyEdgeValue(new Version("1.0.0"), new Version("2.0.0"), "runtime", false, License.Commercial));
     graph.addEdge(multipleVersionsDifferentDeps.id, intermediate2.id, new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", false, License.Commercial));
     graph.addEdge(multipleVersionsDifferentDeps.id, leaf.id, new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", false, License.Commercial));
 
     ArtifactGraph expected = new ArtifactGraph(project);
     expected.addEdge(project, multipleVersions, "compile");
-    expected.addEdge(project, intermediate, "run");
+    expected.addEdge(project, intermediate, "runtime");
     expected.addEdge(project, multipleVersionsDifferentDeps, "compile");
     expected.addEdge(intermediate, multipleVersions, "compile");
-    expected.addEdge(intermediate, multipleVersionsDifferentDeps, "run");
+    expected.addEdge(intermediate, multipleVersionsDifferentDeps, "runtime");
     expected.addEdge(multipleVersions, intermediate2, "compile");
     expected.addEdge(multipleVersionsDifferentDeps, intermediate2, "compile");
     expected.addEdge(multipleVersionsDifferentDeps, leaf, "compile");
@@ -449,7 +473,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
 
   /**
    * Graph:
-   * <p/>
+   * <p>
    * <pre>
    *   root(1.0.0)-->(1.0.0)leaf
    *              |     * (2.0.0)
@@ -458,7 +482,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
    *              |          |
    *              |->(1.0.0)intermediate
    * </pre>
-   * <p/>
+   * <p>
    * Notice that leaf has two versions, 1.0.0 and 2.0.0. Since this artifact is reachable from the root node, it will
    * cause a failure.
    */
@@ -468,8 +492,8 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     ArtifactID intermediate = new ArtifactID("org.savantbuild.test", "intermediate", "intermediate", "jar");
 
     DependencyGraph incompatible = new DependencyGraph(project);
-    incompatible.addEdge(project.id, leaf, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "run", false, License.Commercial));
-    incompatible.addEdge(project.id, intermediate, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "run", false, License.Commercial));
+    incompatible.addEdge(project.id, leaf, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", false, License.Commercial));
+    incompatible.addEdge(project.id, intermediate, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", false, License.Commercial));
     incompatible.addEdge(intermediate, leaf, new DependencyEdgeValue(new Version("1.0.0"), new Version("2.0.0"), "compile", false, License.Commercial));
 
     try {
@@ -485,7 +509,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
 
   /**
    * Graph:
-   * <p/>
+   * <p>
    * <pre>
    *   root(1.0.0)-->(1.0.0)multiple-versions(1.0.0)-->(1.0.0)leaf:leaf
    *              |            (1.1.0)       (1.1.0)-->(1.0.0)leaf:leaf
@@ -501,7 +525,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
    *              |
    *              |
    * </pre>
-   * <p/>
+   * <p>
    * Notice that the leaf has two versions, 1.0.0 and 2.0.0. Since the first visit to this node from the
    * multiple-versions node will encounter two incompatible versions, it will cause a failure.
    */
@@ -514,13 +538,13 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
 
     DependencyGraph incompatible = new DependencyGraph(project);
     incompatible.addEdge(project.id, multipleVersions, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", false, License.Commercial));
-    incompatible.addEdge(project.id, intermediate, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "run", false, License.Commercial));
+    incompatible.addEdge(project.id, intermediate, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", false, License.Commercial));
     incompatible.addEdge(project.id, multipleVersionsDifferentDeps, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", false, License.Commercial));
     incompatible.addEdge(intermediate, multipleVersions, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "compile", false, License.Commercial));
-    incompatible.addEdge(intermediate, multipleVersionsDifferentDeps, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "run", false, License.Commercial));
+    incompatible.addEdge(intermediate, multipleVersionsDifferentDeps, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "runtime", false, License.Commercial));
     incompatible.addEdge(multipleVersions, leaf, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", false, License.Commercial));
     incompatible.addEdge(multipleVersions, leaf, new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", false, License.Commercial));
-    incompatible.addEdge(multipleVersionsDifferentDeps, leaf, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "run", false, License.Commercial));
+    incompatible.addEdge(multipleVersionsDifferentDeps, leaf, new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", false, License.Commercial));
     incompatible.addEdge(multipleVersionsDifferentDeps, leaf, new DependencyEdgeValue(new Version("1.1.0"), new Version("2.0.0"), "compile", false, License.Commercial));
 
     try {
@@ -545,39 +569,28 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     ArtifactGraph artifactGraph = service.reduce(goodGraph);
     ResolvedArtifactGraph actual = service.resolve(artifactGraph, workflow,
         new ResolveConfiguration().with("compile", new TypeResolveConfiguration(true, true))
-                                  .with("run", new TypeResolveConfiguration(true, true))
+                                  .with("runtime", new TypeResolveConfiguration(true, true))
     );
 
     ResolvedArtifactGraph expected = new ResolvedArtifactGraph(projectResolved);
-    ResolvedArtifact intermediate = new ResolvedArtifact("org.savantbuild.test:intermediate:1.0.0", License.Apachev2, cache.resolve("org/savantbuild/test/intermediate/1.0.0/intermediate-1.0.0.jar").toAbsolutePath());
-    ResolvedArtifact multipleVersions = new ResolvedArtifact("org.savantbuild.test:multiple-versions:1.1.0", License.Apachev2, cache.resolve("org/savantbuild/test/multiple-versions/1.1.0/multiple-versions-1.1.0.jar").toAbsolutePath());
-    ResolvedArtifact multipleVersionsDifferentDeps = new ResolvedArtifact("org.savantbuild.test:multiple-versions-different-dependencies:1.1.0", License.Apachev2, cache.resolve("org/savantbuild/test/multiple-versions-different-dependencies/1.1.0/multiple-versions-different-dependencies-1.1.0.jar").toAbsolutePath());
-    ResolvedArtifact leaf1 = new ResolvedArtifact("org.savantbuild.test:leaf:leaf1:1.0.0:jar", License.GPL, cache.resolve("org/savantbuild/test/leaf/1.0.0/leaf1-1.0.0.jar").toAbsolutePath());
-    ResolvedArtifact leaf1_1 = new ResolvedArtifact("org.savantbuild.test:leaf1:1.0.0", License.Commercial, cache.resolve("org/savantbuild/test/leaf1/1.0.0/leaf1-1.0.0.jar").toAbsolutePath());
-    ResolvedArtifact leaf2_2 = new ResolvedArtifact("org.savantbuild.test:leaf2:1.0.0", License.OtherNonDistributableOpenSource, cache.resolve("org/savantbuild/test/leaf2/1.0.0/leaf2-1.0.0.jar").toAbsolutePath());
-    ResolvedArtifact integrationBuild = new ResolvedArtifact("org.savantbuild.test:integration-build:2.1.1-{integration}", License.Apachev2, cache.resolve("org/savantbuild/test/integration-build/2.1.1-{integration}/integration-build-2.1.1-{integration}.jar").toAbsolutePath());
-
-    expected.addEdge(projectResolved, multipleVersions, "compile");
-    expected.addEdge(projectResolved, intermediate, "run");
-    expected.addEdge(projectResolved, multipleVersionsDifferentDeps, "compile");
-    expected.addEdge(intermediate, multipleVersions, "compile");
-    expected.addEdge(intermediate, multipleVersionsDifferentDeps, "run");
-    expected.addEdge(multipleVersions, leaf1, "compile");
-    expected.addEdge(multipleVersions, integrationBuild, "compile");
-    expected.addEdge(multipleVersionsDifferentDeps, leaf1_1, "compile");
-    expected.addEdge(multipleVersionsDifferentDeps, leaf2_2, "compile");
+    expected.addEdge(projectResolved, resolvedMultipleVersions, "compile");
+    expected.addEdge(projectResolved, resolvedIntermediate, "runtime");
+    expected.addEdge(projectResolved, resolvedMultipleVersionsDifferentDeps, "compile");
+    expected.addEdge(resolvedIntermediate, resolvedMultipleVersions, "compile");
+    expected.addEdge(resolvedIntermediate, resolvedMultipleVersionsDifferentDeps, "runtime");
+    expected.addEdge(resolvedMultipleVersions, resolvedLeaf1, "compile");
+    expected.addEdge(resolvedMultipleVersions, resolvedIntegrationBuild, "compile");
+    expected.addEdge(resolvedMultipleVersionsDifferentDeps, resolvedLeaf1_1, "compile");
+    expected.addEdge(resolvedMultipleVersionsDifferentDeps, resolvedLeaf2_2, "compile");
 
     assertEquals(actual, expected);
 
-    // Verify that all the artifacts have files and they all exist (except for the project)
-    Set<ResolvedArtifact> artifacts = actual.values();
-    artifacts.remove(projectResolved);
-    artifacts.forEach((artifact) -> assertTrue(Files.isRegularFile(artifact.file)));
+    verifyResolvedArtifacts(actual);
 
-    String expectedClasspath = String.join(File.pathSeparator, intermediate.file.toAbsolutePath().toString(),
-        multipleVersions.file.toAbsolutePath().toString(), leaf1.file.toAbsolutePath().toString(),
-        integrationBuild.file.toAbsolutePath().toString(), multipleVersionsDifferentDeps.file.toAbsolutePath().toString(),
-        leaf1_1.file.toAbsolutePath().toString(), leaf2_2.file.toAbsolutePath().toString());
+    String expectedClasspath = String.join(File.pathSeparator, resolvedIntermediate.file.toAbsolutePath().toString(),
+        resolvedMultipleVersions.file.toAbsolutePath().toString(), resolvedLeaf1.file.toAbsolutePath().toString(),
+        resolvedIntegrationBuild.file.toAbsolutePath().toString(), resolvedMultipleVersionsDifferentDeps.file.toAbsolutePath().toString(),
+        resolvedLeaf1_1.file.toAbsolutePath().toString(), resolvedLeaf2_2.file.toAbsolutePath().toString());
     assertEquals(actual.toClasspath().toString(), expectedClasspath);
   }
 
@@ -587,7 +600,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     try {
       service.resolve(artifactGraph, workflow,
           new ResolveConfiguration().with("compile", new TypeResolveConfiguration(true, true, License.GPL))
-                                    .with("run", new TypeResolveConfiguration(true, true))
+                                    .with("runtime", new TypeResolveConfiguration(true, true))
       );
     } catch (LicenseException e) {
       assertEquals(e.artifact, leaf1);
@@ -625,18 +638,69 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     );
 
     ResolvedArtifactGraph expected = new ResolvedArtifactGraph(projectResolved);
-    ResolvedArtifact multipleVersions = new ResolvedArtifact("org.savantbuild.test:multiple-versions:1.1.0", License.Apachev2, cache.resolve("org/savantbuild/test/multiple-versions/1.1.0/multiple-versions-1.1.0.jar").toAbsolutePath());
-    ResolvedArtifact multipleVersionsDifferentDeps = new ResolvedArtifact("org.savantbuild.test:multiple-versions-different-dependencies:1.1.0", License.Apachev2, cache.resolve("org/savantbuild/test/multiple-versions-different-dependencies/1.1.0/multiple-versions-different-dependencies-1.1.0.jar").toAbsolutePath());
+    ResolvedArtifact multipleVersions = new ResolvedArtifact("org.savantbuild.test:multiple-versions:1.1.0", License.Apachev2, cache.resolve("org/savantbuild/test/multiple-versions/1.1.0/multiple-versions-1.1.0.jar").toAbsolutePath(), null);
+    ResolvedArtifact multipleVersionsDifferentDeps = new ResolvedArtifact("org.savantbuild.test:multiple-versions-different-dependencies:1.1.0", License.Apachev2, cache.resolve("org/savantbuild/test/multiple-versions-different-dependencies/1.1.0/multiple-versions-different-dependencies-1.1.0.jar").toAbsolutePath(), null);
 
     expected.addEdge(projectResolved, multipleVersions, "compile");
     expected.addEdge(projectResolved, multipleVersionsDifferentDeps, "compile");
 
     assertEquals(actual, expected);
 
-    // Verify that all the artifacts have files and they all exist (except for the project)
-    Set<ResolvedArtifact> artifacts = actual.values();
-    artifacts.remove(projectResolved);
-    artifacts.forEach((artifact) -> assertTrue(Files.isRegularFile(artifact.file)));
+    verifyResolvedArtifacts(actual);
+  }
+
+  @Test
+  public void resolveGraphTransitiveWithTransitiveMissingGroups() throws Exception {
+    ArtifactGraph artifactGraph = service.reduce(goodGraph);
+    ResolvedArtifactGraph actual = service.resolve(artifactGraph, workflow,
+        new ResolveConfiguration().with("runtime", new TypeResolveConfiguration(true, "missing"))
+    );
+
+    ResolvedArtifactGraph expected = new ResolvedArtifactGraph(projectResolved);
+    expected.addEdge(projectResolved, resolvedIntermediate, "runtime");
+
+    assertEquals(actual, expected);
+
+    verifyResolvedArtifacts(actual);
+  }
+
+  @Test
+  public void resolveGraphTransitiveWithTransitiveGroups() throws Exception {
+    ArtifactGraph artifactGraph = service.reduce(goodGraph);
+    ResolvedArtifactGraph actual = service.resolve(artifactGraph, workflow,
+        new ResolveConfiguration().with("runtime", new TypeResolveConfiguration(true, "compile", "runtime"))
+    );
+
+    ResolvedArtifactGraph expected = new ResolvedArtifactGraph(projectResolved);
+    expected.addEdge(projectResolved, resolvedIntermediate, "runtime");
+    expected.addEdge(resolvedIntermediate, resolvedMultipleVersions, "compile");
+    expected.addEdge(resolvedIntermediate, resolvedMultipleVersionsDifferentDeps, "runtime");
+    expected.addEdge(resolvedMultipleVersions, resolvedLeaf1, "compile");
+    expected.addEdge(resolvedMultipleVersions, resolvedIntegrationBuild, "compile");
+    expected.addEdge(resolvedMultipleVersionsDifferentDeps, resolvedLeaf1_1, "compile");
+    expected.addEdge(resolvedMultipleVersionsDifferentDeps, resolvedLeaf2_2, "compile");
+
+    assertEquals(actual, expected);
+
+    verifyResolvedArtifacts(actual);
+  }
+
+  @Test
+  public void resolveGraphTransitiveWithTransitiveSingleGroup() throws Exception {
+    ArtifactGraph artifactGraph = service.reduce(goodGraph);
+    ResolvedArtifactGraph actual = service.resolve(artifactGraph, workflow,
+        new ResolveConfiguration().with("runtime", new TypeResolveConfiguration(true, "compile"))
+    );
+
+    ResolvedArtifactGraph expected = new ResolvedArtifactGraph(projectResolved);
+    expected.addEdge(projectResolved, resolvedIntermediate, "runtime");
+    expected.addEdge(resolvedIntermediate, resolvedMultipleVersions, "compile");
+    expected.addEdge(resolvedMultipleVersions, resolvedLeaf1, "compile");
+    expected.addEdge(resolvedMultipleVersions, resolvedIntegrationBuild, "compile");
+
+    assertEquals(actual, expected);
+
+    verifyResolvedArtifacts(actual);
   }
 
   private Dependencies makeSimpleDependencies(String dependency) {
@@ -659,5 +723,12 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     };
     graph.addEdge(project.id, artifact.id, new DependencyEdgeValue(project.version, artifact.version, "compile", false, License.Commercial));
     return graph;
+  }
+
+  private void verifyResolvedArtifacts(ResolvedArtifactGraph actual) {
+    // Verify that all the artifacts have files and they all exist (except for the project)
+    Set<ResolvedArtifact> artifacts = actual.values();
+    artifacts.remove(projectResolved);
+    artifacts.forEach((artifact) -> assertTrue(Files.isRegularFile(artifact.file)));
   }
 }
