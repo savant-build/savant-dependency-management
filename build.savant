@@ -35,11 +35,14 @@ project(group: "org.savantbuild", name: "savant-dependency-management", version:
 
 dependency = loadPlugin(id: "org.savantbuild.plugin:dependency:0.1.0-{integration}")
 
+idea = loadPlugin(id: "org.savantbuild.plugin:idea:0.1.0-{integration}")
+
 java = loadPlugin(id: "org.savantbuild.plugin:java:0.1.0-{integration}")
 java.settings.javaVersion = "1.8"
 
 javaTestNG = loadPlugin(id: "org.savantbuild.plugin:java-testng:0.1.0-{integration}")
 javaTestNG.settings.javaVersion = "1.8"
+javaTestNG.settings.verbosity = 10
 
 
 target(name: "clean", description: "Cleans the project") {
@@ -61,4 +64,8 @@ target(name: "test", description: "Runs the project's tests", dependsOn: ["jar"]
 
 target(name: "int", description: "Releases a local integration build of the project", dependsOn: ["test"]) {
   dependency.integrate()
+}
+
+target(name: "iml", description: "Updates the .iml file") {
+  idea.iml()
 }

@@ -35,25 +35,38 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
 /**
- * SCPProcess Tester.
+ * SCPProcess Tester. In order to get this working, you must setup SSH on your machine. Here are the steps on a Mac:
+ *
+ * <pre>
+ *   - Create a savanttest user with the password savantpassword (you can disable this account when you are done testing for security)
+ *   - Enable password authentication (edit the /etc/sshd_config file and uncomment the "PasswordAuthentication yes" line)
+ *   - Restart SSH (sudo launchctl unload /System/Library/LaunchDaemons/ssh.plist followed by a load)
+ * </pre>
  *
  * @author Brian Pontarelli
  */
 public class SCPProcessTest extends BaseUnitTest {
+
+  private Path path = Paths.get("/tmp/savant-test");
+
   @BeforeMethod
   public void deleteFile() throws Exception {
-    if (Files.isDirectory(Paths.get("/tmp/savant-test"))) {
+    if (Files.isDirectory(path)) {
+      System.out.println("Deleting " + path.toString());
+      System.out.println("Deleting " + path.toRealPath().toString());
       Connection connection = new Connection("localhost");
       connection.connect();
       connection.authenticateWithPassword("savanttest", "savantpassword");
 
       Session session = connection.openSession();
-      session.execCommand("rm -rf /tmp/savant-test");
+      session.execCommand("rm -rf " + path.toString());
       session.close();
       connection.close();
+      System.out.println("Should be gone [" + Files.isDirectory(path) + "]");
+      System.out.println("Should be gone rp [" + Files.isDirectory(path.toRealPath()) + "]");
     }
 
-    assertFalse(Files.exists(Paths.get("/tmp/savant-text")));
+    assertFalse(Files.isDirectory(path));
   }
 
   @DataProvider(name = "options")
@@ -81,7 +94,7 @@ public class SCPProcessTest extends BaseUnitTest {
 
   @Test(dataProvider = "options")
   public void run(SSHOptions options) throws IOException {
-    SCPProcess process = new SCPProcess(output, "localhost", "/tmp/savant-test", options);
+    SCPProcess process = new SCPProcess(output, "localhost", path.toString(), options);
     Path path = projectDir.resolve("src/test/java/org/savantbuild/dep/net/test_id_dsa");
     AbstractArtifact artifact = new Artifact("org.savantbuild.test:scp-test:1.0", License.Apachev2);
     process.publish(artifact, artifact.getArtifactFile(), path);

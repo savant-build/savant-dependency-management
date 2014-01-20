@@ -15,17 +15,19 @@
  */
 package org.savantbuild.dep.workflow.process;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Objects;
+
 import org.savantbuild.dep.domain.AbstractArtifact;
 import org.savantbuild.dep.net.SSHOptions;
 import org.savantbuild.dep.workflow.PublishWorkflow;
 import org.savantbuild.output.Output;
 
-import java.io.IOException;
-import java.nio.file.Path;
-import java.util.Objects;
-
 import ch.ethz.ssh2.Connection;
 import ch.ethz.ssh2.SCPClient;
+import ch.ethz.ssh2.SCPOutputStream;
 import ch.ethz.ssh2.Session;
 
 /**
@@ -112,7 +114,9 @@ public class SCPProcess implements Process {
 
       // SCP the file
       SCPClient client = new SCPClient(connection);
-      client.put(artifactFile.toAbsolutePath().toString(), item, path, "0444");
+      try (SCPOutputStream out = client.put(item, Files.size(artifactFile), path, "0444")) {
+        Files.copy(artifactFile, out);
+      }
 
       connection.close();
     } catch (IOException e) {
