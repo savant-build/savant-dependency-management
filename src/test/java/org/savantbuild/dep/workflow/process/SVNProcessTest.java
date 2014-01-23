@@ -49,7 +49,7 @@ public class SVNProcessTest extends BaseUnitTest {
 
     assertFalse(Files.exists(projectDir.resolve("build/test/cache")));
     assertFalse(Files.exists(projectDir.resolve("build/test/svn-repository")));
-    assertTrue(RuntimeTools.exec("svnadmin", "create", projectDir.toString() + "/build/test/svn-repository"));
+    assertTrue(RuntimeTools.exec("svnadmin", "create", projectDir.resolve("build/test/svn-repository").toString()));
     assertTrue(Files.exists(projectDir.resolve("build/test/svn-repository")));
   }
 
@@ -57,7 +57,7 @@ public class SVNProcessTest extends BaseUnitTest {
     AbstractArtifact artifact = new Artifact("org.savantbuild.test:svn-process-test:1.0", License.Apachev2);
 
     Path md5File = FileTools.createTempPath("savant-process", "md5", true);
-    Path file = projectDir.resolve("src/test/java/org/savantbuild/dep/BaseTest.java").toRealPath();
+    Path file = projectDir.resolve("src/test/java/org/savantbuild/dep/BaseUnitTest.java").toRealPath();
     MD5.writeMD5(MD5.fromBytes(Files.readAllBytes(file), "BaseTest.java"), md5File);
 
     SVNProcess process = new SVNProcess(output, "file:///" + projectDir.resolve("build/test/svn-repository").toRealPath(), null, null);

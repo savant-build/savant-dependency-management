@@ -15,6 +15,7 @@
  */
 package org.savantbuild.dep;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -140,6 +141,23 @@ public interface DependencyService {
         Collections.addAll(this.transitiveGroups, transitiveGroups);
         this.fetchSource = fetchSource;
         this.transitive = true;
+      }
+
+      /**
+       * Construct that assists with calling from Groovy code.
+       *
+       * @param fetchSource      Determines if the source should be fetched.
+       * @param transitive       Determines if transitive dependencies are fetched.
+       * @param transitiveGroups If transitive dependencies are fetched, this controls the transitive groups that are
+       *                         fetched.
+       */
+      public TypeResolveConfiguration(boolean fetchSource, boolean transitive, Collection<String> transitiveGroups) {
+        this.fetchSource = fetchSource;
+        this.transitive = transitive;
+
+        if (transitive) {
+          this.transitiveGroups.addAll(transitiveGroups);
+        }
       }
 
       public TypeResolveConfiguration withDisallowedLicenses(License... disallowedLicenses) {

@@ -46,14 +46,11 @@ import static org.testng.Assert.assertTrue;
  * @author Brian Pontarelli
  */
 public class SCPProcessTest extends BaseUnitTest {
-
   private Path path = Paths.get("/tmp/savant-test");
 
   @BeforeMethod
   public void deleteFile() throws Exception {
     if (Files.isDirectory(path)) {
-      System.out.println("Deleting " + path.toString());
-      System.out.println("Deleting " + path.toRealPath().toString());
       Connection connection = new Connection("localhost");
       connection.connect();
       connection.authenticateWithPassword("savanttest", "savantpassword");
@@ -62,8 +59,9 @@ public class SCPProcessTest extends BaseUnitTest {
       session.execCommand("rm -rf " + path.toString());
       session.close();
       connection.close();
-      System.out.println("Should be gone [" + Files.isDirectory(path) + "]");
-      System.out.println("Should be gone rp [" + Files.isDirectory(path.toRealPath()) + "]");
+
+      // Wait for the ssh command to terminate
+      Thread.sleep(100);
     }
 
     assertFalse(Files.isDirectory(path));
