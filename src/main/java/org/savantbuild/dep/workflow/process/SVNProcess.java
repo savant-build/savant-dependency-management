@@ -15,21 +15,21 @@
  */
 package org.savantbuild.dep.workflow.process;
 
-import org.savantbuild.dep.domain.AbstractArtifact;
-import org.savantbuild.security.MD5;
-import org.savantbuild.security.MD5Exception;
-import org.savantbuild.net.NetTools;
-import org.savantbuild.lang.RuntimeTools;
-import org.savantbuild.dep.workflow.PublishWorkflow;
-import org.savantbuild.io.FileTools;
-import org.savantbuild.output.Output;
-
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
+
+import org.savantbuild.dep.domain.AbstractArtifact;
+import org.savantbuild.dep.workflow.PublishWorkflow;
+import org.savantbuild.io.FileTools;
+import org.savantbuild.lang.RuntimeTools;
+import org.savantbuild.net.NetTools;
+import org.savantbuild.output.Output;
+import org.savantbuild.security.MD5;
+import org.savantbuild.security.MD5Exception;
 
 /**
  * This is an implementation of the Process that uses the SVNKit SubVersion library to fetch and publish artifacts
@@ -139,7 +139,7 @@ public class SVNProcess implements Process {
         throw new ProcessFailureException(artifact, "Unable to publish artifact item [" + item + "] to [" + uri + "]");
       }
 
-      output.info("Published to SubVersion at [%s/%s]", repository, uri);
+      output.info("Published to SubVersion at [%s]", uri);
       return null;
     } catch (URISyntaxException | IOException | InterruptedException e) {
       throw new ProcessFailureException(artifact, e);
