@@ -51,7 +51,7 @@ public class URLProcessTest extends BaseUnitTest {
     Path file = ufp.fetch(artifact, artifact.getArtifactFile(), new PublishWorkflow(new CacheProcess(output, cache.toString())));
     assertNotNull(file);
 
-    assertEquals(file.toAbsolutePath(), Paths.get(result).toAbsolutePath());
+    assertEquals((Object) file.toAbsolutePath(), Paths.get(result).toAbsolutePath());
   }
 
   @DataProvider(name = "fetchData")
