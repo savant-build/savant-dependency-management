@@ -1,4 +1,4 @@
-savant-dependency-management
+Savant Dependency Management
 ============================
 
-Savant Dependency Management library
+More docs coming soon for the Savant Dependency Management library.
