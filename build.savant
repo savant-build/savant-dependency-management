@@ -20,6 +20,10 @@ project(group: "org.savantbuild", name: "savant-dependency-management", version:
     standard()
   }
 
+  publishWorkflow {
+    subversion(repository: "http://svn.inversoft.org")
+  }
+
   dependencies {
     group(type: "compile") {
       dependency(id: "ch.ethz.ganymed:ganymed-ssh2:261.0.0")

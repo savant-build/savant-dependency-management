@@ -59,7 +59,7 @@ public class SCPProcess implements Process {
     Objects.requireNonNull(options, "The [options] attribute is required for the [scp] workflow process");
     if (options != null) {
       if (options.username != null) {
-        Objects.requireNonNull(options.username, "You must specify both the [username] attributes for the [scp] workflow process.");
+        Objects.requireNonNull(options.username, "You must specify the [username] attributes for the [scp] workflow process.");
       }
     }
 
