@@ -281,7 +281,7 @@ public class DefaultDependencyService implements DependencyService {
    * @throws IOException If the publication fails.
    */
   private void publishItem(AbstractArtifact artifact, String item, Path file, PublishWorkflow workflow) throws IOException {
-    MD5 md5 = MD5.fromPath(file);
+    MD5 md5 = MD5.forPath(file);
     Path md5File = FileTools.createTempPath("artifact-item", "md5", true);
     MD5.writeMD5(md5, md5File);
     workflow.publish(artifact, item + ".md5", md5File);

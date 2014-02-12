@@ -101,7 +101,7 @@ public class SVNProcess implements Process {
         return null;
       }
 
-      MD5 itemMD5 = MD5.fromPath(itemFile);
+      MD5 itemMD5 = MD5.forPath(itemFile);
       if (!itemMD5.equals(md5)) {
         throw new MD5Exception("AbstractArtifact item file [" + itemURI.toString() + "] doesn't match MD5");
       }

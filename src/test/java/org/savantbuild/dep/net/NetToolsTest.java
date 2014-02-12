@@ -77,7 +77,7 @@ public class NetToolsTest extends BaseUnitTest {
     HttpServer server = makeFileServer(null, null);
 
     try {
-      MD5 md5 = MD5.fromBytes(Files.readAllBytes(projectDir.resolve("src/test/java/org/savantbuild/dep/TestFile.txt")), "TestFile.txt");
+      MD5 md5 = MD5.forBytes(Files.readAllBytes(projectDir.resolve("src/test/java/org/savantbuild/dep/TestFile.txt")), "TestFile.txt");
       Path path = NetTools.downloadToPath(new URI("http://localhost:7000/src/test/java/org/savantbuild/dep/TestFile.txt"), null, null, md5);
       String result = new String(Files.readAllBytes(path), "UTF-8");
       assertEquals(result.trim(), "This file is a test file for copying and writing and such.");
