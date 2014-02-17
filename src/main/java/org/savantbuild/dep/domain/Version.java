@@ -27,14 +27,14 @@ import java.util.stream.Collectors;
 /**
  * This class models a simple three number version as well as any free form version String. It has two modes of
  * operation, strict and relaxed.
- * <p/>
+ * <p>
  * When this class is constructed in it tries everything in its power to figure out what the heck a version string is
  * and will only fail if the version string has two delimiters next to each other or begins/ends with a delimiter.
- * <p/>
+ * <p>
  * For the most part, this class correctly implements the Semantic Versioning system. This can be found here:
- * <p/>
+ * <p>
  * <a href="http://semver.org">http://semver.org</a>
- * <p/>
+ * <p>
  * The only notable except to this scheme is that Savant supports integration builds, which are not released versions,
  * but are local versions to a single developer or a team. Integration builds are always denoted by an additional
  * version specifier of <code>-{integration}</code>. For example, 1.0.0-{integration} denotes an integration build.

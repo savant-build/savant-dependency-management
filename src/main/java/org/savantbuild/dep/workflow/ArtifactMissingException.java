@@ -19,7 +19,7 @@ import org.savantbuild.dep.domain.AbstractArtifact;
 
 /**
  * Thrown when an artifact is missing.
- * <p/>
+ * <p>
  * This exception is not permanent and usually is fixed by changing to a different server. This exception should not
  * cause a negative cache file to be written and should repeat itself if nothing else changes.
  *

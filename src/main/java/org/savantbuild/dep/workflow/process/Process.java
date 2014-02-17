@@ -15,10 +15,10 @@
  */
 package org.savantbuild.dep.workflow.process;
 
+import java.nio.file.Path;
+
 import org.savantbuild.dep.domain.AbstractArtifact;
 import org.savantbuild.dep.workflow.PublishWorkflow;
-
-import java.nio.file.Path;
 
 /**
  * This interface defines a workflow process that can be used for either publishing or for fetching.
@@ -37,7 +37,7 @@ public interface Process {
    * Attempts to fetch the given item. The item is normally associated with the artifact, but might be associated with a
    * group or project. This method can use the artifact for logging or other purposes, but should use the item String
    * for fetching only.
-   * <p/>
+   * <p>
    * If the item is found, it should be published by calling the {@link PublishWorkflow}.
    *
    * @param artifact        The artifact that the item is associated with.
@@ -56,7 +56,7 @@ public interface Process {
    * Attempts to publish the given item. The item is normally associated with the artifact, but might be associated with
    * a group or project. This method can use the artifact for logging or other purposes, but should use the item String
    * for publishing only.
-   * <p/>
+   * <p>
    * If the item is published in a manner that a file can be returned, that file should be returned as it might be used
    * to create paths or other constructs.
    *
