@@ -15,13 +15,15 @@
  */
 package org.savantbuild.dep;
 
+import org.savantbuild.dep.domain.Publication;
+
 /**
  * Thrown when publishing an Artifact fails.
  *
  * @author Brian Pontarelli
  */
 public class PublishException extends RuntimeException {
-  public PublishException(Throwable cause) {
-    super(cause);
+  public PublishException(Publication publication, Throwable cause) {
+    super("Unable to publish the publication [" + publication + "] because an IO error occurred.", cause);
   }
 }

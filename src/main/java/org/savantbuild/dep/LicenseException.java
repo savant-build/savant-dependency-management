@@ -25,8 +25,8 @@ import org.savantbuild.dep.domain.Artifact;
 public class LicenseException extends RuntimeException {
   public final Artifact artifact;
 
-  public LicenseException(String message, Artifact artifact) {
-    super(message);
+  public LicenseException(Artifact artifact) {
+    super("The artifact [" + artifact + "] uses an invalid license [" + artifact.license + "]");
     this.artifact = artifact;
   }
 }

@@ -28,6 +28,7 @@ import org.savantbuild.lang.RuntimeTools;
 import org.savantbuild.security.MD5;
 import org.testng.annotations.BeforeMethod;
 
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
@@ -49,7 +50,7 @@ public class SVNProcessTest extends BaseUnitTest {
 
     assertFalse(Files.exists(projectDir.resolve("build/test/cache")));
     assertFalse(Files.exists(projectDir.resolve("build/test/svn-repository")));
-    assertTrue(RuntimeTools.exec("svnadmin", "create", projectDir.resolve("build/test/svn-repository").toString()));
+    assertEquals(RuntimeTools.exec("svnadmin", "create", projectDir.resolve("build/test/svn-repository").toString()).exitCode, 0);
     assertTrue(Files.exists(projectDir.resolve("build/test/svn-repository")));
   }
 

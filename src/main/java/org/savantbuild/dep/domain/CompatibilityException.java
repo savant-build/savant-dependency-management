@@ -26,13 +26,9 @@ public class CompatibilityException extends RuntimeException {
   public final Version max;
 
   public CompatibilityException(ArtifactID artifactID, Version min, Version max) {
+    super("The artifact [" + artifactID + "] has incompatible versions in your dependencies. The versions are [" + min + ", " + max + "]");
     this.artifactID = artifactID;
     this.min = min;
     this.max = max;
-  }
-
-  @Override
-  public String toString() {
-    return "The artifact [" + artifactID + "] has incompatible versions in your dependencies. The versions are [" + min + ", " + max + "]";
   }
 }

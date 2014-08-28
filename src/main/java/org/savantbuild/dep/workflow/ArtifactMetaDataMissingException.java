@@ -29,10 +29,7 @@ public class ArtifactMetaDataMissingException extends RuntimeException {
   public final AbstractArtifact artifactMissingAMD;
 
   public ArtifactMetaDataMissingException(AbstractArtifact artifactMissingAMD) {
+    super("The AMD file for the artifact [" + artifactMissingAMD + "] could not be located using your workflow");
     this.artifactMissingAMD = artifactMissingAMD;
-  }
-
-  public String toString() {
-    return "The AMD file for the artifact [" + artifactMissingAMD + "] could not be located using your workflow\n" + super.toString();
   }
 }

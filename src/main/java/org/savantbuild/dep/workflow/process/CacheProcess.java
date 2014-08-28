@@ -15,15 +15,15 @@
  */
 package org.savantbuild.dep.workflow.process;
 
-import org.savantbuild.dep.domain.AbstractArtifact;
-import org.savantbuild.dep.workflow.PublishWorkflow;
-import org.savantbuild.io.FileTools;
-import org.savantbuild.output.Output;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+
+import org.savantbuild.dep.domain.AbstractArtifact;
+import org.savantbuild.dep.workflow.PublishWorkflow;
+import org.savantbuild.io.FileTools;
+import org.savantbuild.output.Output;
 
 /**
  * This is an implementation of the Process that uses the a local cache to fetch and publish artifacts.
@@ -61,7 +61,7 @@ public class CacheProcess implements Process {
     try {
       FileTools.prune(dir);
     } catch (IOException e) {
-      throw new ProcessFailureException(artifact, "Unable to delete integration builds from [" + dir.toAbsolutePath() + "]", e);
+      throw new ProcessFailureException(artifact, "Unable to delete integration builds from the local cache at [" + dir.toAbsolutePath() + "]", e);
     }
   }
 
@@ -106,14 +106,14 @@ public class CacheProcess implements Process {
     String cachePath = String.join("/", dir, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString(), item);
     Path cacheFile = Paths.get(cachePath);
     if (Files.isDirectory(cacheFile)) {
-      throw new ProcessFailureException(artifact, "An AbstractArtifact cache location is a directory [" + cacheFile.toAbsolutePath() + "]");
+      throw new ProcessFailureException(artifact, "Your local artifact cache location is a directory [" + cacheFile.toAbsolutePath() + "]");
     }
 
     if (Files.isRegularFile(cacheFile)) {
       try {
         Files.delete(cacheFile);
       } catch (IOException e) {
-        throw new ProcessFailureException(artifact, "Unable to clean out old file to replace [" + cacheFile.toAbsolutePath() + "]", e);
+        throw new ProcessFailureException(artifact, "Unable to delete old file in the local cache to replace [" + cacheFile.toAbsolutePath() + "]", e);
       }
     } else if (!Files.exists(cacheFile)) {
       try {

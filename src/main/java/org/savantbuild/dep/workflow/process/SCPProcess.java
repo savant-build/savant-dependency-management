@@ -73,7 +73,7 @@ public class SCPProcess implements Process {
    */
   @Override
   public void deleteIntegrationBuilds(AbstractArtifact artifact) throws ProcessFailureException {
-    throw new ProcessFailureException(artifact, "The [scp] process doesn't allow deleting of integration builds.");
+    throw new ProcessFailureException(artifact, "The [scp] process doesn't allow deletion of integration builds.");
   }
 
   /**

@@ -26,11 +26,12 @@ public class ProcessFailureException extends RuntimeException {
   public final AbstractArtifact artifact;
 
   public ProcessFailureException(AbstractArtifact artifact) {
+    super("A process failed for the artifact [" + artifact + "].");
     this.artifact = artifact;
   }
 
   public ProcessFailureException(AbstractArtifact artifact, Throwable cause) {
-    super(cause);
+    super("A process failed for the artifact [" + artifact + "]." + (cause != null ? " The original error is [" + cause.getMessage() + "]\n" : "\n"), cause);
     this.artifact = artifact;
   }
 
@@ -42,9 +43,5 @@ public class ProcessFailureException extends RuntimeException {
   public ProcessFailureException(AbstractArtifact artifact, String message, Throwable cause) {
     super(message, cause);
     this.artifact = artifact;
-  }
-
-  public String toString() {
-    return "A process failed for the artifact [" + artifact + "]." + (getCause() != null ? " The original error is [" + getCause().getMessage() + "]\n" : "\n") + super.toString();
   }
 }

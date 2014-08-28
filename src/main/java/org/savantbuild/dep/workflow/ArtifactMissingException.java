@@ -29,10 +29,7 @@ public class ArtifactMissingException extends RuntimeException {
   public final AbstractArtifact artifact;
 
   public ArtifactMissingException(AbstractArtifact artifact) {
+    super("The artifact [" + artifact + "] could not be located using your workflow");
     this.artifact = artifact;
-  }
-
-  public String toString() {
-    return "The artifact [" + artifact + "] could not be located using your workflow\n" + super.toString();
   }
 }

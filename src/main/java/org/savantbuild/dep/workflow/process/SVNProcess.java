@@ -26,6 +26,7 @@ import org.savantbuild.dep.domain.AbstractArtifact;
 import org.savantbuild.dep.workflow.PublishWorkflow;
 import org.savantbuild.io.FileTools;
 import org.savantbuild.lang.RuntimeTools;
+import org.savantbuild.lang.RuntimeTools.ProcessResult;
 import org.savantbuild.net.NetTools;
 import org.savantbuild.output.Output;
 import org.savantbuild.security.MD5;
@@ -103,7 +104,7 @@ public class SVNProcess implements Process {
 
       MD5 itemMD5 = MD5.forPath(itemFile);
       if (!itemMD5.equals(md5)) {
-        throw new MD5Exception("AbstractArtifact item file [" + itemURI.toString() + "] doesn't match MD5");
+        throw new MD5Exception("MD5 mismatch when fetching item from [" + itemURI.toString() + "]");
       }
 
       output.info("Downloaded from SubVersion at [%s]", itemURI);
@@ -147,18 +148,28 @@ public class SVNProcess implements Process {
   }
 
   private boolean export(URI uri, Path file) throws IOException, InterruptedException {
+    ProcessResult result;
     if (username != null) {
-      return RuntimeTools.exec("svn", "export", "--force", "--non-interactive", "--no-auth-cache", "--username", username, "--password", password, uri.toString(), file.toAbsolutePath().toString());
+      result = RuntimeTools.exec("svn", "export", "--force", "--non-interactive", "--no-auth-cache", "--username", username, "--password", password, uri.toString(), file.toAbsolutePath().toString());
+    } else {
+      result = RuntimeTools.exec("svn", "export", "--force", "--non-interactive", "--no-auth-cache", uri.toString(), file.toAbsolutePath().toString());
     }
 
-    return RuntimeTools.exec("svn", "export", "--force", "--non-interactive", "--no-auth-cache", uri.toString(), file.toAbsolutePath().toString());
+    output.debug(result.output);
+
+    return result.exitCode == 0;
   }
 
   private boolean imprt(URI uri, Path file) throws IOException, InterruptedException {
+    ProcessResult result;
     if (username != null) {
-      return RuntimeTools.exec("svn", "import", "--non-interactive", "--no-auth-cache", "-m", "Published artifact", "--username", username, "--password", password, file.toAbsolutePath().toString(), uri.toString());
+      result = RuntimeTools.exec("svn", "import", "--non-interactive", "--no-auth-cache", "-m", "Published artifact", "--username", username, "--password", password, file.toAbsolutePath().toString(), uri.toString());
+    } else {
+      result = RuntimeTools.exec("svn", "import", "--non-interactive", "--no-auth-cache", "-m", "Published artifact", file.toAbsolutePath().toString(), uri.toString());
     }
 
-    return RuntimeTools.exec("svn", "import", "--non-interactive", "--no-auth-cache", "-m", "Published artifact", file.toAbsolutePath().toString(), uri.toString());
+    output.debug(result.output);
+
+    return result.exitCode == 0;
   }
 }

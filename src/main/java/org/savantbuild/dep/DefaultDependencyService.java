@@ -95,7 +95,7 @@ public class DefaultDependencyService implements DependencyService {
         publishItem(publication.artifact, publication.artifact.getArtifactSourceFile(), publication.sourceFile, workflow);
       }
     } catch (IOException e) {
-      throw new PublishException(e);
+      throw new PublishException(publication, e);
     }
   }
 
@@ -205,7 +205,7 @@ public class DefaultDependencyService implements DependencyService {
       }
 
       if (typeResolveConfiguration.disallowedLicenses.contains(destination.license)) {
-        throw new LicenseException("Invalid license encountered", destination);
+        throw new LicenseException(destination);
       }
 
       Path file = workflow.fetchArtifact(destination).toAbsolutePath();

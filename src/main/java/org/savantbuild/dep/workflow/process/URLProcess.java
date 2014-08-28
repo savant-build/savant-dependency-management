@@ -15,13 +15,6 @@
  */
 package org.savantbuild.dep.workflow.process;
 
-import org.savantbuild.dep.domain.AbstractArtifact;
-import org.savantbuild.security.MD5;
-import org.savantbuild.security.MD5Exception;
-import org.savantbuild.net.NetTools;
-import org.savantbuild.dep.workflow.PublishWorkflow;
-import org.savantbuild.output.Output;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
@@ -29,6 +22,13 @@ import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
+
+import org.savantbuild.dep.domain.AbstractArtifact;
+import org.savantbuild.dep.workflow.PublishWorkflow;
+import org.savantbuild.net.NetTools;
+import org.savantbuild.output.Output;
+import org.savantbuild.security.MD5;
+import org.savantbuild.security.MD5Exception;
 
 /**
  * This class is a workflow process that attempts to download artifacts from the internet using the Savant scheme via
@@ -103,7 +103,7 @@ public class URLProcess implements Process {
       try {
         itemFile = NetTools.downloadToPath(itemURI, username, password, md5);
       } catch (MD5Exception e) {
-        throw new MD5Exception("MD5 mismatch when downloading item from [" + itemURI.toString() + "]");
+        throw new MD5Exception("MD5 mismatch when fetching item from [" + itemURI.toString() + "]");
       }
 
       if (itemFile != null) {
