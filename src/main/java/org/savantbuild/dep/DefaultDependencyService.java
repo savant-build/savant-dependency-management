@@ -122,8 +122,7 @@ public class DefaultDependencyService implements DependencyService {
       }
 
       List<Edge<ArtifactID, DependencyEdgeValue>> inboundEdges = graph.getInboundEdges(destination);
-      boolean alreadyCheckedAllParents = inboundEdges.size() > 0 && inboundEdges.stream().allMatch((
-          edge) -> artifacts.containsKey(edge.getOrigin()));
+      boolean alreadyCheckedAllParents = inboundEdges.size() > 0 && inboundEdges.stream().allMatch((edge) -> artifacts.containsKey(edge.getOrigin()));
       if (alreadyCheckedAllParents) {
         List<Edge<ArtifactID, DependencyEdgeValue>> significantInbound =
             inboundEdges.stream()

@@ -110,7 +110,7 @@ public interface DependencyService {
    * transitive dependencies are fetch.
    */
   public static class ResolveConfiguration {
-    Map<String, TypeResolveConfiguration> groupConfigurations = new HashMap<>();
+    public final Map<String, TypeResolveConfiguration> groupConfigurations = new HashMap<>();
 
     public ResolveConfiguration with(String type, TypeResolveConfiguration typeResolveConfiguration) {
       groupConfigurations.put(type, typeResolveConfiguration);

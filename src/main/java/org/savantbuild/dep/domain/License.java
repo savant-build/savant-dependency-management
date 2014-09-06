@@ -28,7 +28,11 @@ public enum License {
 
   BSD,
 
+  CDDLv1,
+
   Commercial,
+
+  Eclipsev1,
 
   GPL,
 
