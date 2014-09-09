@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001-2010, Inversoft, All Rights Reserved
+ * Copyright (c) 2014, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import java.nio.file.Path;
  *
  * @author Brian Pontarelli
  */
-public class ResolvedArtifact extends Artifact {
+public class ResolvedArtifact extends ReifiedArtifact {
   public final Path file;
 
   public final Path sourceFile;
@@ -65,9 +65,9 @@ public class ResolvedArtifact extends Artifact {
 
   /**
    * @return This ResolvedArtifact as a Dependency. This is useful for comparing ResolvedArtifacts to {@link
-   * Dependency}s.
+   * ReifiedArtifact}s.
    */
-  public Dependency toDependency() {
-    return new Dependency(id, version, false);
+  public Artifact toArtifact() {
+    return new Artifact(id, version);
   }
 }

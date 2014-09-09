@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2001-2010, Inversoft, All Rights Reserved
+ * Copyright (c) 2014, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -23,7 +23,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
 
-import org.savantbuild.dep.domain.AbstractArtifact;
+import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.workflow.PublishWorkflow;
 import org.savantbuild.net.NetTools;
 import org.savantbuild.output.Output;
@@ -67,7 +67,7 @@ public class URLProcess implements Process {
    * Throws an exception. This isn't supported yet.
    */
   @Override
-  public void deleteIntegrationBuilds(AbstractArtifact artifact) throws ProcessFailureException {
+  public void deleteIntegrationBuilds(Artifact artifact) throws ProcessFailureException {
     throw new ProcessFailureException(artifact, "The [url] process doesn't support deleting integration builds.");
   }
 
@@ -81,7 +81,7 @@ public class URLProcess implements Process {
    * @return The File of the artifact after it has been published.
    */
   @Override
-  public Path fetch(AbstractArtifact artifact, String item, PublishWorkflow publishWorkflow)
+  public Path fetch(Artifact artifact, String item, PublishWorkflow publishWorkflow)
       throws ProcessFailureException {
     try {
       URI md5URI = NetTools.build(url, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString(), item + ".md5");
@@ -130,7 +130,7 @@ public class URLProcess implements Process {
    * Throws an exception. This isn't supported yet.
    */
   @Override
-  public Path publish(AbstractArtifact artifact, String item, Path file) throws ProcessFailureException {
+  public Path publish(Artifact artifact, String item, Path file) throws ProcessFailureException {
     throw new ProcessFailureException(artifact, "The [url] process doesn't allow publishing.");
   }
 }

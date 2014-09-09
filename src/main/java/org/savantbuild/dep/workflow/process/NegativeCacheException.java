@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, Inversoft, All Rights Reserved.
+ * Copyright (c) 2014, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package org.savantbuild.dep.workflow.process;
 
-import org.savantbuild.dep.domain.AbstractArtifact;
+import org.savantbuild.dep.domain.Artifact;
 
 /**
  * This class denotes that a negative cache was stored for an artifact item of some sort and that it should not be
@@ -24,7 +24,7 @@ import org.savantbuild.dep.domain.AbstractArtifact;
  * @author Brian Pontarelli
  */
 public class NegativeCacheException extends ProcessFailureException {
-  public NegativeCacheException(AbstractArtifact artifact) {
+  public NegativeCacheException(Artifact artifact) {
     super(artifact);
   }
 }

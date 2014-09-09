@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001-2006, Inversoft, All Rights Reserved
+ * Copyright (c) 2014, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,16 +15,16 @@
  */
 package org.savantbuild.dep.workflow;
 
-import org.savantbuild.dep.domain.AbstractArtifact;
-import org.savantbuild.dep.workflow.process.Process;
-import org.savantbuild.dep.workflow.process.ProcessFailureException;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import org.savantbuild.dep.domain.Artifact;
+import org.savantbuild.dep.workflow.process.Process;
+import org.savantbuild.dep.workflow.process.ProcessFailureException;
 
 /**
  * This is the interface that defines how artifacts are published to different locations during resolution. Publishing
@@ -45,7 +45,7 @@ public class PublishWorkflow {
    *
    * @param artifact The artifact information used to publish.
    */
-  public void deleteIntegrationBuilds(AbstractArtifact artifact) {
+  public void deleteIntegrationBuilds(Artifact artifact) {
     for (Process process : processes) {
       process.deleteIntegrationBuilds(artifact);
     }
@@ -67,7 +67,7 @@ public class PublishWorkflow {
    * @return A file that can be used to reference the artifact for paths and other constructs.
    * @throws ProcessFailureException If the artifact could not be published for any reason.
    */
-  public Path publish(AbstractArtifact artifact, String item, Path file) throws ProcessFailureException {
+  public Path publish(Artifact artifact, String item, Path file) throws ProcessFailureException {
     Path result = null;
     for (Process process : processes) {
       Path temp = process.publish(artifact, item, file);
@@ -86,7 +86,7 @@ public class PublishWorkflow {
    * @param artifact The artifact information used to publish.
    * @param item     The item that the negative is being published for.
    */
-  public void publishNegative(AbstractArtifact artifact, String item) {
+  public void publishNegative(Artifact artifact, String item) {
     Path itemFile;
     try {
       File tempFile = File.createTempFile("savant-item", "neg");

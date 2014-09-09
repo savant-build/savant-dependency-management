@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001-2010, Inversoft, All Rights Reserved
+ * Copyright (c) 2014, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ public class Dependencies {
 
   public Dependencies(DependencyGroup... groups) {
     for (DependencyGroup group : groups) {
-      this.groups.put(group.type, group);
+      this.groups.put(group.name, group);
     }
   }
 
@@ -52,8 +52,8 @@ public class Dependencies {
    *
    * @return All of the artifacts.
    */
-  public Set<AbstractArtifact> getAllArtifacts() {
-    Set<AbstractArtifact> set = new HashSet<>();
+  public Set<Artifact> getAllArtifacts() {
+    Set<Artifact> set = new HashSet<>();
     groups.values().forEach((group) -> set.addAll(group.dependencies));
     return set;
   }

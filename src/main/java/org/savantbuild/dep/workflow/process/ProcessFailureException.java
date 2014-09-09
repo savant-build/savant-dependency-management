@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001-2013, Inversoft, All Rights Reserved
+ * Copyright (c) 2014, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package org.savantbuild.dep.workflow.process;
 
-import org.savantbuild.dep.domain.AbstractArtifact;
+import org.savantbuild.dep.domain.Artifact;
 
 /**
  * Thrown when a process encounters a failure (network failure, IO exception, etc.).
@@ -23,24 +23,24 @@ import org.savantbuild.dep.domain.AbstractArtifact;
  * @author Brian Pontarelli
  */
 public class ProcessFailureException extends RuntimeException {
-  public final AbstractArtifact artifact;
+  public final Artifact artifact;
 
-  public ProcessFailureException(AbstractArtifact artifact) {
+  public ProcessFailureException(Artifact artifact) {
     super("A process failed for the artifact [" + artifact + "].");
     this.artifact = artifact;
   }
 
-  public ProcessFailureException(AbstractArtifact artifact, Throwable cause) {
+  public ProcessFailureException(Artifact artifact, Throwable cause) {
     super("A process failed for the artifact [" + artifact + "]." + (cause != null ? " The original error is [" + cause.getMessage() + "]\n" : "\n"), cause);
     this.artifact = artifact;
   }
 
-  public ProcessFailureException(AbstractArtifact artifact, String message) {
+  public ProcessFailureException(Artifact artifact, String message) {
     super(message);
     this.artifact = artifact;
   }
 
-  public ProcessFailureException(AbstractArtifact artifact, String message, Throwable cause) {
+  public ProcessFailureException(Artifact artifact, String message, Throwable cause) {
     super(message, cause);
     this.artifact = artifact;
   }

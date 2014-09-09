@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001-2006, Inversoft, All Rights Reserved
+ * Copyright (c) 2014, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package org.savantbuild.dep;
 
-import org.savantbuild.dep.domain.AbstractArtifact;
+import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.ResolvedArtifact;
 
 /**
@@ -36,5 +36,5 @@ public interface DependencyListener {
    *
    * @param artifact The artifact being published.
    */
-  void artifactPublished(AbstractArtifact artifact);
+  void artifactPublished(Artifact artifact);
 }

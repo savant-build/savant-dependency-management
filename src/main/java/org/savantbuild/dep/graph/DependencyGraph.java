@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001-2006, Inversoft, All Rights Reserved
+ * Copyright (c) 2014, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,8 @@ package org.savantbuild.dep.graph;
 
 import java.util.Formatter;
 
-import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.ArtifactID;
+import org.savantbuild.dep.domain.ReifiedArtifact;
 import org.savantbuild.util.HashGraph;
 
 /**
@@ -27,9 +27,9 @@ import org.savantbuild.util.HashGraph;
  * @author Brian Pontarelli
  */
 public class DependencyGraph extends HashGraph<ArtifactID, DependencyEdgeValue> {
-  public final Artifact root;
+  public final ReifiedArtifact root;
 
-  public DependencyGraph(Artifact root) {
+  public DependencyGraph(ReifiedArtifact root) {
     this.root = root;
   }
 

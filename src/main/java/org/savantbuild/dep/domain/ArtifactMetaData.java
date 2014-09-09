@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001-2006, Inversoft, All Rights Reserved
+ * Copyright (c) 2014, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,7 +50,7 @@ public class ArtifactMetaData {
     return result;
   }
 
-  public Artifact toLicensedArtifact(Dependency dependency) {
-    return new Artifact(dependency.id, dependency.version, license);
+  public ReifiedArtifact toLicensedArtifact(Artifact dependency) {
+    return new ReifiedArtifact(dependency.id, dependency.version, license);
   }
 }

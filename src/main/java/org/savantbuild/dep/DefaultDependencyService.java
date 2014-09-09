@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001-2013, Inversoft, All Rights Reserved
+ * Copyright (c) 2014, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,15 +25,14 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
-import org.savantbuild.dep.DependencyService.ResolveConfiguration.TypeResolveConfiguration;
-import org.savantbuild.dep.domain.AbstractArtifact;
+import org.savantbuild.dep.DependencyService.TraversalRules.GroupTraversalRule;
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.ArtifactID;
 import org.savantbuild.dep.domain.ArtifactMetaData;
 import org.savantbuild.dep.domain.CompatibilityException;
 import org.savantbuild.dep.domain.Dependencies;
-import org.savantbuild.dep.domain.Dependency;
 import org.savantbuild.dep.domain.Publication;
+import org.savantbuild.dep.domain.ReifiedArtifact;
 import org.savantbuild.dep.domain.ResolvedArtifact;
 import org.savantbuild.dep.domain.Version;
 import org.savantbuild.dep.graph.ArtifactGraph;
@@ -71,7 +70,7 @@ public class DefaultDependencyService implements DependencyService {
    * {@inheritDoc}
    */
   @Override
-  public DependencyGraph buildGraph(Artifact project, Dependencies dependencies, Workflow workflow)
+  public DependencyGraph buildGraph(ReifiedArtifact project, Dependencies dependencies, Workflow workflow)
       throws ArtifactMetaDataMissingException, ProcessFailureException, MD5Exception {
     output.debug("Building DependencyGraph with a root of [%s]", project);
     DependencyGraph graph = new DependencyGraph(project);
@@ -112,15 +111,10 @@ public class DefaultDependencyService implements DependencyService {
     // ArtifactGraph. Store the kept version. Continue.
 
     ArtifactGraph artifactGraph = new ArtifactGraph(graph.root);
-    Map<ArtifactID, Artifact> artifacts = new HashMap<>();
+    Map<ArtifactID, ReifiedArtifact> artifacts = new HashMap<>();
     artifacts.put(graph.root.id, graph.root);
 
     graph.traverse(graph.root.id, false, (origin, destination, edgeValue, depth) -> {
-      // If this edge optional, skip it and don't continue traversal down
-      if (edgeValue.optional) {
-        return false;
-      }
-
       List<Edge<ArtifactID, DependencyEdgeValue>> inboundEdges = graph.getInboundEdges(destination);
       boolean alreadyCheckedAllParents = inboundEdges.size() > 0 && inboundEdges.stream().allMatch((edge) -> artifacts.containsKey(edge.getOrigin()));
       if (alreadyCheckedAllParents) {
@@ -152,12 +146,12 @@ public class DefaultDependencyService implements DependencyService {
         }
 
         // Build the artifact for this node, save it in the Map and put it in the ArtifactGraph
-        Artifact destinationArtifact = new Artifact(destination, max, edgeValue.license);
+        ReifiedArtifact destinationArtifact = new ReifiedArtifact(destination, max, edgeValue.license);
         artifacts.put(destination, destinationArtifact);
 
         significantInbound.stream()
                           .forEach((edge) -> {
-                            Artifact originArtifact = artifacts.get(edge.getOrigin());
+                            ReifiedArtifact originArtifact = artifacts.get(edge.getOrigin());
                             artifactGraph.addEdge(originArtifact, destinationArtifact, edge.getValue().type);
                           });
       }
@@ -172,7 +166,7 @@ public class DefaultDependencyService implements DependencyService {
    * {@inheritDoc}
    */
   @Override
-  public ResolvedArtifactGraph resolve(ArtifactGraph graph, Workflow workflow, ResolveConfiguration configuration,
+  public ResolvedArtifactGraph resolve(ArtifactGraph graph, Workflow workflow, TraversalRules configuration,
                                        DependencyListener... listeners)
       throws CyclicException, ArtifactMissingException, ProcessFailureException, MD5Exception, LicenseException {
     output.debug("Resolving ArtifactGraph with a root of [%s]", graph.root);
@@ -180,30 +174,30 @@ public class DefaultDependencyService implements DependencyService {
     ResolvedArtifact root = new ResolvedArtifact(graph.root.id, graph.root.version, graph.root.license, null, null);
     ResolvedArtifactGraph resolvedGraph = new ResolvedArtifactGraph(root);
 
-    Map<Artifact, ResolvedArtifact> map = new HashMap<>();
+    Map<ReifiedArtifact, ResolvedArtifact> map = new HashMap<>();
     map.put(graph.root, root);
 
-    AtomicReference<TypeResolveConfiguration> rootTypeResolveConfiguration = new AtomicReference<>();
+    AtomicReference<GroupTraversalRule> rootTypeResolveConfiguration = new AtomicReference<>();
 
     graph.traverse(graph.root, false, (origin, destination, group, depth) -> {
       // If we are at the root, check if the group is to be resolved. If we are below the root, then we need to ensure
       // that the root was setup to fetch the group transitively
-      TypeResolveConfiguration typeResolveConfiguration;
+      GroupTraversalRule groupTraversalRule;
       if (origin.equals(graph.root)) {
-        typeResolveConfiguration = configuration.groupConfigurations.get(group);
-        if (typeResolveConfiguration == null) {
+        groupTraversalRule = configuration.rules.get(group);
+        if (groupTraversalRule == null) {
           return false;
         }
 
-        rootTypeResolveConfiguration.set(typeResolveConfiguration);
+        rootTypeResolveConfiguration.set(groupTraversalRule);
       } else {
-        typeResolveConfiguration = rootTypeResolveConfiguration.get();
-        if (typeResolveConfiguration.transitiveGroups.size() > 0 && !typeResolveConfiguration.transitiveGroups.contains(group)) {
+        groupTraversalRule = rootTypeResolveConfiguration.get();
+        if (groupTraversalRule.transitiveGroups.size() > 0 && !groupTraversalRule.transitiveGroups.contains(group)) {
           return false;
         }
       }
 
-      if (typeResolveConfiguration.disallowedLicenses.contains(destination.license)) {
+      if (groupTraversalRule.disallowedLicenses.contains(destination.license)) {
         throw new LicenseException(destination);
       }
 
@@ -211,7 +205,7 @@ public class DefaultDependencyService implements DependencyService {
 
       // Optionally fetch the source
       Path sourceFile = null;
-      if (typeResolveConfiguration.fetchSource) {
+      if (groupTraversalRule.fetchSource) {
         sourceFile = workflow.fetchSource(destination);
       }
 
@@ -224,7 +218,7 @@ public class DefaultDependencyService implements DependencyService {
       asList(listeners).forEach((listener) -> listener.artifactFetched(resolvedArtifact));
 
       // Recurse if the configuration is set to transitive (or not set)
-      return typeResolveConfiguration.transitive;
+      return groupTraversalRule.transitive;
     });
 
     return resolvedGraph;
@@ -242,15 +236,15 @@ public class DefaultDependencyService implements DependencyService {
    * @param workflow          The workflow used to fetch the AMD files.
    * @param artifactsRecursed The set of artifacts already resolved and recursed for.
    */
-  private void populateGraph(DependencyGraph graph, Artifact origin, Dependencies dependencies, Workflow workflow,
-                             Set<Dependency> artifactsRecursed)
+  private void populateGraph(DependencyGraph graph, ReifiedArtifact origin, Dependencies dependencies, Workflow workflow,
+                             Set<Artifact> artifactsRecursed)
       throws ArtifactMetaDataMissingException, ProcessFailureException, MD5Exception {
     dependencies.groups.forEach((type, group) -> {
-      for (Dependency dependency : group.dependencies) {
+      for (Artifact dependency : group.dependencies) {
         ArtifactMetaData amd = workflow.fetchMetaData(dependency);
 
         // Create an edge using nodes so that we can be explicit
-        DependencyEdgeValue edge = new DependencyEdgeValue(origin.version, dependency.version, type, dependency.optional, amd.license);
+        DependencyEdgeValue edge = new DependencyEdgeValue(origin.version, dependency.version, type, amd.license);
         graph.addEdge(origin.id, dependency.id, edge);
 
         // If we have already recursed this artifact, skip it.
@@ -260,7 +254,7 @@ public class DefaultDependencyService implements DependencyService {
 
         // Recurse
         if (amd.dependencies != null) {
-          Artifact artifact = amd.toLicensedArtifact(dependency);
+          ReifiedArtifact artifact = amd.toLicensedArtifact(dependency);
           populateGraph(graph, artifact, amd.dependencies, workflow, artifactsRecursed);
         }
 
@@ -279,7 +273,7 @@ public class DefaultDependencyService implements DependencyService {
    * @param workflow The publish workflow.
    * @throws IOException If the publication fails.
    */
-  private void publishItem(AbstractArtifact artifact, String item, Path file, PublishWorkflow workflow) throws IOException {
+  private void publishItem(Artifact artifact, String item, Path file, PublishWorkflow workflow) throws IOException {
     MD5 md5 = MD5.forPath(file);
     Path md5File = FileTools.createTempPath("artifact-item", "md5", true);
     MD5.writeMD5(md5, md5File);

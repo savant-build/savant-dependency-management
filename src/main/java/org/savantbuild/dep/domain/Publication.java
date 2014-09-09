@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001-2006, Inversoft, All Rights Reserved
+ * Copyright (c) 2014, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,15 +26,15 @@ import java.util.Objects;
  * @author Brian Pontarelli
  */
 public class Publication {
-  public final AbstractArtifact artifact;
-
-  public final ArtifactMetaData metaData;
+  public final Artifact artifact;
 
   public final Path file;
 
+  public final ArtifactMetaData metaData;
+
   public final Path sourceFile;
 
-  public Publication(AbstractArtifact artifact, ArtifactMetaData metaData, Path file, Path sourceFile) {
+  public Publication(Artifact artifact, ArtifactMetaData metaData, Path file, Path sourceFile) {
     Objects.requireNonNull(artifact, "Publications must have an Artifact");
     Objects.requireNonNull(metaData, "Publications must have ArtifactMetaData");
     Objects.requireNonNull(file, "Publications must have a file");

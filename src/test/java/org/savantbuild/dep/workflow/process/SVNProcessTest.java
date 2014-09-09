@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001-2006, Inversoft, All Rights Reserved
+ * Copyright (c) 2014, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +19,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import org.savantbuild.dep.BaseUnitTest;
-import org.savantbuild.dep.domain.AbstractArtifact;
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.License;
+import org.savantbuild.dep.domain.ReifiedArtifact;
 import org.savantbuild.dep.workflow.PublishWorkflow;
 import org.savantbuild.io.FileTools;
 import org.savantbuild.lang.RuntimeTools;
@@ -55,7 +55,7 @@ public class SVNProcessTest extends BaseUnitTest {
   }
 
   public void run() throws Exception {
-    AbstractArtifact artifact = new Artifact("org.savantbuild.test:svn-process-test:1.0", License.Apachev2);
+    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:svn-process-test:1.0", License.Apachev2);
 
     Path md5File = FileTools.createTempPath("savant-process", "md5", true);
     Path file = projectDir.resolve("src/test/java/org/savantbuild/dep/BaseUnitTest.java").toRealPath();

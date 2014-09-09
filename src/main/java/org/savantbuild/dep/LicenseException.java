@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Inversoft Inc., All Rights Reserved
+ * Copyright (c) 2014, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package org.savantbuild.dep;
 
-import org.savantbuild.dep.domain.Artifact;
+import org.savantbuild.dep.domain.ReifiedArtifact;
 
 /**
  * Thrown when an invalid license is encountered during the resolution process.
@@ -23,9 +23,9 @@ import org.savantbuild.dep.domain.Artifact;
  * @author Brian Pontarelli
  */
 public class LicenseException extends RuntimeException {
-  public final Artifact artifact;
+  public final ReifiedArtifact artifact;
 
-  public LicenseException(Artifact artifact) {
+  public LicenseException(ReifiedArtifact artifact) {
     super("The artifact [" + artifact + "] uses an invalid license [" + artifact.license + "]");
     this.artifact = artifact;
   }

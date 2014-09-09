@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2001-2010, Inversoft, All Rights Reserved
+ * Copyright (c) 2014, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -20,7 +20,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import org.savantbuild.dep.domain.AbstractArtifact;
+import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.workflow.PublishWorkflow;
 import org.savantbuild.io.FileTools;
 import org.savantbuild.output.Output;
@@ -51,7 +51,7 @@ public class CacheProcess implements Process {
    * @throws ProcessFailureException If the integration builds could not be deleted.
    */
   @Override
-  public void deleteIntegrationBuilds(AbstractArtifact artifact) throws ProcessFailureException {
+  public void deleteIntegrationBuilds(Artifact artifact) throws ProcessFailureException {
     String path = String.join("/", dir, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version + "-{integration}");
     Path dir = Paths.get(path);
     if (!Files.isDirectory(dir)) {
@@ -73,10 +73,10 @@ public class CacheProcess implements Process {
    * @param publishWorkflow The PublishWorkflow that is used to store the item if it can be found.
    * @return The File from the cache or null if it doesn't exist.
    * @throws NegativeCacheException If there is a negative cache record of the file, meaning it doesn't exist anywhere
-   *                                in the world.
+   * in the world.
    */
   @Override
-  public Path fetch(AbstractArtifact artifact, String item, PublishWorkflow publishWorkflow)
+  public Path fetch(Artifact artifact, String item, PublishWorkflow publishWorkflow)
       throws NegativeCacheException {
     String path = String.join("/", dir, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString(), item);
     Path file = Paths.get(path);
@@ -102,7 +102,7 @@ public class CacheProcess implements Process {
    * @throws ProcessFailureException If the publish fails.
    */
   @Override
-  public Path publish(AbstractArtifact artifact, String item, Path artifactFile) throws ProcessFailureException {
+  public Path publish(Artifact artifact, String item, Path artifactFile) throws ProcessFailureException {
     String cachePath = String.join("/", dir, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString(), item);
     Path cacheFile = Paths.get(cachePath);
     if (Files.isDirectory(cacheFile)) {

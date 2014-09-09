@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001-2006, Inversoft, All Rights Reserved
+ * Copyright (c) 2014, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,10 @@
  */
 package org.savantbuild.dep.graph;
 
+import java.util.Objects;
+
 import org.savantbuild.dep.domain.License;
 import org.savantbuild.dep.domain.Version;
-
-import java.util.Objects;
 
 /**
  * This class stores the information for edges between artifacts in the graph.
@@ -32,12 +32,9 @@ public class DependencyEdgeValue {
 
   public final License license;
 
-  public final boolean optional;
-
   public final String type;
 
-  public DependencyEdgeValue(Version dependentVersion, Version dependencyVersion, String type, boolean optional,
-                             License license) {
+  public DependencyEdgeValue(Version dependentVersion, Version dependencyVersion, String type, License license) {
     Objects.requireNonNull(dependentVersion, "DependencyEdgeValue requires a dependentVersion");
     Objects.requireNonNull(dependencyVersion, "DependencyEdgeValue requires a dependencyVersion");
     Objects.requireNonNull(type, "DependencyEdgeValue requires a type");
@@ -45,7 +42,6 @@ public class DependencyEdgeValue {
     this.dependentVersion = dependentVersion;
     this.dependencyVersion = dependencyVersion;
     this.type = type;
-    this.optional = optional;
     this.license = license;
   }
 
@@ -62,7 +58,6 @@ public class DependencyEdgeValue {
     return dependencyVersion.equals(that.dependencyVersion) &&
         dependentVersion.equals(that.dependentVersion) &&
         type.equals(that.type) &&
-        optional == that.optional &&
         license == that.license;
   }
 
@@ -75,6 +70,6 @@ public class DependencyEdgeValue {
   }
 
   public String toString() {
-    return dependentVersion.toString() + " ---(optional=" + optional + ",type=" + type + ",license=" + license + ")--> " + dependencyVersion.toString();
+    return dependentVersion.toString() + " ---(type=" + type + ",license=" + license + ")--> " + dependencyVersion.toString();
   }
 }

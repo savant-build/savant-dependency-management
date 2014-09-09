@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001-2006, Inversoft, All Rights Reserved
+ * Copyright (c) 2014, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,18 +15,6 @@
  */
 package org.savantbuild.dep.xml;
 
-import org.savantbuild.dep.domain.ArtifactID;
-import org.savantbuild.dep.domain.ArtifactMetaData;
-import org.savantbuild.dep.domain.Dependencies;
-import org.savantbuild.dep.domain.Dependency;
-import org.savantbuild.dep.domain.DependencyGroup;
-import org.savantbuild.dep.domain.License;
-import org.savantbuild.dep.domain.Version;
-import org.savantbuild.dep.domain.VersionException;
-import org.xml.sax.Attributes;
-import org.xml.sax.SAXException;
-import org.xml.sax.helpers.DefaultHandler;
-
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
@@ -36,6 +24,18 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.util.Objects;
+
+import org.savantbuild.dep.domain.Artifact;
+import org.savantbuild.dep.domain.ArtifactID;
+import org.savantbuild.dep.domain.ArtifactMetaData;
+import org.savantbuild.dep.domain.Dependencies;
+import org.savantbuild.dep.domain.DependencyGroup;
+import org.savantbuild.dep.domain.License;
+import org.savantbuild.dep.domain.Version;
+import org.savantbuild.dep.domain.VersionException;
+import org.xml.sax.Attributes;
+import org.xml.sax.SAXException;
+import org.xml.sax.helpers.DefaultHandler;
 
 import static java.util.Arrays.asList;
 
@@ -70,11 +70,11 @@ public class ArtifactTools {
             return;
           }
 
-          pw.printf("    <dependency-group type=\"%s\">\n", group.type);
+          pw.printf("    <dependency-group type=\"%s\">\n", group.name);
 
-          for (Dependency dependency : group.dependencies) {
-            pw.printf("      <dependency group=\"%s\" project=\"%s\" name=\"%s\" version=\"%s\" type=\"%s\" optional=\"%b\"/>\n",
-                dependency.id.group, dependency.id.project, dependency.id.name, dependency.version, dependency.id.type, dependency.optional);
+          for (Artifact dependency : group.dependencies) {
+            pw.printf("      <dependency group=\"%s\" project=\"%s\" name=\"%s\" version=\"%s\" type=\"%s\"/>\n",
+                dependency.id.group, dependency.id.project, dependency.id.name, dependency.version, dependency.id.type);
           }
           pw.println("    </dependency-group>");
         });
@@ -92,10 +92,10 @@ public class ArtifactTools {
    *
    * @param file The File to read the XML MetaData information from.
    * @return The MetaData parsed.
-   * @throws SAXException                 If the SAX parsing failed.
-   * @throws VersionException             If any of the version strings could not be parsed.
+   * @throws SAXException If the SAX parsing failed.
+   * @throws VersionException If any of the version strings could not be parsed.
    * @throws ParserConfigurationException If the parser configuration in the JDK is invalid.
-   * @throws IOException                  If the parse operation failed because of an IO error.
+   * @throws IOException If the parse operation failed because of an IO error.
    */
   public static ArtifactMetaData parseArtifactMetaData(Path file)
       throws SAXException, VersionException, ParserConfigurationException, IOException {
@@ -106,11 +106,11 @@ public class ArtifactTools {
   }
 
   public static class ArtifactMetaDataHandler extends DefaultHandler {
-    public License license;
-
     public Dependencies dependencies;
 
     public DependencyGroup group;
+
+    public License license;
 
     @Override
     public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
@@ -130,9 +130,8 @@ public class ArtifactTools {
           break;
         case "dependency":
           try {
-            Dependency dependency = new Dependency(new ArtifactID(attributes.getValue("group"), attributes.getValue("project"),
-                attributes.getValue("name"), attributes.getValue("type")), new Version(attributes.getValue("version")),
-                Boolean.parseBoolean(attributes.getValue("optional")));
+            Artifact dependency = new Artifact(new ArtifactID(attributes.getValue("group"), attributes.getValue("project"),
+                attributes.getValue("name"), attributes.getValue("type")), new Version(attributes.getValue("version")));
             group.dependencies.add(dependency);
           } catch (NullPointerException e) {
             throw new NullPointerException("Invalid AMD file. The dependency element is missing a required attribute. The error message is [" + e.getMessage() + "]");

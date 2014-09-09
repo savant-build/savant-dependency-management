@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001-2013, Inversoft, All Rights Reserved
+ * Copyright (c) 2014, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package org.savantbuild.dep.workflow;
 
-import org.savantbuild.dep.domain.AbstractArtifact;
+import org.savantbuild.dep.domain.Artifact;
 
 /**
  * Thrown when an artifact is missing an AMD file during the dependency graph building process.
@@ -26,9 +26,9 @@ import org.savantbuild.dep.domain.AbstractArtifact;
  * @author Brian Pontarelli
  */
 public class ArtifactMetaDataMissingException extends RuntimeException {
-  public final AbstractArtifact artifactMissingAMD;
+  public final Artifact artifactMissingAMD;
 
-  public ArtifactMetaDataMissingException(AbstractArtifact artifactMissingAMD) {
+  public ArtifactMetaDataMissingException(Artifact artifactMissingAMD) {
     super("The AMD file for the artifact [" + artifactMissingAMD + "] could not be located using your workflow");
     this.artifactMissingAMD = artifactMissingAMD;
   }

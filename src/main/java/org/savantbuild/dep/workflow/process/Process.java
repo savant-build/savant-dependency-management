@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2001-2010, Inversoft, All Rights Reserved
+ * Copyright (c) 2014, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
@@ -17,7 +17,7 @@ package org.savantbuild.dep.workflow.process;
 
 import java.nio.file.Path;
 
-import org.savantbuild.dep.domain.AbstractArtifact;
+import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.workflow.PublishWorkflow;
 
 /**
@@ -31,7 +31,7 @@ public interface Process {
    *
    * @param artifact The artifact. This artifacts version is the next integration build version.
    */
-  void deleteIntegrationBuilds(AbstractArtifact artifact) throws ProcessFailureException;
+  void deleteIntegrationBuilds(Artifact artifact) throws ProcessFailureException;
 
   /**
    * Attempts to fetch the given item. The item is normally associated with the artifact, but might be associated with a
@@ -50,7 +50,7 @@ public interface Process {
    * @return The Path to the item on the local disk or null if the item does not exist and there were no failures.
    * @throws ProcessFailureException If the process failed when fetching the artifact.
    */
-  Path fetch(AbstractArtifact artifact, String item, PublishWorkflow publishWorkflow) throws ProcessFailureException;
+  Path fetch(Artifact artifact, String item, PublishWorkflow publishWorkflow) throws ProcessFailureException;
 
   /**
    * Attempts to publish the given item. The item is normally associated with the artifact, but might be associated with
@@ -65,8 +65,8 @@ public interface Process {
    * @param artifactFile The path to the artifact stored on disk (which could be a temporary file that it was downloaded
    *                     to).
    * @return The file if the publish process stored the given file locally (local cache for example). Otherwise, this
-   *         should return null.
+   * should return null.
    * @throws ProcessFailureException If there was any issue publishing.
    */
-  Path publish(AbstractArtifact artifact, String item, Path artifactFile) throws ProcessFailureException;
+  Path publish(Artifact artifact, String item, Path artifactFile) throws ProcessFailureException;
 }

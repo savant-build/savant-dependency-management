@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, Inversoft, All Rights Reserved.
+ * Copyright (c) 2014, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,17 +15,17 @@
  */
 package org.savantbuild.dep.workflow;
 
-import org.savantbuild.dep.domain.AbstractArtifact;
-import org.savantbuild.security.MD5Exception;
-import org.savantbuild.dep.workflow.process.Process;
-import org.savantbuild.dep.workflow.process.ProcessFailureException;
-import org.savantbuild.output.Output;
-
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+
+import org.savantbuild.dep.domain.Artifact;
+import org.savantbuild.dep.workflow.process.Process;
+import org.savantbuild.dep.workflow.process.ProcessFailureException;
+import org.savantbuild.output.Output;
+import org.savantbuild.security.MD5Exception;
 
 /**
  * This class is the workflow that is used when attempting to fetch artifacts.
@@ -33,9 +33,9 @@ import java.util.Objects;
  * @author Brian Pontarelli
  */
 public class FetchWorkflow {
-  private final Output output;
-
   public final List<Process> processes = new ArrayList<>();
+
+  private final Output output;
 
   public FetchWorkflow(Output output, Process... processes) {
     this.output = output;
@@ -58,7 +58,7 @@ public class FetchWorkflow {
    * @throws ProcessFailureException If any of the processes failed while attempting to fetch the artifact.
    * @throws MD5Exception If the item's MD5 file did not match the item.
    */
-  public Path fetchItem(AbstractArtifact artifact, String item, PublishWorkflow publishWorkflow)
+  public Path fetchItem(Artifact artifact, String item, PublishWorkflow publishWorkflow)
       throws ProcessFailureException, MD5Exception {
     output.debug("Running processes %s to fetch [%s]", processes, item);
     return processes.stream()

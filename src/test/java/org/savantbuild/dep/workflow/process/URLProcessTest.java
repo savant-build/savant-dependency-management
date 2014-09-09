@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, Inversoft, All Rights Reserved.
+ * Copyright (c) 2014, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +19,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import org.savantbuild.dep.BaseUnitTest;
-import org.savantbuild.dep.domain.AbstractArtifact;
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.License;
+import org.savantbuild.dep.domain.ReifiedArtifact;
 import org.savantbuild.dep.workflow.PublishWorkflow;
 import org.savantbuild.io.FileTools;
 import org.testng.annotations.AfterMethod;
@@ -46,7 +46,7 @@ public class URLProcessTest extends BaseUnitTest {
   public void fetch(String url, String name, String version, String result) throws Exception {
     FileTools.prune(projectDir.resolve("build/test/cache"));
 
-    AbstractArtifact artifact = new Artifact("org.savantbuild.test:" + name + ":" + name + ":" + version + ":jar", License.Apachev2);
+    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:" + name + ":" + name + ":" + version + ":jar", License.Apachev2);
     URLProcess ufp = new URLProcess(output, url, null, null);
     Path file = ufp.fetch(artifact, artifact.getArtifactFile(), new PublishWorkflow(new CacheProcess(output, cache.toString())));
     assertNotNull(file);
@@ -70,7 +70,7 @@ public class URLProcessTest extends BaseUnitTest {
   public void integration(String url) throws Exception {
     FileTools.prune(projectDir.resolve("build/test/cache"));
 
-    AbstractArtifact artifact = new Artifact("org.savantbuild.test:integration-build:integration-build:2.1.1-{integration}:jar", License.Apachev2);
+    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:integration-build:integration-build:2.1.1-{integration}:jar", License.Apachev2);
 
     CacheProcess process = new CacheProcess(output, cache.toString());
     PublishWorkflow pw = new PublishWorkflow();
@@ -85,7 +85,7 @@ public class URLProcessTest extends BaseUnitTest {
   public void metaData(String url) throws Exception {
     FileTools.prune(projectDir.resolve("build/test/cache"));
 
-    AbstractArtifact artifact = new Artifact("org.savantbuild.test:multiple-versions:multiple-versions:1.0:jar", License.Apachev2);
+    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:multiple-versions:multiple-versions:1.0:jar", License.Apachev2);
 
     CacheProcess process = new CacheProcess(output, cache.toString());
     PublishWorkflow pw = new PublishWorkflow();
@@ -100,7 +100,7 @@ public class URLProcessTest extends BaseUnitTest {
   public void missingAMD(String url) throws Exception {
     FileTools.prune(projectDir.resolve("build/test/cache"));
 
-    AbstractArtifact artifact = new Artifact("org.savantbuild.test:missing-item:missing-item:1.0:jar", License.Apachev2);
+    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:missing-item:missing-item:1.0:jar", License.Apachev2);
 
     CacheProcess process = new CacheProcess(output, cache.toString());
     PublishWorkflow pw = new PublishWorkflow();
@@ -115,7 +115,7 @@ public class URLProcessTest extends BaseUnitTest {
   public void missingItem(String url) throws Exception {
     FileTools.prune(projectDir.resolve("build/test/cache"));
 
-    AbstractArtifact artifact = new Artifact("org.savantbuild.test:missing-item:missing-item:1.0:jar", License.Apachev2);
+    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:missing-item:missing-item:1.0:jar", License.Apachev2);
 
     CacheProcess process = new CacheProcess(output, cache.toString());
     PublishWorkflow pw = new PublishWorkflow();
@@ -130,7 +130,7 @@ public class URLProcessTest extends BaseUnitTest {
   public void missingMD5() throws Exception {
     FileTools.prune(projectDir.resolve("build/test/cache"));
 
-    AbstractArtifact artifact = new Artifact("org.savantbuild.test:missing-md5:missing-md5:1.0:jar", License.Apachev2);
+    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:missing-md5:missing-md5:1.0:jar", License.Apachev2);
 
     CacheProcess process = new CacheProcess(output, cache.toString());
     PublishWorkflow pw = new PublishWorkflow();

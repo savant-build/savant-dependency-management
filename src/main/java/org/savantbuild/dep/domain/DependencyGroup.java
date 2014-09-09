@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2001-2010, Inversoft, All Rights Reserved
+ * Copyright (c) 2014, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,23 +26,23 @@ import java.util.Objects;
  * @author Brian Pontarelli
  */
 public class DependencyGroup {
-  public final List<Dependency> dependencies = new ArrayList<>();
+  public final List<Artifact> dependencies = new ArrayList<>();
 
   public final boolean export;
 
-  public final String type;
+  public final String name;
 
   /**
    * Constructs a Dependency group.
    *
-   * @param type         The type (compile, run, etc).
+   * @param name         The name of the group (compile, run, etc).
    * @param export       Whether or not this group is exported or not.
    * @param dependencies The initial dependencies of the group.
    * @throws NullPointerException If the type parameter is null.
    */
-  public DependencyGroup(String type, boolean export, Dependency... dependencies) throws NullPointerException {
-    Objects.requireNonNull(type, "DependencyGroups must have a type specified (i.e. compile, run, test, etc.)");
-    this.type = type;
+  public DependencyGroup(String name, boolean export, Artifact... dependencies) throws NullPointerException {
+    Objects.requireNonNull(name, "DependencyGroups must have a type specified (i.e. compile, run, test, etc.)");
+    this.name = name;
     this.export = export;
     Collections.addAll(this.dependencies, dependencies);
   }
@@ -57,13 +57,13 @@ public class DependencyGroup {
     }
 
     final DependencyGroup that = (DependencyGroup) o;
-    return export == that.export && dependencies.equals(that.dependencies) && type.equals(that.type);
+    return export == that.export && dependencies.equals(that.dependencies) && name.equals(that.name);
   }
 
   @Override
   public int hashCode() {
     int result = dependencies.hashCode();
-    result = 31 * result + type.hashCode();
+    result = 31 * result + name.hashCode();
     result = 31 * result + (export ? 1 : 0);
     return result;
   }
