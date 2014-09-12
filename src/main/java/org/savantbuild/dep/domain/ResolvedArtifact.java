@@ -68,6 +68,6 @@ public class ResolvedArtifact extends ReifiedArtifact {
    * ReifiedArtifact}s.
    */
   public Artifact toArtifact() {
-    return new Artifact(id, version);
+    return new Artifact(id, version, false);
   }
 }

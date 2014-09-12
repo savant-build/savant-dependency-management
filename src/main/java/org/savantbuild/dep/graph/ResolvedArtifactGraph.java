@@ -15,6 +15,8 @@
  */
 package org.savantbuild.dep.graph;
 
+import java.util.Formatter;
+
 import org.savantbuild.dep.domain.ArtifactID;
 import org.savantbuild.dep.domain.ResolvedArtifact;
 import org.savantbuild.lang.Classpath;
@@ -85,5 +87,28 @@ public class ResolvedArtifactGraph extends HashGraph<ResolvedArtifact, String> {
     });
 
     return classpath;
+  }
+
+  /**
+   * Outputs this DependencyGraph as a GraphViz DOT file.
+   *
+   * @return The DOT file String.
+   */
+  public String toDOT() {
+    StringBuilder build = new StringBuilder();
+    build.append("digraph ResolvedArtifactGraph {\n");
+
+    Formatter formatter = new Formatter(build);
+    traverse(root, false, (origin, destination, edge, depth) -> {
+      formatter.format("  \"%s\" -> \"%s\" [label=\"%s\"];\n", origin, destination, edge);
+      return true;
+    });
+
+    build.append("}\n");
+    return build.toString();
+  }
+
+  public String toString() {
+    return toDOT();
   }
 }

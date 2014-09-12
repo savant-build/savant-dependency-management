@@ -18,6 +18,7 @@ package org.savantbuild.dep.graph;
 import org.savantbuild.dep.BaseUnitTest;
 import org.savantbuild.dep.domain.License;
 import org.savantbuild.dep.domain.ReifiedArtifact;
+import org.savantbuild.dep.graph.DependencyGraph.Dependency;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;
@@ -36,16 +37,16 @@ public class DependencyGraphTest extends BaseUnitTest {
     ReifiedArtifact four = new ReifiedArtifact("group:project:artifact4:1.0:jar", License.Commercial);
 
     DependencyGraph graph = new DependencyGraph(one);
-    graph.addEdge(one.id, two.id, new DependencyEdgeValue(one.version, two.version, "compile", License.Commercial));
-    graph.addEdge(one.id, three.id, new DependencyEdgeValue(one.version, three.version, "compile", License.Commercial));
-    graph.addEdge(two.id, four.id, new DependencyEdgeValue(two.version, four.version, "compile", License.Commercial));
-    graph.addEdge(three.id, four.id, new DependencyEdgeValue(three.version, four.version, "compile", License.Commercial));
+    graph.addEdge(new Dependency(one.id), new Dependency(two.id), new DependencyEdgeValue(one.version, two.version, "compile", License.Commercial));
+    graph.addEdge(new Dependency(one.id), new Dependency(three.id), new DependencyEdgeValue(one.version, three.version, "compile", License.Commercial));
+    graph.addEdge(new Dependency(two.id), new Dependency(four.id), new DependencyEdgeValue(two.version, four.version, "compile", License.Commercial));
+    graph.addEdge(new Dependency(three.id), new Dependency(four.id), new DependencyEdgeValue(three.version, four.version, "compile", License.Commercial));
 
     DependencyGraph graph2 = new DependencyGraph(one);
-    graph2.addEdge(three.id, four.id, new DependencyEdgeValue(three.version, four.version, "compile", License.Commercial));
-    graph2.addEdge(two.id, four.id, new DependencyEdgeValue(two.version, four.version, "compile", License.Commercial));
-    graph2.addEdge(one.id, three.id, new DependencyEdgeValue(one.version, three.version, "compile", License.Commercial));
-    graph2.addEdge(one.id, two.id, new DependencyEdgeValue(one.version, two.version, "compile", License.Commercial));
+    graph2.addEdge(new Dependency(three.id), new Dependency(four.id), new DependencyEdgeValue(three.version, four.version, "compile", License.Commercial));
+    graph2.addEdge(new Dependency(two.id), new Dependency(four.id), new DependencyEdgeValue(two.version, four.version, "compile", License.Commercial));
+    graph2.addEdge(new Dependency(one.id), new Dependency(three.id), new DependencyEdgeValue(one.version, three.version, "compile", License.Commercial));
+    graph2.addEdge(new Dependency(one.id), new Dependency(two.id), new DependencyEdgeValue(one.version, two.version, "compile", License.Commercial));
 
     assertEquals(graph, graph2);
   }

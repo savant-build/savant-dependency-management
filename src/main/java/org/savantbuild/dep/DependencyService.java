@@ -110,6 +110,18 @@ public interface DependencyService {
   public static class TraversalRules {
     public Map<String, GroupTraversalRule> rules = new HashMap<>();
 
+    public String toString() {
+      StringBuilder build = new StringBuilder();
+      rules.forEach((key, value) -> {
+        build.append("  [group: \"").append(key)
+             .append("\", fetchSource: ").append(value.fetchSource)
+             .append(", transitive: ").append(value.transitive)
+             .append(", transitiveGroups: ").append(value.transitiveGroups)
+             .append("]\n");
+      });
+      return build.toString();
+    }
+
     public TraversalRules with(String group, GroupTraversalRule groupTraversalRule) {
       rules.put(group, groupTraversalRule);
       return this;

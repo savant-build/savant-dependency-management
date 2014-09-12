@@ -19,6 +19,7 @@ import java.util.Formatter;
 
 import org.savantbuild.dep.domain.ArtifactID;
 import org.savantbuild.dep.domain.ReifiedArtifact;
+import org.savantbuild.dep.graph.DependencyGraph.Dependency;
 import org.savantbuild.util.HashGraph;
 
 /**
@@ -26,11 +27,16 @@ import org.savantbuild.util.HashGraph;
  *
  * @author Brian Pontarelli
  */
-public class DependencyGraph extends HashGraph<ArtifactID, DependencyEdgeValue> {
+public class DependencyGraph extends HashGraph<Dependency, DependencyEdgeValue> {
   public final ReifiedArtifact root;
 
   public DependencyGraph(ReifiedArtifact root) {
     this.root = root;
+  }
+
+  public void updateSkipCompatibilityCheck(ArtifactID id, boolean skipCompatibilityCheck) {
+    HashNode<Dependency, DependencyEdgeValue> node = addNode(new Dependency(id));
+    node.value.updateSkipCompatibilityCheck(skipCompatibilityCheck);
   }
 
   @Override
@@ -66,12 +72,44 @@ public class DependencyGraph extends HashGraph<ArtifactID, DependencyEdgeValue> 
     build.append("digraph Dependencies {\n");
 
     Formatter formatter = new Formatter(build);
-    traverse(root.id, false, (origin, destination, edge, depth) -> {
+    traverse(new Dependency(root.id), false, (origin, destination, edge, depth) -> {
       formatter.format("  \"%s\" -> \"%s\" [label=\"%s\", headlabel=\"%s\", taillabel=\"%s\"];\n", origin, destination, edge.type, edge.dependentVersion, edge.dependencyVersion);
       return true;
     });
 
     build.append("}\n");
     return build.toString();
+  }
+
+  public String toString() {
+    return toDOT();
+  }
+
+  public static class Dependency {
+    public final ArtifactID id;
+
+    public boolean skipCompatibilityCheck;
+
+    public Dependency(ArtifactID id) {
+      this.id = id;
+    }
+
+    public void updateSkipCompatibilityCheck(boolean skipCompatibilityCheck) {
+      this.skipCompatibilityCheck |= skipCompatibilityCheck;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+
+      final Dependency that = (Dependency) o;
+      return id.equals(that.id);
+    }
+
+    @Override
+    public int hashCode() {
+      return id.hashCode();
+    }
   }
 }

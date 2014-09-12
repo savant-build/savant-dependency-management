@@ -80,10 +80,10 @@ public class ArtifactToolsTest extends BaseUnitTest {
    */
   @Test
   public void xml() throws Exception {
-    Artifact d1 = new Artifact("group_name:project_name:name:1.0.0:type");
-    Artifact d2 = new Artifact("group_name2:project_name2:name2:2.0.0:type2");
-    Artifact d3 = new Artifact("group_name3:project_name3:name3:3.0.0:type3");
-    Artifact d4 = new Artifact("group_name4:project_name4:name4:4.0.0:type4");
+    Artifact d1 = new Artifact("group_name:project_name:name:1.0.0:type", false);
+    Artifact d2 = new Artifact("group_name2:project_name2:name2:2.0.0:type2", false);
+    Artifact d3 = new Artifact("group_name3:project_name3:name3:3.0.0:type3", false);
+    Artifact d4 = new Artifact("group_name4:project_name4:name4:4.0.0:type4", false);
 
     DependencyGroup group = new DependencyGroup("compile", true);
     group.dependencies.add(d1);
@@ -121,7 +121,6 @@ public class ArtifactToolsTest extends BaseUnitTest {
     assertEquals(elem.getAttribute("name"), "name");
     assertEquals(elem.getAttribute("version"), "1.0.0");
     assertEquals(elem.getAttribute("type"), "type");
-    assertEquals(elem.getAttribute("optional"), "false");
 
     elem = (Element) groupElem.getElementsByTagName("dependency").item(1);
     assertEquals(elem.getAttribute("group"), "group_name2");
@@ -129,7 +128,6 @@ public class ArtifactToolsTest extends BaseUnitTest {
     assertEquals(elem.getAttribute("name"), "name2");
     assertEquals(elem.getAttribute("version"), "2.0.0");
     assertEquals(elem.getAttribute("type"), "type2");
-    assertEquals(elem.getAttribute("optional"), "true");
 
     groupElem = (Element) root.getElementsByTagName("dependency-group").item(1);
     assertEquals(groupElem.getElementsByTagName("dependency").getLength(), 1);
@@ -140,7 +138,6 @@ public class ArtifactToolsTest extends BaseUnitTest {
     assertEquals(elem.getAttribute("name"), "name3");
     assertEquals(elem.getAttribute("version"), "3.0.0");
     assertEquals(elem.getAttribute("type"), "type3");
-    assertEquals(elem.getAttribute("optional"), "false");
 
     // Remove the non-exported group
     deps.groups.remove("test");

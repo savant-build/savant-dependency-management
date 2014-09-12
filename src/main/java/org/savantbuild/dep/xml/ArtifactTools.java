@@ -70,7 +70,7 @@ public class ArtifactTools {
             return;
           }
 
-          pw.printf("    <dependency-group type=\"%s\">\n", group.name);
+          pw.printf("    <dependency-group name=\"%s\">\n", group.name);
 
           for (Artifact dependency : group.dependencies) {
             pw.printf("      <dependency group=\"%s\" project=\"%s\" name=\"%s\" version=\"%s\" type=\"%s\"/>\n",
@@ -120,18 +120,18 @@ public class ArtifactTools {
           break;
         case "dependency-group":
           try {
-            String type = attributes.getValue("type");
+            String type = attributes.getValue("name");
             group = new DependencyGroup(type, true);
             dependencies.groups.put(type, group);
           } catch (NullPointerException e) {
-            throw new NullPointerException("Invalid AMD file. The dependency-group elements must specify a [type] attribute");
+            throw new NullPointerException("Invalid AMD file. The dependency-group elements must specify a [name] attribute");
           }
 
           break;
         case "dependency":
           try {
             Artifact dependency = new Artifact(new ArtifactID(attributes.getValue("group"), attributes.getValue("project"),
-                attributes.getValue("name"), attributes.getValue("type")), new Version(attributes.getValue("version")));
+                attributes.getValue("name"), attributes.getValue("type")), new Version(attributes.getValue("version")), false);
             group.dependencies.add(dependency);
           } catch (NullPointerException e) {
             throw new NullPointerException("Invalid AMD file. The dependency element is missing a required attribute. The error message is [" + e.getMessage() + "]");

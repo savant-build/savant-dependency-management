@@ -38,6 +38,7 @@ import org.savantbuild.dep.domain.Version;
 import org.savantbuild.dep.graph.ArtifactGraph;
 import org.savantbuild.dep.graph.DependencyEdgeValue;
 import org.savantbuild.dep.graph.DependencyGraph;
+import org.savantbuild.dep.graph.DependencyGraph.Dependency;
 import org.savantbuild.dep.graph.ResolvedArtifactGraph;
 import org.savantbuild.dep.workflow.ArtifactMetaDataMissingException;
 import org.savantbuild.dep.workflow.ArtifactMissingException;
@@ -114,13 +115,13 @@ public class DefaultDependencyService implements DependencyService {
     Map<ArtifactID, ReifiedArtifact> artifacts = new HashMap<>();
     artifacts.put(graph.root.id, graph.root);
 
-    graph.traverse(graph.root.id, false, (origin, destination, edgeValue, depth) -> {
-      List<Edge<ArtifactID, DependencyEdgeValue>> inboundEdges = graph.getInboundEdges(destination);
-      boolean alreadyCheckedAllParents = inboundEdges.size() > 0 && inboundEdges.stream().allMatch((edge) -> artifacts.containsKey(edge.getOrigin()));
+    graph.traverse(new Dependency(graph.root.id), false, (origin, destination, edgeValue, depth) -> {
+      List<Edge<Dependency, DependencyEdgeValue>> inboundEdges = graph.getInboundEdges(destination);
+      boolean alreadyCheckedAllParents = inboundEdges.size() > 0 && inboundEdges.stream().allMatch((edge) -> artifacts.containsKey(edge.getOrigin().id));
       if (alreadyCheckedAllParents) {
-        List<Edge<ArtifactID, DependencyEdgeValue>> significantInbound =
+        List<Edge<Dependency, DependencyEdgeValue>> significantInbound =
             inboundEdges.stream()
-                        .filter((edge) -> edge.getValue().dependentVersion.equals(artifacts.get(edge.getOrigin()).version))
+                        .filter((edge) -> edge.getValue().dependentVersion.equals(artifacts.get(edge.getOrigin().id).version))
                         .collect(Collectors.toList());
 
         // This is the complex part, for each inbound edge, grab the one where the origin is the correct version (based
@@ -141,17 +142,17 @@ public class DefaultDependencyService implements DependencyService {
         }
 
         // Ensure min and max are compatible
-        if (!min.isCompatibleWith(max)) {
-          throw new CompatibilityException(destination, min, max);
+        if (!destination.skipCompatibilityCheck && !min.isCompatibleWith(max)) {
+          throw new CompatibilityException(destination.id, min, max);
         }
 
         // Build the artifact for this node, save it in the Map and put it in the ArtifactGraph
-        ReifiedArtifact destinationArtifact = new ReifiedArtifact(destination, max, edgeValue.license);
-        artifacts.put(destination, destinationArtifact);
+        ReifiedArtifact destinationArtifact = new ReifiedArtifact(destination.id, max, edgeValue.license);
+        artifacts.put(destination.id, destinationArtifact);
 
         significantInbound.stream()
                           .forEach((edge) -> {
-                            ReifiedArtifact originArtifact = artifacts.get(edge.getOrigin());
+                            ReifiedArtifact originArtifact = artifacts.get(edge.getOrigin().id);
                             artifactGraph.addEdge(originArtifact, destinationArtifact, edge.getValue().type);
                           });
       }
@@ -245,7 +246,8 @@ public class DefaultDependencyService implements DependencyService {
 
         // Create an edge using nodes so that we can be explicit
         DependencyEdgeValue edge = new DependencyEdgeValue(origin.version, dependency.version, type, amd.license);
-        graph.addEdge(origin.id, dependency.id, edge);
+        graph.addEdge(new Dependency(origin.id), new Dependency(dependency.id), edge);
+        graph.updateSkipCompatibilityCheck(dependency.id, dependency.skipCompatibilityCheck);
 
         // If we have already recursed this artifact, skip it.
         if (artifactsRecursed.contains(dependency)) {

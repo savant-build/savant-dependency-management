@@ -24,7 +24,7 @@ import java.util.Objects;
  *
  * @author Brian Pontarelli
  */
-public class ArtifactID {
+public class ArtifactID implements Comparable<ArtifactID> {
   public final String group;
 
   public final String name;
@@ -51,6 +51,22 @@ public class ArtifactID {
     this.project = project == null ? name : project;
     this.name = name == null ? project : name;
     this.type = type == null ? "jar" : type;
+  }
+
+  @Override
+  public int compareTo(ArtifactID other) {
+    Objects.requireNonNull(other);
+    int diff = group.compareTo(other.group);
+    if (diff == 0) {
+      diff = name.compareTo(other.name);
+    }
+    if (diff == 0) {
+      diff = project.compareTo(other.project);
+    }
+    if (diff == 0) {
+      diff = type.compareTo(other.type);
+    }
+    return diff;
   }
 
   public boolean equals(Object o) {

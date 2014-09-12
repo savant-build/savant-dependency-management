@@ -22,22 +22,26 @@ import java.util.Objects;
  * of the artifact that is defined by its group, project, name, type and version. This object is also the representation
  * of a dependency between two project's.
  * <p>
- * See the {@link #Artifact(String)} constructor for String formats of artifacts.
+ * See the {@link #Artifact(String, boolean)} constructor for String formats of artifacts.
  *
  * @author Brian Pontarelli
  */
 public class Artifact {
   public final ArtifactID id;
 
+  public final boolean skipCompatibilityCheck;
+
   public final Version version;
 
   /**
    * Constructs an Artifact with the given ID and version.
    *
-   * @param id      The artifact ID (group, project, name, type).
-   * @param version The version of the artifact.
+   * @param id                     The artifact ID (group, project, name, type).
+   * @param version                The version of the artifact.
+   * @param skipCompatibilityCheck Determines if the compatibility check is skipped for this artifact or not.
    */
-  public Artifact(ArtifactID id, Version version) {
+  public Artifact(ArtifactID id, Version version, boolean skipCompatibilityCheck) {
+    this.skipCompatibilityCheck = skipCompatibilityCheck;
     Objects.requireNonNull(id, "Artifacts must have an ArtifactID");
     Objects.requireNonNull(version, "Artifacts must have a Version");
 
@@ -62,9 +66,11 @@ public class Artifact {
    *   org.savantbuild.dep:savant-dependency-management:some-other-artifact:0.1:jar
    * </pre>
    *
-   * @param spec The spec.
+   * @param spec                   The spec.
+   * @param skipCompatibilityCheck Determines if the compatibility check is skipped for this artifact or not.
    */
-  public Artifact(String spec) {
+  public Artifact(String spec, boolean skipCompatibilityCheck) {
+    this.skipCompatibilityCheck = skipCompatibilityCheck;
     String[] parts = spec.split(":");
     if (parts.length < 3) {
       throw new IllegalArgumentException("Invalid artifact specification [" + spec + "]. It must have 3, 4, or 5 parts");

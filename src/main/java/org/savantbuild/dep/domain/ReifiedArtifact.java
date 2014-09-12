@@ -29,19 +29,19 @@ public class ReifiedArtifact extends Artifact {
   public final License license;
 
   public ReifiedArtifact(ArtifactID id, Version version, License license) {
-    super(id, version);
+    super(id, version, false);
     Objects.requireNonNull(license, "Artifacts must have a license");
     this.license = license;
   }
 
   /**
-   * See {@link Artifact#Artifact(String)} for what is allowed for the specification String.
+   * See {@link Artifact#Artifact(String, boolean)} for what is allowed for the specification String.
    *
    * @param spec    The specification String.
    * @param license The license.
    */
   public ReifiedArtifact(String spec, License license) {
-    super(spec);
+    super(spec, false);
     Objects.requireNonNull(license, "Artifacts must have a license");
     this.license = license;
   }
