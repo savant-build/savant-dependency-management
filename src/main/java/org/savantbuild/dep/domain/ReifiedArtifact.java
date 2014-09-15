@@ -15,6 +15,7 @@
  */
 package org.savantbuild.dep.domain;
 
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -26,24 +27,24 @@ import java.util.Objects;
  * @author Brian Pontarelli
  */
 public class ReifiedArtifact extends Artifact {
-  public final License license;
+  public final Map<License, String> licenses;
 
-  public ReifiedArtifact(ArtifactID id, Version version, License license) {
+  public ReifiedArtifact(ArtifactID id, Version version, Map<License, String> licenses) {
     super(id, version, false);
-    Objects.requireNonNull(license, "Artifacts must have a license");
-    this.license = license;
+    Objects.requireNonNull(licenses, "Artifacts must have a license");
+    this.licenses = licenses;
   }
 
   /**
    * See {@link Artifact#Artifact(String, boolean)} for what is allowed for the specification String.
    *
-   * @param spec    The specification String.
-   * @param license The license.
+   * @param spec     The specification String.
+   * @param licenses The licenses.
    */
-  public ReifiedArtifact(String spec, License license) {
+  public ReifiedArtifact(String spec, Map<License, String> licenses) {
     super(spec, false);
-    Objects.requireNonNull(license, "Artifacts must have a license");
-    this.license = license;
+    Objects.requireNonNull(licenses, "Artifacts must have a license");
+    this.licenses = licenses;
   }
 
   @Override
@@ -59,13 +60,13 @@ public class ReifiedArtifact extends Artifact {
     }
 
     final ReifiedArtifact that = (ReifiedArtifact) o;
-    return license == that.license;
+    return licenses.equals(that.licenses);
   }
 
   @Override
   public int hashCode() {
     int result = super.hashCode();
-    result = 31 * result + license.hashCode();
+    result = 31 * result + licenses.hashCode();
     return result;
   }
 }

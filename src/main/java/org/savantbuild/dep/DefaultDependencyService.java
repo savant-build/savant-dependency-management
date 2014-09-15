@@ -147,7 +147,7 @@ public class DefaultDependencyService implements DependencyService {
         }
 
         // Build the artifact for this node, save it in the Map and put it in the ArtifactGraph
-        ReifiedArtifact destinationArtifact = new ReifiedArtifact(destination.id, max, edgeValue.license);
+        ReifiedArtifact destinationArtifact = new ReifiedArtifact(destination.id, max, edgeValue.licenses);
         artifacts.put(destination.id, destinationArtifact);
 
         significantInbound.stream()
@@ -172,7 +172,7 @@ public class DefaultDependencyService implements DependencyService {
       throws CyclicException, ArtifactMissingException, ProcessFailureException, MD5Exception, LicenseException {
     output.debug("Resolving ArtifactGraph with a root of [%s]", graph.root);
 
-    ResolvedArtifact root = new ResolvedArtifact(graph.root.id, graph.root.version, graph.root.license, null, null);
+    ResolvedArtifact root = new ResolvedArtifact(graph.root.id, graph.root.version, graph.root.licenses, null, null);
     ResolvedArtifactGraph resolvedGraph = new ResolvedArtifactGraph(root);
 
     Map<ReifiedArtifact, ResolvedArtifact> map = new HashMap<>();
@@ -198,7 +198,7 @@ public class DefaultDependencyService implements DependencyService {
         }
       }
 
-      if (groupTraversalRule.disallowedLicenses.contains(destination.license)) {
+      if (groupTraversalRule.disallowedLicenses.stream().filter(destination.licenses.keySet()::contains).findFirst().isPresent()) {
         throw new LicenseException(destination);
       }
 
@@ -211,7 +211,7 @@ public class DefaultDependencyService implements DependencyService {
       }
 
       // Add to the graph
-      ResolvedArtifact resolvedArtifact = new ResolvedArtifact(destination.id, destination.version, destination.license, file, sourceFile);
+      ResolvedArtifact resolvedArtifact = new ResolvedArtifact(destination.id, destination.version, destination.licenses, file, sourceFile);
       resolvedGraph.addEdge(map.get(origin), resolvedArtifact, group);
       map.put(destination, resolvedArtifact);
 
@@ -245,7 +245,7 @@ public class DefaultDependencyService implements DependencyService {
         ArtifactMetaData amd = workflow.fetchMetaData(dependency);
 
         // Create an edge using nodes so that we can be explicit
-        DependencyEdgeValue edge = new DependencyEdgeValue(origin.version, dependency.version, type, amd.license);
+        DependencyEdgeValue edge = new DependencyEdgeValue(origin.version, dependency.version, type, amd.licenses);
         graph.addEdge(new Dependency(origin.id), new Dependency(dependency.id), edge);
         graph.updateSkipCompatibilityCheck(dependency.id, dependency.skipCompatibilityCheck);
 

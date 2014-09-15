@@ -25,6 +25,7 @@ import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.License;
 import org.savantbuild.dep.domain.ReifiedArtifact;
 import org.savantbuild.dep.net.SSHOptions;
+import org.savantbuild.util.MapBuilder;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -97,7 +98,7 @@ public class SCPProcessTest extends BaseUnitTest {
   public void run(SSHOptions options) throws IOException {
     SCPProcess process = new SCPProcess(output, "localhost", path.toString(), options);
     Path path = projectDir.resolve("src/test/java/org/savantbuild/dep/net/test_id_dsa");
-    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:scp-test:1.0", License.Apachev2);
+    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:scp-test:1.0", MapBuilder.simpleMap(License.ApacheV2_0, null));
     process.publish(artifact, artifact.getArtifactFile(), path);
 
     Path result = Paths.get("/tmp/savant-test/org/savantbuild/test/scp-test/1.0.0/scp-test-1.0.0.jar");

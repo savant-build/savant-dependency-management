@@ -41,11 +41,11 @@ public class Artifact {
    * @param skipCompatibilityCheck Determines if the compatibility check is skipped for this artifact or not.
    */
   public Artifact(ArtifactID id, Version version, boolean skipCompatibilityCheck) {
-    this.skipCompatibilityCheck = skipCompatibilityCheck;
     Objects.requireNonNull(id, "Artifacts must have an ArtifactID");
     Objects.requireNonNull(version, "Artifacts must have a Version");
 
     this.id = id;
+    this.skipCompatibilityCheck = skipCompatibilityCheck;
     this.version = version;
   }
 

@@ -16,6 +16,7 @@
 package org.savantbuild.dep.domain;
 
 import org.savantbuild.dep.BaseUnitTest;
+import org.savantbuild.util.MapBuilder;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;
@@ -29,16 +30,16 @@ import static org.testng.Assert.assertNotEquals;
 public class ReifiedArtifactTest extends BaseUnitTest {
   @Test
   public void construct() {
-    assertEquals(new ReifiedArtifact("group:name:2.0", License.Apachev1), new ReifiedArtifact(new ArtifactID("group", "name", "name", "jar"), new Version("2.0"), License.Apachev1));
-    assertEquals(new ReifiedArtifact("group:name:2.0:zip", License.Apachev2), new ReifiedArtifact(new ArtifactID("group", "name", "name", "zip"), new Version("2.0"), License.Apachev2));
-    assertEquals(new ReifiedArtifact("group:project:name:2.0:zip", License.Commercial), new ReifiedArtifact(new ArtifactID("group", "project", "name", "zip"), new Version("2.0"), License.Commercial));
-    assertNotEquals(new ReifiedArtifact("group:project:name:1.0:zip", License.Apachev1), new ReifiedArtifact(new ArtifactID("group", "project", "name", "zip"), new Version("1.0"), License.Commercial));
+    assertEquals(new ReifiedArtifact("group:name:2.0", MapBuilder.simpleMap(License.ApacheV1_0, null)), new ReifiedArtifact(new ArtifactID("group", "name", "name", "jar"), new Version("2.0"), MapBuilder.simpleMap(License.ApacheV1_0, null)));
+    assertEquals(new ReifiedArtifact("group:name:2.0:zip", MapBuilder.simpleMap(License.ApacheV2_0, null)), new ReifiedArtifact(new ArtifactID("group", "name", "name", "zip"), new Version("2.0"), MapBuilder.simpleMap(License.ApacheV2_0, null)));
+    assertEquals(new ReifiedArtifact("group:project:name:2.0:zip", MapBuilder.simpleMap(License.Commercial, null)), new ReifiedArtifact(new ArtifactID("group", "project", "name", "zip"), new Version("2.0"), MapBuilder.simpleMap(License.Commercial, null)));
+    assertNotEquals(new ReifiedArtifact("group:project:name:1.0:zip", MapBuilder.simpleMap(License.ApacheV1_0, null)), new ReifiedArtifact(new ArtifactID("group", "project", "name", "zip"), new Version("1.0"), MapBuilder.simpleMap(License.Commercial, null)));
   }
 
   @Test
   public void syntheticMethods() {
-    assertEquals(new ReifiedArtifact("group:name:2.0", License.Apachev2).getArtifactFile(), "name-2.0.0.jar");
-    assertEquals(new ReifiedArtifact("group:name:2.0", License.Apachev2).getArtifactMetaDataFile(), "name-2.0.0.jar.amd");
-    assertEquals(new ReifiedArtifact("group:name:2.0", License.Apachev2).getArtifactSourceFile(), "name-2.0.0-src.jar");
+    assertEquals(new ReifiedArtifact("group:name:2.0", MapBuilder.simpleMap(License.ApacheV2_0, null)).getArtifactFile(), "name-2.0.0.jar");
+    assertEquals(new ReifiedArtifact("group:name:2.0", MapBuilder.simpleMap(License.ApacheV2_0, null)).getArtifactMetaDataFile(), "name-2.0.0.jar.amd");
+    assertEquals(new ReifiedArtifact("group:name:2.0", MapBuilder.simpleMap(License.ApacheV2_0, null)).getArtifactSourceFile(), "name-2.0.0-src.jar");
   }
 }

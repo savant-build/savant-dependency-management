@@ -15,6 +15,8 @@
  */
 package org.savantbuild.dep.domain;
 
+import java.util.Map;
+
 /**
  * This class is the model for the artifact meta data XML file that is published along with artifacts.
  *
@@ -23,11 +25,11 @@ package org.savantbuild.dep.domain;
 public class ArtifactMetaData {
   public final Dependencies dependencies;
 
-  public final License license;
+  public final Map<License, String> licenses;
 
-  public ArtifactMetaData(Dependencies dependencies, License license) {
+  public ArtifactMetaData(Dependencies dependencies, Map<License, String> licenses) {
     this.dependencies = dependencies;
-    this.license = license;
+    this.licenses = licenses;
   }
 
   @Override
@@ -40,17 +42,17 @@ public class ArtifactMetaData {
     }
 
     final ArtifactMetaData that = (ArtifactMetaData) o;
-    return dependencies.equals(that.dependencies) && license == that.license;
+    return dependencies.equals(that.dependencies) && licenses.equals(that.licenses);
   }
 
   @Override
   public int hashCode() {
     int result = dependencies.hashCode();
-    result = 31 * result + license.hashCode();
+    result = 31 * result + licenses.hashCode();
     return result;
   }
 
   public ReifiedArtifact toLicensedArtifact(Artifact dependency) {
-    return new ReifiedArtifact(dependency.id, dependency.version, license);
+    return new ReifiedArtifact(dependency.id, dependency.version, licenses);
   }
 }

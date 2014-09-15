@@ -23,7 +23,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Path;
-import java.util.Objects;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.ArtifactID;
@@ -59,7 +60,15 @@ public class ArtifactTools {
 
     try (PrintWriter pw = new PrintWriter(new FileWriter(tmp))) {
       pw.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
-      pw.printf("<artifact-meta-data license=\"%s\">\n", artifactMetaData.license);
+      pw.printf("<artifact-meta-data>\n");
+
+      artifactMetaData.licenses.forEach((license, text) -> {
+        if (text != null) {
+          pw.printf("  <license type=\"%s\">\n<![CDATA[%s]]>\n  </license>\n", license, text);
+        } else {
+          pw.printf("  <license type=\"%s\"/>\n", license);
+        }
+      });
 
       Dependencies dependencies = artifactMetaData.dependencies;
       if (dependencies != null) {
@@ -102,15 +111,41 @@ public class ArtifactTools {
     SAXParser parser = SAXParserFactory.newInstance().newSAXParser();
     ArtifactMetaDataHandler handler = new ArtifactMetaDataHandler();
     parser.parse(file.toFile(), handler);
-    return new ArtifactMetaData(handler.dependencies, handler.license);
+    return new ArtifactMetaData(handler.dependencies, handler.licenses);
   }
 
   public static class ArtifactMetaDataHandler extends DefaultHandler {
+    public final Map<License, String> licenses = new HashMap<>();
+
+    public License currentLicense;
+
     public Dependencies dependencies;
 
     public DependencyGroup group;
 
-    public License license;
+    public StringBuilder licenseText;
+
+    @Override
+    public void characters(char[] ch, int start, int length) throws SAXException {
+      if (licenseText != null) {
+        licenseText.append(ch, start, length);
+      }
+    }
+
+    @Override
+    public void endElement(String uri, String localName, String qName) throws SAXException {
+      if (qName.equals("license")) {
+        String text = licenseText.toString().trim();
+        if (text.length() > 0) {
+          licenses.put(currentLicense, text);
+        } else {
+          licenses.put(currentLicense, null);
+        }
+
+        currentLicense = null;
+        licenseText = null;
+      }
+    }
 
     @Override
     public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
@@ -119,32 +154,63 @@ public class ArtifactTools {
           dependencies = new Dependencies();
           break;
         case "dependency-group":
-          try {
-            String type = attributes.getValue("name");
-            group = new DependencyGroup(type, true);
-            dependencies.groups.put(type, group);
-          } catch (NullPointerException e) {
-            throw new NullPointerException("Invalid AMD file. The dependency-group elements must specify a [name] attribute");
+          String name = attributes.getValue("name");
+          if (name == null) {
+            throw new SAXException("Invalid AMD file. The dependency-group elements must specify a [name] attribute");
           }
+
+          group = new DependencyGroup(name, true);
+          dependencies.groups.put(name, group);
 
           break;
         case "dependency":
-          try {
-            Artifact dependency = new Artifact(new ArtifactID(attributes.getValue("group"), attributes.getValue("project"),
-                attributes.getValue("name"), attributes.getValue("type")), new Version(attributes.getValue("version")), false);
-            group.dependencies.add(dependency);
-          } catch (NullPointerException e) {
-            throw new NullPointerException("Invalid AMD file. The dependency element is missing a required attribute. The error message is [" + e.getMessage() + "]");
+          String dependencyGroup = attributes.getValue("group");
+          if (dependencyGroup == null) {
+            throw new SAXException("Invalid AMD file. The dependency elements must specify a [group] attribute");
           }
+          String dependencyProject = attributes.getValue("project");
+          if (dependencyProject == null) {
+            throw new SAXException("Invalid AMD file. The dependency elements must specify a [project] attribute");
+          }
+          String dependencyName = attributes.getValue("name");
+          if (dependencyName == null) {
+            throw new SAXException("Invalid AMD file. The dependency elements must specify a [name] attribute");
+          }
+          String dependencyType = attributes.getValue("type");
+          if (dependencyType == null) {
+            throw new SAXException("Invalid AMD file. The dependency elements must specify a [type] attribute");
+          }
+          String dependencyVersion = attributes.getValue("version");
+          if (dependencyVersion == null) {
+            throw new SAXException("Invalid AMD file. The dependency elements must specify a [version] attribute");
+          }
+
+          if (group == null) {
+            throw new SAXException("Invalid AMD file. A dependency doesn't appear to be inside a dependency-group element");
+          }
+
+          Artifact dependency = new Artifact(new ArtifactID(dependencyGroup, dependencyProject, dependencyName, dependencyType), new Version(dependencyVersion), false);
+          group.dependencies.add(dependency);
+
+          break;
+        case "license":
+          String type = attributes.getValue("type");
+          if (type == null) {
+            throw new SAXException("Invalid AMD file. The license elements must contain a [type] attribute");
+          }
+
+          try {
+            this.currentLicense = License.valueOf(type);
+          } catch (IllegalArgumentException e) {
+            throw new SAXException("Invalid AMD file. The license [" + type + "] is not an allowed license type. Allowable values are " + asList(License.values()), e);
+          }
+
+          licenseText = new StringBuilder();
 
           break;
         case "artifact-meta-data":
-          String license = attributes.getValue("license");
-          try {
-            Objects.requireNonNull(license, "AMD files must contain a license attribute on the root element");
-            this.license = License.valueOf(license);
-          } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid AMD file. The license [" + license + "] is not an allowed license type. Allowable values are " + asList(License.values()), e);
+          if (attributes.getValue("license") != null) {
+            throw new IllegalArgumentException("Invalid AMD file. It contains the old license definition on the <artifact-meta-data> element");
           }
 
           break;

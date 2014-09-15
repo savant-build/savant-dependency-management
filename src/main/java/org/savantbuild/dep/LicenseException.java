@@ -26,7 +26,7 @@ public class LicenseException extends RuntimeException {
   public final ReifiedArtifact artifact;
 
   public LicenseException(ReifiedArtifact artifact) {
-    super("The artifact [" + artifact + "] uses an invalid license [" + artifact.license + "]");
+    super("The artifact [" + artifact + "] uses an invalid license " + artifact.licenses.keySet());
     this.artifact = artifact;
   }
 }

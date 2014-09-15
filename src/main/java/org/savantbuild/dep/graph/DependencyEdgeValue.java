@@ -15,6 +15,7 @@
  */
 package org.savantbuild.dep.graph;
 
+import java.util.Map;
 import java.util.Objects;
 
 import org.savantbuild.dep.domain.License;
@@ -30,19 +31,19 @@ public class DependencyEdgeValue {
 
   public final Version dependentVersion;
 
-  public final License license;
+  public final Map<License, String> licenses;
 
   public final String type;
 
-  public DependencyEdgeValue(Version dependentVersion, Version dependencyVersion, String type, License license) {
+  public DependencyEdgeValue(Version dependentVersion, Version dependencyVersion, String type, Map<License, String> licenses) {
     Objects.requireNonNull(dependentVersion, "DependencyEdgeValue requires a dependentVersion");
     Objects.requireNonNull(dependencyVersion, "DependencyEdgeValue requires a dependencyVersion");
     Objects.requireNonNull(type, "DependencyEdgeValue requires a type");
-    Objects.requireNonNull(license, "DependencyEdgeValue requires a license");
+    Objects.requireNonNull(licenses, "DependencyEdgeValue requires a license");
     this.dependentVersion = dependentVersion;
     this.dependencyVersion = dependencyVersion;
     this.type = type;
-    this.license = license;
+    this.licenses = licenses;
   }
 
   @Override
@@ -58,7 +59,7 @@ public class DependencyEdgeValue {
     return dependencyVersion.equals(that.dependencyVersion) &&
         dependentVersion.equals(that.dependentVersion) &&
         type.equals(that.type) &&
-        license == that.license;
+        licenses.equals(that.licenses);
   }
 
   @Override
@@ -70,6 +71,6 @@ public class DependencyEdgeValue {
   }
 
   public String toString() {
-    return dependentVersion.toString() + " ---(type=" + type + ",license=" + license + ")--> " + dependencyVersion.toString();
+    return dependentVersion.toString() + " ---(type=" + type + ",licenses=" + licenses.keySet() + ")--> " + dependencyVersion.toString();
   }
 }

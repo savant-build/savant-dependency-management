@@ -27,6 +27,7 @@ import org.savantbuild.dep.domain.Dependencies;
 import org.savantbuild.dep.domain.DependencyGroup;
 import org.savantbuild.dep.domain.License;
 import org.savantbuild.dep.domain.Version;
+import org.savantbuild.util.MapBuilder;
 import org.testng.annotations.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -44,7 +45,7 @@ public class ArtifactToolsTest extends BaseUnitTest {
   @Test
   public void parse() throws Exception {
     ArtifactMetaData amd = ArtifactTools.parseArtifactMetaData(projectDir.resolve("src/test/java/org/savantbuild/dep/xml/amd.xml"));
-    assertEquals(amd.license, License.Apachev2);
+    assertEquals(amd.licenses, new MapBuilder<License, String>().put(License.ApacheV2_0, null).put(License.BSD_2_Clause, "Override the BSD license.").done());
     assertEquals(amd.dependencies.groups.size(), 2);
     assertEquals(amd.dependencies.groups.get("runtime").dependencies.size(), 2);
     assertEquals(amd.dependencies.groups.get("runtime").name, "runtime");
@@ -101,7 +102,7 @@ public class ArtifactToolsTest extends BaseUnitTest {
     deps.groups.put("runtime", group1);
     deps.groups.put("test", group2);
 
-    ArtifactMetaData amd = new ArtifactMetaData(deps, License.Apachev2);
+    ArtifactMetaData amd = new ArtifactMetaData(deps, new MapBuilder<License, String>().put(License.ApacheV2_0, null).put(License.BSD_2_Clause, "Override the license.").done());
 
     Path tmp = ArtifactTools.generateXML(amd);
     assertNotNull(tmp);
@@ -110,12 +111,20 @@ public class ArtifactToolsTest extends BaseUnitTest {
     DocumentBuilder b = DocumentBuilderFactory.newInstance().newDocumentBuilder();
     Document d = b.parse(tmp.toFile());
     Element root = d.getDocumentElement();
+
+    assertEquals(root.getElementsByTagName("license").getLength(), 2);
+    Element elem = (Element) root.getElementsByTagName("license").item(0);
+    assertEquals(elem.getAttribute("type"), "ApacheV2_0");
+    elem = (Element) root.getElementsByTagName("license").item(1);
+    assertEquals(elem.getAttribute("type"), "BSD_2_Clause");
+    assertEquals(elem.getTextContent().trim(), "Override the license.");
+
     assertEquals(root.getElementsByTagName("dependency-group").getLength(), 2);
 
     Element groupElem = (Element) root.getElementsByTagName("dependency-group").item(0);
     assertEquals(groupElem.getElementsByTagName("dependency").getLength(), 2);
 
-    Element elem = (Element) groupElem.getElementsByTagName("dependency").item(0);
+    elem = (Element) groupElem.getElementsByTagName("dependency").item(0);
     assertEquals(elem.getAttribute("group"), "group_name");
     assertEquals(elem.getAttribute("project"), "project_name");
     assertEquals(elem.getAttribute("name"), "name");

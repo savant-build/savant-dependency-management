@@ -22,25 +22,45 @@ package org.savantbuild.dep.domain;
  * @author Brian Pontarelli
  */
 public enum License {
-  Apachev1,
+  ApacheV1_0,
 
-  Apachev2,
+  ApacheV1_1,
+
+  ApacheV2_0,
 
   BSD,
 
-  CDDLv1,
+  BSD_2_Clause,
+
+  BSD_3_Clause,
+
+  BSD_4_Clause,
+
+  CDDLV1_0,
 
   Commercial,
 
-  Eclipsev1,
+  EclipseV1_0,
 
-  GPL,
+  GPLV1_0,
 
-  LGPL,
+  GPLV2_0,
+
+  GPLV2_0_CE,
+
+  GPLV3_0,
+
+  LGPLV2_1,
+
+  LGPLV3_0,
+
+  MIT,
+
+  Other,
 
   OtherDistributableOpenSource,
 
   OtherNonDistributableOpenSource,
 
-  MIT
+  Public_Domain
 }

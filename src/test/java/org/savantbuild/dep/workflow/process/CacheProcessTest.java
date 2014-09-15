@@ -23,6 +23,7 @@ import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.License;
 import org.savantbuild.dep.domain.ReifiedArtifact;
 import org.savantbuild.io.FileTools;
+import org.savantbuild.util.MapBuilder;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertFalse;
@@ -41,13 +42,13 @@ public class CacheProcessTest extends BaseUnitTest {
     FileTools.prune(cache);
 
     CacheProcess process = new CacheProcess(output, cache.toString());
-    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:integration-build:integration-build:2.1.1-{integration}:jar", License.Apachev2);
+    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:integration-build:integration-build:2.1.1-{integration}:jar", MapBuilder.simpleMap(License.ApacheV2_0, null));
 
     Path artFile = projectDir.resolve("test-deps/savant/org/savantbuild/test/integration-build/2.1.1-{integration}/integration-build-2.1.1-{integration}.jar");
     Path file = process.publish(artifact, artifact.getArtifactFile(), artFile);
     assertTrue(Files.isRegularFile(file));
 
-    artifact = new ReifiedArtifact("org.savantbuild.test:integration-build:integration-build:2.1.1:jar", License.Apachev2);
+    artifact = new ReifiedArtifact("org.savantbuild.test:integration-build:integration-build:2.1.1:jar", MapBuilder.simpleMap(License.ApacheV2_0, null));
     process.deleteIntegrationBuilds(artifact);
     assertFalse(Files.isRegularFile(file));
   }
@@ -55,7 +56,7 @@ public class CacheProcessTest extends BaseUnitTest {
   @Test
   public void fetch() {
     CacheProcess process = new CacheProcess(output, projectDir.resolve("test-deps/savant").toString());
-    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:multiple-versions:multiple-versions:1.0.0:jar", License.Apachev2);
+    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:multiple-versions:multiple-versions:1.0.0:jar", MapBuilder.simpleMap(License.ApacheV2_0, null));
 
     Path file = process.fetch(artifact, artifact.getArtifactFile(), null);
     assertNotNull(file);
@@ -69,7 +70,7 @@ public class CacheProcessTest extends BaseUnitTest {
     FileTools.prune(cache);
 
     CacheProcess process = new CacheProcess(output, cache.toString());
-    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:multiple-versions:multiple-versions:1.0.0:jar", License.Apachev2);
+    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:multiple-versions:multiple-versions:1.0.0:jar", MapBuilder.simpleMap(License.ApacheV2_0, null));
 
     Path artFile = projectDir.resolve("test-deps/savant/org/savantbuild/test/multiple-versions/1.0.0/multiple-versions-1.0.0.jar");
     Path file = process.publish(artifact, artifact.getArtifactFile(), artFile);

@@ -19,6 +19,7 @@ import org.savantbuild.dep.BaseUnitTest;
 import org.savantbuild.dep.domain.License;
 import org.savantbuild.dep.domain.ReifiedArtifact;
 import org.savantbuild.dep.graph.DependencyGraph.Dependency;
+import org.savantbuild.util.MapBuilder;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;
@@ -31,22 +32,22 @@ import static org.testng.Assert.assertEquals;
 public class DependencyGraphTest extends BaseUnitTest {
   @Test
   public void equals() {
-    ReifiedArtifact one = new ReifiedArtifact("group:project:artifact1:1.0:jar", License.Apachev2);
-    ReifiedArtifact two = new ReifiedArtifact("group:project:artifact2:1.0:jar", License.Commercial);
-    ReifiedArtifact three = new ReifiedArtifact("group:project:artifact3:1.0:jar", License.Commercial);
-    ReifiedArtifact four = new ReifiedArtifact("group:project:artifact4:1.0:jar", License.Commercial);
+    ReifiedArtifact one = new ReifiedArtifact("group:project:artifact1:1.0:jar", MapBuilder.simpleMap(License.ApacheV2_0, null));
+    ReifiedArtifact two = new ReifiedArtifact("group:project:artifact2:1.0:jar", MapBuilder.simpleMap(License.Commercial, null));
+    ReifiedArtifact three = new ReifiedArtifact("group:project:artifact3:1.0:jar", MapBuilder.simpleMap(License.Commercial, null));
+    ReifiedArtifact four = new ReifiedArtifact("group:project:artifact4:1.0:jar", MapBuilder.simpleMap(License.Commercial, null));
 
     DependencyGraph graph = new DependencyGraph(one);
-    graph.addEdge(new Dependency(one.id), new Dependency(two.id), new DependencyEdgeValue(one.version, two.version, "compile", License.Commercial));
-    graph.addEdge(new Dependency(one.id), new Dependency(three.id), new DependencyEdgeValue(one.version, three.version, "compile", License.Commercial));
-    graph.addEdge(new Dependency(two.id), new Dependency(four.id), new DependencyEdgeValue(two.version, four.version, "compile", License.Commercial));
-    graph.addEdge(new Dependency(three.id), new Dependency(four.id), new DependencyEdgeValue(three.version, four.version, "compile", License.Commercial));
+    graph.addEdge(new Dependency(one.id), new Dependency(two.id), new DependencyEdgeValue(one.version, two.version, "compile", MapBuilder.simpleMap(License.Commercial, null)));
+    graph.addEdge(new Dependency(one.id), new Dependency(three.id), new DependencyEdgeValue(one.version, three.version, "compile", MapBuilder.simpleMap(License.Commercial, null)));
+    graph.addEdge(new Dependency(two.id), new Dependency(four.id), new DependencyEdgeValue(two.version, four.version, "compile", MapBuilder.simpleMap(License.Commercial, null)));
+    graph.addEdge(new Dependency(three.id), new Dependency(four.id), new DependencyEdgeValue(three.version, four.version, "compile", MapBuilder.simpleMap(License.Commercial, null)));
 
     DependencyGraph graph2 = new DependencyGraph(one);
-    graph2.addEdge(new Dependency(three.id), new Dependency(four.id), new DependencyEdgeValue(three.version, four.version, "compile", License.Commercial));
-    graph2.addEdge(new Dependency(two.id), new Dependency(four.id), new DependencyEdgeValue(two.version, four.version, "compile", License.Commercial));
-    graph2.addEdge(new Dependency(one.id), new Dependency(three.id), new DependencyEdgeValue(one.version, three.version, "compile", License.Commercial));
-    graph2.addEdge(new Dependency(one.id), new Dependency(two.id), new DependencyEdgeValue(one.version, two.version, "compile", License.Commercial));
+    graph2.addEdge(new Dependency(three.id), new Dependency(four.id), new DependencyEdgeValue(three.version, four.version, "compile", MapBuilder.simpleMap(License.Commercial, null)));
+    graph2.addEdge(new Dependency(two.id), new Dependency(four.id), new DependencyEdgeValue(two.version, four.version, "compile", MapBuilder.simpleMap(License.Commercial, null)));
+    graph2.addEdge(new Dependency(one.id), new Dependency(three.id), new DependencyEdgeValue(one.version, three.version, "compile", MapBuilder.simpleMap(License.Commercial, null)));
+    graph2.addEdge(new Dependency(one.id), new Dependency(two.id), new DependencyEdgeValue(one.version, two.version, "compile", MapBuilder.simpleMap(License.Commercial, null)));
 
     assertEquals(graph, graph2);
   }

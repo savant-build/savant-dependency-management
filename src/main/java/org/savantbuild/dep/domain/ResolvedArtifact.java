@@ -16,6 +16,7 @@
 package org.savantbuild.dep.domain;
 
 import java.nio.file.Path;
+import java.util.Map;
 
 /**
  * This class defines a resolved artifact, which is an artifact after it has been downloaded as a dependency and is
@@ -28,14 +29,14 @@ public class ResolvedArtifact extends ReifiedArtifact {
 
   public final Path sourceFile;
 
-  public ResolvedArtifact(ArtifactID id, Version version, License license, Path file, Path sourceFile) {
-    super(id, version, license);
+  public ResolvedArtifact(ArtifactID id, Version version, Map<License, String> licenses, Path file, Path sourceFile) {
+    super(id, version, licenses);
     this.file = file;
     this.sourceFile = sourceFile;
   }
 
-  public ResolvedArtifact(String spec, License license, Path file, Path sourceFile) {
-    super(spec, license);
+  public ResolvedArtifact(String spec, Map<License, String> licenses, Path file, Path sourceFile) {
+    super(spec, licenses);
     this.file = file;
     this.sourceFile = sourceFile;
   }

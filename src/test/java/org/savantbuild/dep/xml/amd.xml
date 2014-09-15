@@ -13,7 +13,11 @@
   ~ either express or implied. See the License for the specific
   ~ language governing permissions and limitations under the License.
   -->
-<artifact-meta-data license="Apachev2">
+<artifact-meta-data>
+  <license type="ApacheV2_0"/>
+  <license type="BSD_2_Clause">
+<![CDATA[Override the BSD license.]]>
+  </license>
   <dependencies>
     <dependency-group name="runtime">
       <dependency group="org.example.test" project="test-project" name="test-project" version="1.0" type="jar"/>

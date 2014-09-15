@@ -13,4 +13,6 @@
   ~ either express or implied. See the License for the specific
   ~ language governing permissions and limitations under the License.
   -->
-<artifact-meta-data license="GPL"/>
+<artifact-meta-data>
+  <license type="GPLV2_0"/>
+</artifact-meta-data>
