@@ -22,45 +22,51 @@ package org.savantbuild.dep.domain;
  * @author Brian Pontarelli
  */
 public enum License {
-  ApacheV1_0,
+  ApacheV1_0(false),
 
-  ApacheV1_1,
+  ApacheV1_1(false),
 
-  ApacheV2_0,
+  ApacheV2_0(false),
 
-  BSD,
+  BSD(true),
 
-  BSD_2_Clause,
+  BSD_2_Clause(true),
 
-  BSD_3_Clause,
+  BSD_3_Clause(true),
 
-  BSD_4_Clause,
+  BSD_4_Clause(true),
 
-  CDDLV1_0,
+  CDDLV1_0(false),
 
-  Commercial,
+  Commercial(true),
 
-  EclipseV1_0,
+  EclipseV1_0(false),
 
-  GPLV1_0,
+  GPLV1_0(false),
 
-  GPLV2_0,
+  GPLV2_0(false),
 
-  GPLV2_0_CE,
+  GPLV2_0_CE(false),
 
-  GPLV3_0,
+  GPLV3_0(false),
 
-  LGPLV2_1,
+  LGPLV2_1(false),
 
-  LGPLV3_0,
+  LGPLV3_0(false),
 
-  MIT,
+  MIT(true),
 
-  Other,
+  Other(true),
 
-  OtherDistributableOpenSource,
+  OtherDistributableOpenSource(true),
 
-  OtherNonDistributableOpenSource,
+  OtherNonDistributableOpenSource(true),
 
-  Public_Domain
+  Public_Domain(false);
+
+  public final boolean requiresText;
+
+  License(boolean requiresText) {
+    this.requiresText = requiresText;
+  }
 }

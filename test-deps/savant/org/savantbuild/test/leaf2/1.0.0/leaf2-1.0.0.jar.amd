@@ -14,5 +14,9 @@
   ~ language governing permissions and limitations under the License.
   -->
 <artifact-meta-data>
-  <license type="OtherNonDistributableOpenSource"/>
+  <license type="OtherNonDistributableOpenSource">
+<![CDATA[
+Open source
+]]>
+  </license>
 </artifact-meta-data>

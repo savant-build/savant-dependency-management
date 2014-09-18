@@ -14,5 +14,9 @@
   ~ language governing permissions and limitations under the License.
   -->
 <artifact-meta-data>
-  <license type="Commercial"/>
+  <license type="Commercial">
+<![CDATA[
+    Commercial license
+]]>
+  </license>
 </artifact-meta-data>
