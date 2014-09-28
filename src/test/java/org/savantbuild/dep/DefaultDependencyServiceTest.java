@@ -602,7 +602,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
 
     // Add the skip node
     incompatible.addEdge(new Dependency(project.id), new Dependency(leaf), new DependencyEdgeValue(new Version("1.0.0"), new Version("2.0.0"), "runtime", MapBuilder.simpleMap(License.Commercial, null)));
-    incompatible.updateSkipCompatibilityCheck(leaf, true);
+    incompatible.skipCompatibilityCheck(leaf);
 
     ReifiedArtifact intermediateArtifact = new ReifiedArtifact(intermediate, new Version("1.0.0"), MapBuilder.simpleMap(License.Commercial, null));
     ReifiedArtifact multipleVersionsArtifact = new ReifiedArtifact(multipleVersions, new Version("1.1.0"), MapBuilder.simpleMap(License.Commercial, null));

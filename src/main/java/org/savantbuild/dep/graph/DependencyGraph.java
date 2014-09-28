@@ -34,9 +34,9 @@ public class DependencyGraph extends HashGraph<Dependency, DependencyEdgeValue> 
     this.root = root;
   }
 
-  public void updateSkipCompatibilityCheck(ArtifactID id, boolean skipCompatibilityCheck) {
-    HashNode<Dependency, DependencyEdgeValue> node = addNode(new Dependency(id));
-    node.value.updateSkipCompatibilityCheck(skipCompatibilityCheck);
+  public void skipCompatibilityCheck(ArtifactID id) {
+    HashNode<Dependency, DependencyEdgeValue> node = getNode(new Dependency(id));
+    node.value.skipCompatibilityCheck = true;
   }
 
   @Override
@@ -94,10 +94,6 @@ public class DependencyGraph extends HashGraph<Dependency, DependencyEdgeValue> 
       this.id = id;
     }
 
-    public void updateSkipCompatibilityCheck(boolean skipCompatibilityCheck) {
-      this.skipCompatibilityCheck |= skipCompatibilityCheck;
-    }
-
     @Override
     public boolean equals(Object o) {
       if (this == o) return true;
@@ -112,8 +108,12 @@ public class DependencyGraph extends HashGraph<Dependency, DependencyEdgeValue> 
       return id.hashCode();
     }
 
+    @Override
     public String toString() {
-      return id.toString();
+      return "Dependency{" +
+          "id=" + id +
+          ", skipCompatibilityCheck=" + skipCompatibilityCheck +
+          '}';
     }
   }
 }

@@ -93,6 +93,8 @@ public class DefaultDependencyService implements DependencyService {
 
       if (publication.sourceFile != null) {
         publishItem(publication.artifact, publication.artifact.getArtifactSourceFile(), publication.sourceFile, workflow);
+      } else {
+        workflow.publishNegative(publication.artifact, publication.artifact.getArtifactSourceFile());
       }
     } catch (IOException e) {
       throw new PublishException(publication, e);
@@ -119,6 +121,9 @@ public class DefaultDependencyService implements DependencyService {
       List<Edge<Dependency, DependencyEdgeValue>> inboundEdges = graph.getInboundEdges(destination);
       boolean alreadyCheckedAllParents = inboundEdges.size() > 0 && inboundEdges.stream().allMatch((edge) -> artifacts.containsKey(edge.getOrigin().id));
       if (alreadyCheckedAllParents) {
+        output.debug("Already checked all parents so we know the versions of them at this point. Working on node [%s]", destination);
+
+        // Determine all of the versions of this dependency
         List<Edge<Dependency, DependencyEdgeValue>> significantInbound =
             inboundEdges.stream()
                         .filter((edge) -> edge.getValue().dependentVersion.equals(artifacts.get(edge.getOrigin().id).version))
@@ -136,13 +141,17 @@ public class DefaultDependencyService implements DependencyService {
                                         .max(Version::compareTo)
                                         .orElse(null);
 
+        output.debug("Min [%s] and max [%s]", min, max);
+
         // This dependency is no longer used
         if (min == null || max == null) {
+          output.debug("NO LONGER USED");
           return false;
         }
 
         // Ensure min and max are compatible
         if (!destination.skipCompatibilityCheck && !min.isCompatibleWith(max)) {
+          output.debug("INCOMPATIBLE");
           throw new CompatibilityException(destination.id, min, max);
         }
 
@@ -155,6 +164,8 @@ public class DefaultDependencyService implements DependencyService {
                             ReifiedArtifact originArtifact = artifacts.get(edge.getOrigin().id);
                             artifactGraph.addEdge(originArtifact, destinationArtifact, edge.getValue().type);
                           });
+      } else {
+        output.debug("Skipping dependency [%s] for now. Not all its parents have been checked", destination);
       }
 
       return true; // Always continue traversal
@@ -241,13 +252,20 @@ public class DefaultDependencyService implements DependencyService {
                              Set<Artifact> artifactsRecursed)
       throws ArtifactMetaDataMissingException, ProcessFailureException, MD5Exception {
     dependencies.groups.forEach((type, group) -> {
+      output.debug("Loading dependency group [%s]", type);
+
       for (Artifact dependency : group.dependencies) {
+        output.debug("Loading dependency [%s] skipCompatibilityCheck=[%b]", dependency, dependency.skipCompatibilityCheck);
+
         ArtifactMetaData amd = workflow.fetchMetaData(dependency);
 
         // Create an edge using nodes so that we can be explicit
         DependencyEdgeValue edge = new DependencyEdgeValue(origin.version, dependency.version, type, amd.licenses);
         graph.addEdge(new Dependency(origin.id), new Dependency(dependency.id), edge);
-        graph.updateSkipCompatibilityCheck(dependency.id, dependency.skipCompatibilityCheck);
+        if (dependency.skipCompatibilityCheck) {
+          output.debug("SKIPPING COMPATIBILITY CHECK for [%s]", dependency.id);
+          graph.skipCompatibilityCheck(dependency.id);
+        }
 
         // If we have already recursed this artifact, skip it.
         if (artifactsRecursed.contains(dependency)) {

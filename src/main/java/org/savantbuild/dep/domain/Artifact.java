@@ -17,6 +17,8 @@ package org.savantbuild.dep.domain;
 
 import java.util.Objects;
 
+import static java.util.Arrays.stream;
+
 /**
  * This class defines an artifact as it exists across all projects, dependencies, etc. This class is the representation
  * of the artifact that is defined by its group, project, name, type and version. This object is also the representation
@@ -74,6 +76,10 @@ public class Artifact {
     String[] parts = spec.split(":");
     if (parts.length < 3) {
       throw new IllegalArgumentException("Invalid artifact specification [" + spec + "]. It must have 3, 4, or 5 parts");
+    }
+
+    if (stream(parts).filter(String::isEmpty).count() > 0) {
+      throw new IllegalArgumentException("Invalid artifact specification [" + spec + "]. One of the parts is empty (i.e. foo::3.0");
     }
 
     if (parts.length == 3) {
