@@ -13,9 +13,9 @@
  * either express or implied. See the License for the specific
  * language governing permissions and limitations under the License.
  */
-savantVersion = "0.2.0"
+savantVersion = "0.2.1"
 
-project(group: "org.savantbuild", name: "savant-dependency-management", version: "0.2.0", licenses: ["ApacheV2_0"]) {
+project(group: "org.savantbuild", name: "savant-dependency-management", version: "0.2.1", licenses: ["ApacheV2_0"]) {
   workflow {
     standard()
   }
@@ -40,17 +40,17 @@ project(group: "org.savantbuild", name: "savant-dependency-management", version:
 }
 
 // Plugins
-dependency = loadPlugin(id: "org.savantbuild.plugin:dependency:${savantVersion}")
-java = loadPlugin(id: "org.savantbuild.plugin:java:${savantVersion}")
-javaTestNG = loadPlugin(id: "org.savantbuild.plugin:java-testng:${savantVersion}")
-idea = loadPlugin(id: "org.savantbuild.plugin:idea:${savantVersion}")
-release = loadPlugin(id: "org.savantbuild.plugin:release-git:${savantVersion}")
+dependency = loadPlugin(id: "org.savantbuild.plugin:dependency:0.2.0")
+java = loadPlugin(id: "org.savantbuild.plugin:java:0.2.0")
+javaTestNG = loadPlugin(id: "org.savantbuild.plugin:java-testng:0.2.0")
+idea = loadPlugin(id: "org.savantbuild.plugin:idea:0.2.0")
+release = loadPlugin(id: "org.savantbuild.plugin:release-git:0.2.0")
 
 // Plugin settings
 java.settings.javaVersion = "1.8"
 javaTestNG.settings.javaVersion = "1.8"
 idea.settings.moduleMap = [
-    "org.savantbuild:savant-utils:0.1.1":"savant-utils"
+    "org.savantbuild:savant-utils:${savantVersion}":"savant-utils"
 ]
 
 target(name: "clean", description: "Cleans the project") {
