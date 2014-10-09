@@ -22,9 +22,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
 
+import org.savantbuild.dep.PathTools;
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.workflow.PublishWorkflow;
-import org.savantbuild.io.FileTools;
 import org.savantbuild.lang.RuntimeTools;
 import org.savantbuild.lang.RuntimeTools.ProcessResult;
 import org.savantbuild.net.NetTools;
@@ -82,7 +82,7 @@ public class SVNProcess implements Process {
   public Path fetch(Artifact artifact, String item, PublishWorkflow publishWorkflow)
       throws ProcessFailureException {
     try {
-      Path md5File = FileTools.createTempPath("savant-svn-process", "export", true);
+      Path md5File = PathTools.createTempPath("savant-svn-process", "export", true);
       URI md5URI = NetTools.build(repository, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString(), item + ".md5");
       if (!export(md5URI, md5File)) {
         return null;
@@ -96,7 +96,7 @@ public class SVNProcess implements Process {
         throw new ProcessFailureException(artifact, e);
       }
 
-      Path itemFile = FileTools.createTempPath("savant-svn-process", "export", true);
+      Path itemFile = PathTools.createTempPath("savant-svn-process", "export", true);
       URI itemURI = NetTools.build(repository, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString(), item);
       if (!export(itemURI, itemFile)) {
         return null;

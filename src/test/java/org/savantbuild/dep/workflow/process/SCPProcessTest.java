@@ -75,14 +75,14 @@ public class SCPProcessTest extends BaseUnitTest {
   public Object[][] options() {
     SSHOptions trust = new SSHOptions();
     trust.username = "savanttest";
-    trust.identity = projectDir.resolve("src/test/java/org/savantbuild/dep/net/test_id_dsa").toFile();
+    trust.identity = projectDir.resolve("src/test/java/org/savantbuild/dep/workflow/process/test_id_dsa").toFile();
     trust.knownHosts = null;
     trust.trustUnknownHosts = true;
 
     SSHOptions identity = new SSHOptions();
     identity.identity = null;
     identity.username = "savanttest";
-    identity.identity = projectDir.resolve("src/test/java/org/savantbuild/dep/net/test_id_dsa").toFile();
+    identity.identity = projectDir.resolve("src/test/java/org/savantbuild/dep/workflow/process/test_id_dsa").toFile();
 
     SSHOptions username = new SSHOptions();
     username.identity = null;
@@ -97,7 +97,7 @@ public class SCPProcessTest extends BaseUnitTest {
   @Test(dataProvider = "options")
   public void run(SSHOptions options) throws IOException {
     SCPProcess process = new SCPProcess(output, "localhost", path.toString(), options);
-    Path path = projectDir.resolve("src/test/java/org/savantbuild/dep/net/test_id_dsa");
+    Path path = projectDir.resolve("src/test/java/org/savantbuild/dep/workflow/process/test_id_dsa");
     Artifact artifact = new ReifiedArtifact("org.savantbuild.test:scp-test:1.0", MapBuilder.simpleMap(License.ApacheV2_0, null));
     process.publish(artifact, artifact.getArtifactFile(), path);
 

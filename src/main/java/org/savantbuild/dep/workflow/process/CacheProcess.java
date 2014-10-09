@@ -20,9 +20,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import org.savantbuild.dep.PathTools;
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.workflow.PublishWorkflow;
-import org.savantbuild.io.FileTools;
 import org.savantbuild.output.Output;
 
 /**
@@ -59,7 +59,7 @@ public class CacheProcess implements Process {
     }
 
     try {
-      FileTools.prune(dir);
+      PathTools.prune(dir);
     } catch (IOException e) {
       throw new ProcessFailureException(artifact, "Unable to delete integration builds from the local cache at [" + dir.toAbsolutePath() + "]", e);
     }

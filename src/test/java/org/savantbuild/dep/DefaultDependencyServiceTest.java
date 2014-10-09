@@ -42,7 +42,6 @@ import org.savantbuild.dep.workflow.ArtifactMetaDataMissingException;
 import org.savantbuild.dep.workflow.ArtifactMissingException;
 import org.savantbuild.dep.workflow.PublishWorkflow;
 import org.savantbuild.dep.workflow.process.CacheProcess;
-import org.savantbuild.io.FileTools;
 import org.savantbuild.security.MD5;
 import org.savantbuild.security.MD5Exception;
 import org.savantbuild.util.MapBuilder;
@@ -191,7 +190,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
   @BeforeMethod
   public void beforeMethodStartFileServer() throws IOException {
     server = makeFileServer(null, null);
-    FileTools.prune(cache);
+    PathTools.prune(cache);
     assertFalse(Files.isDirectory(cache));
   }
 
@@ -247,7 +246,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
 
   @Test
   public void publishWithSource() throws IOException {
-    FileTools.prune(projectDir.resolve("build/test/publish"));
+    PathTools.prune(projectDir.resolve("build/test/publish"));
 
     Artifact artifact = new Artifact("org.savantbuild.test:publication-with-source:1.0.0", false);
     ArtifactMetaData amd = new ArtifactMetaData(dependencies, MapBuilder.simpleMap(License.BSD_2_Clause, null));
@@ -270,7 +269,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
 
   @Test
   public void publishWithoutSource() throws IOException {
-    FileTools.prune(projectDir.resolve("build/test/publish"));
+    PathTools.prune(projectDir.resolve("build/test/publish"));
 
     Artifact artifact = new Artifact("org.savantbuild.test:publication-without-source:1.0.0", false);
     ArtifactMetaData amd = new ArtifactMetaData(dependencies, MapBuilder.simpleMap(License.BSD_2_Clause, null));

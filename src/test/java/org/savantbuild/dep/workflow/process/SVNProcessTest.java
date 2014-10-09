@@ -19,11 +19,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import org.savantbuild.dep.BaseUnitTest;
+import org.savantbuild.dep.PathTools;
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.License;
 import org.savantbuild.dep.domain.ReifiedArtifact;
 import org.savantbuild.dep.workflow.PublishWorkflow;
-import org.savantbuild.io.FileTools;
 import org.savantbuild.lang.RuntimeTools;
 import org.savantbuild.security.MD5;
 import org.savantbuild.util.MapBuilder;
@@ -42,11 +42,11 @@ public class SVNProcessTest extends BaseUnitTest {
   @BeforeMethod
   public void deleteRepository() throws Exception {
     if (Files.isDirectory(projectDir.resolve("build/test/svn-repository"))) {
-      FileTools.prune(projectDir.resolve("build/test/svn-repository"));
+      PathTools.prune(projectDir.resolve("build/test/svn-repository"));
     }
 
     if (Files.isDirectory(projectDir.resolve("build/test/cache"))) {
-      FileTools.prune(projectDir.resolve("build/test/cache"));
+      PathTools.prune(projectDir.resolve("build/test/cache"));
     }
 
     assertFalse(Files.exists(projectDir.resolve("build/test/cache")));
@@ -58,7 +58,7 @@ public class SVNProcessTest extends BaseUnitTest {
   public void run() throws Exception {
     Artifact artifact = new ReifiedArtifact("org.savantbuild.test:svn-process-test:1.0", MapBuilder.simpleMap(License.ApacheV2_0, null));
 
-    Path md5File = FileTools.createTempPath("savant-process", "md5", true);
+    Path md5File = PathTools.createTempPath("savant-process", "md5", true);
     Path file = projectDir.resolve("src/test/java/org/savantbuild/dep/BaseUnitTest.java").toRealPath();
     MD5.writeMD5(MD5.forBytes(Files.readAllBytes(file), "BaseTest.java"), md5File);
 

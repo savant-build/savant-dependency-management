@@ -15,6 +15,7 @@
  */
 package org.savantbuild.dep;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -46,7 +47,6 @@ import org.savantbuild.dep.workflow.PublishWorkflow;
 import org.savantbuild.dep.workflow.Workflow;
 import org.savantbuild.dep.workflow.process.ProcessFailureException;
 import org.savantbuild.dep.xml.ArtifactTools;
-import org.savantbuild.io.FileTools;
 import org.savantbuild.output.Output;
 import org.savantbuild.security.MD5;
 import org.savantbuild.security.MD5Exception;
@@ -65,6 +65,24 @@ public class DefaultDependencyService implements DependencyService {
 
   public DefaultDependencyService(Output output) {
     this.output = output;
+  }
+
+  /**
+   * Creates a temporary file.
+   *
+   * @param prefix       The prefix for the temporary file.
+   * @param suffix       The suffix for the temporary file.
+   * @param deleteOnExit If the file should be deleted when the JVM exits.
+   * @return The Path of the temporary file.
+   * @throws IOException If the create fails.
+   */
+  public static Path createTempPath(String prefix, String suffix, boolean deleteOnExit) throws IOException {
+    File file = File.createTempFile(prefix, suffix);
+    if (deleteOnExit) {
+      file.deleteOnExit();
+    }
+
+    return file.toPath();
   }
 
   /**
@@ -295,9 +313,10 @@ public class DefaultDependencyService implements DependencyService {
    */
   private void publishItem(Artifact artifact, String item, Path file, PublishWorkflow workflow) throws IOException {
     MD5 md5 = MD5.forPath(file);
-    Path md5File = FileTools.createTempPath("artifact-item", "md5", true);
+    Path md5File = createTempPath("artifact-item", "md5", true);
     MD5.writeMD5(md5, md5File);
     workflow.publish(artifact, item + ".md5", md5File);
     workflow.publish(artifact, item, file);
   }
+
 }

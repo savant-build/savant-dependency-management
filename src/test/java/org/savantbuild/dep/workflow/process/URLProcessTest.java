@@ -19,11 +19,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import org.savantbuild.dep.BaseUnitTest;
+import org.savantbuild.dep.PathTools;
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.License;
 import org.savantbuild.dep.domain.ReifiedArtifact;
 import org.savantbuild.dep.workflow.PublishWorkflow;
-import org.savantbuild.io.FileTools;
 import org.savantbuild.util.MapBuilder;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -45,7 +45,7 @@ public class URLProcessTest extends BaseUnitTest {
 
   @Test(dataProvider = "fetchData")
   public void fetch(String url, String name, String version, String result) throws Exception {
-    FileTools.prune(projectDir.resolve("build/test/cache"));
+    PathTools.prune(projectDir.resolve("build/test/cache"));
 
     Artifact artifact = new ReifiedArtifact("org.savantbuild.test:" + name + ":" + name + ":" + version + ":jar", MapBuilder.simpleMap(License.ApacheV2_0, null));
     URLProcess ufp = new URLProcess(output, url, null, null);
@@ -69,7 +69,7 @@ public class URLProcessTest extends BaseUnitTest {
 
   @Test(dataProvider = "urls")
   public void integration(String url) throws Exception {
-    FileTools.prune(projectDir.resolve("build/test/cache"));
+    PathTools.prune(projectDir.resolve("build/test/cache"));
 
     Artifact artifact = new ReifiedArtifact("org.savantbuild.test:integration-build:integration-build:2.1.1-{integration}:jar", MapBuilder.simpleMap(License.ApacheV2_0, null));
 
@@ -84,7 +84,7 @@ public class URLProcessTest extends BaseUnitTest {
 
   @Test(dataProvider = "urls")
   public void metaData(String url) throws Exception {
-    FileTools.prune(projectDir.resolve("build/test/cache"));
+    PathTools.prune(projectDir.resolve("build/test/cache"));
 
     Artifact artifact = new ReifiedArtifact("org.savantbuild.test:multiple-versions:multiple-versions:1.0:jar", MapBuilder.simpleMap(License.ApacheV2_0, null));
 
@@ -99,7 +99,7 @@ public class URLProcessTest extends BaseUnitTest {
 
   @Test(dataProvider = "urls")
   public void missingAMD(String url) throws Exception {
-    FileTools.prune(projectDir.resolve("build/test/cache"));
+    PathTools.prune(projectDir.resolve("build/test/cache"));
 
     Artifact artifact = new ReifiedArtifact("org.savantbuild.test:missing-item:missing-item:1.0:jar", MapBuilder.simpleMap(License.ApacheV2_0, null));
 
@@ -114,7 +114,7 @@ public class URLProcessTest extends BaseUnitTest {
 
   @Test(dataProvider = "urls")
   public void missingItem(String url) throws Exception {
-    FileTools.prune(projectDir.resolve("build/test/cache"));
+    PathTools.prune(projectDir.resolve("build/test/cache"));
 
     Artifact artifact = new ReifiedArtifact("org.savantbuild.test:missing-item:missing-item:1.0:jar", MapBuilder.simpleMap(License.ApacheV2_0, null));
 
@@ -129,7 +129,7 @@ public class URLProcessTest extends BaseUnitTest {
 
   @Test
   public void missingMD5() throws Exception {
-    FileTools.prune(projectDir.resolve("build/test/cache"));
+    PathTools.prune(projectDir.resolve("build/test/cache"));
 
     Artifact artifact = new ReifiedArtifact("org.savantbuild.test:missing-md5:missing-md5:1.0:jar", MapBuilder.simpleMap(License.ApacheV2_0, null));
 
