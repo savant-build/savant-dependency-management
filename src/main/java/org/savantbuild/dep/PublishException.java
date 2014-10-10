@@ -26,4 +26,8 @@ public class PublishException extends RuntimeException {
   public PublishException(Publication publication, Throwable cause) {
     super("Unable to publish the publication [" + publication + "] because an IO error occurred.", cause);
   }
+
+  public PublishException(String message) {
+    super(message);
+  }
 }

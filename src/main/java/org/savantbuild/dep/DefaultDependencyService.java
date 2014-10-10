@@ -17,6 +17,7 @@ package org.savantbuild.dep;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -102,6 +103,14 @@ public class DefaultDependencyService implements DependencyService {
    */
   @Override
   public void publish(Publication publication, PublishWorkflow workflow) throws PublishException {
+    if (!Files.isReadable(publication.file)) {
+      throw new PublishException("The publication file [" + publication.file + "] for the publication [" + publication.artifact + "] doesn't exist.");
+    }
+
+    if (publication.sourceFile != null && !Files.isReadable(publication.sourceFile)) {
+      throw new PublishException("The publication source file [" + publication.sourceFile + "] for the publication [" + publication.artifact + "] doesn't exist.");
+    }
+
     output.info("Publishing [%s]", publication);
 
     try {

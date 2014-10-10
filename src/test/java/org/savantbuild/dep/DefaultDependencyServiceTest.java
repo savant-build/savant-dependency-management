@@ -268,6 +268,32 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
   }
 
   @Test
+  public void publishMissingFile() throws IOException {
+    Artifact artifact = new Artifact("org.savantbuild.test:publication-with-source:1.0.0", false);
+    ArtifactMetaData amd = new ArtifactMetaData(dependencies, MapBuilder.simpleMap(License.BSD_2_Clause, null));
+    Publication publication = new Publication(artifact, amd, projectDir.resolve("MissingFile.txt"), null);
+    PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, projectDir.resolve("build/test/publish").toString()));
+    try {
+      service.publish(publication, workflow);
+    } catch (PublishException e) {
+      assertTrue(e.getMessage().contains("The publication file"));
+    }
+  }
+
+  @Test
+  public void publishMissingSourceFile() throws IOException {
+    Artifact artifact = new Artifact("org.savantbuild.test:publication-with-source:1.0.0", false);
+    ArtifactMetaData amd = new ArtifactMetaData(dependencies, MapBuilder.simpleMap(License.BSD_2_Clause, null));
+    Publication publication = new Publication(artifact, amd, projectDir.resolve("src/test/java/org/savantbuild/dep/TestFile.txt"), projectDir.resolve("MissingFile.txt"));
+    PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, projectDir.resolve("build/test/publish").toString()));
+    try {
+      service.publish(publication, workflow);
+    } catch (PublishException e) {
+      assertTrue(e.getMessage().contains("The publication source file"));
+    }
+  }
+
+  @Test
   public void publishWithoutSource() throws IOException {
     PathTools.prune(projectDir.resolve("build/test/publish"));
 
