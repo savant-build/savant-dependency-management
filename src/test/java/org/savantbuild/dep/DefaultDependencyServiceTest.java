@@ -526,7 +526,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
       service.reduce(incompatible);
       fail("Should have failed");
     } catch (CompatibilityException e) {
-      assertEquals(e.artifactID, leaf);
+      assertEquals(e.dependency.id, leaf);
       assertEquals(e.min, new Version("1.0.0"));
       assertEquals(e.max, new Version("2.0.0"));
       e.printStackTrace();
@@ -577,7 +577,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
       service.reduce(incompatible);
       fail("Should have failed");
     } catch (CompatibilityException e) {
-      assertEquals(e.artifactID, leaf);
+      assertEquals(e.dependency.id, leaf);
       assertEquals(e.min, new Version("1.0.0"));
       assertEquals(e.max, new Version("2.0.0"));
       e.printStackTrace();

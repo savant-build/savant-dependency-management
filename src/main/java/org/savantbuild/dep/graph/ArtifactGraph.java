@@ -67,7 +67,7 @@ public class ArtifactGraph extends HashGraph<ReifiedArtifact, String> {
     build.append("digraph ArtifactGraph {\n");
 
     Formatter formatter = new Formatter(build);
-    traverse(root, false, (origin, destination, edge, depth) -> {
+    traverse(root, false, null, (origin, destination, edge, depth, isLast) -> {
       formatter.format("  \"%s\" -> \"%s\" [label=\"%s\"];\n", origin, destination, edge);
       return true;
     });

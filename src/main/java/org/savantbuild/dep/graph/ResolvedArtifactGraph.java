@@ -81,7 +81,7 @@ public class ResolvedArtifactGraph extends HashGraph<ResolvedArtifact, String> {
     }
 
     Classpath classpath = new Classpath();
-    traverse(root, true, (origin, destination, value, depth) -> {
+    traverse(root, true, null, (origin, destination, value, depth, isLast) -> {
       classpath.path(destination.file);
       return true;
     });
@@ -99,7 +99,7 @@ public class ResolvedArtifactGraph extends HashGraph<ResolvedArtifact, String> {
     build.append("digraph ResolvedArtifactGraph {\n");
 
     Formatter formatter = new Formatter(build);
-    traverse(root, false, (origin, destination, edge, depth) -> {
+    traverse(root, false, null, (origin, destination, edge, depth, isLast) -> {
       formatter.format("  \"%s\" -> \"%s\" [label=\"%s\"];\n", origin, destination, edge);
       return true;
     });

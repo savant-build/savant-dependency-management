@@ -107,7 +107,7 @@ public class URLProcess implements Process {
       }
 
       if (itemFile != null) {
-        output.info("Downloaded from [%s]", itemURI);
+        output.infoln("Downloaded from [%s]", itemURI);
         md5File = publishWorkflow.publish(artifact, item + ".md5", md5File);
         try {
           itemFile = publishWorkflow.publish(artifact, item, itemFile);

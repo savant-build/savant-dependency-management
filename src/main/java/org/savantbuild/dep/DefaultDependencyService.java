@@ -92,7 +92,7 @@ public class DefaultDependencyService implements DependencyService {
   @Override
   public DependencyGraph buildGraph(ReifiedArtifact project, Dependencies dependencies, Workflow workflow)
       throws ArtifactMetaDataMissingException, ProcessFailureException, MD5Exception {
-    output.debug("Building DependencyGraph with a root of [%s]", project);
+    output.debugln("Building DependencyGraph with a root of [%s]", project);
     DependencyGraph graph = new DependencyGraph(project);
     populateGraph(graph, project, dependencies, workflow, new HashSet<>());
     return graph;
@@ -111,7 +111,7 @@ public class DefaultDependencyService implements DependencyService {
       throw new PublishException("The publication source file [" + publication.sourceFile + "] for the publication [" + publication.artifact + "] doesn't exist.");
     }
 
-    output.info("Publishing [%s]", publication);
+    output.infoln("Publishing [%s]", publication);
 
     try {
       Path amdFile = ArtifactTools.generateXML(publication.metaData);
@@ -133,7 +133,7 @@ public class DefaultDependencyService implements DependencyService {
    */
   @Override
   public ArtifactGraph reduce(DependencyGraph graph) throws CompatibilityException, CyclicException {
-    output.debug("Reducing DependencyGraph with a root of [%s]", graph.root);
+    output.debugln("Reducing DependencyGraph with a root of [%s]", graph.root);
 
     // Traverse graph. At each node, if the node's parents haven't all been checked. Skip it.
     // If the node's parents have all been checked, for each parent, get the version of the node for the version of the
@@ -144,11 +144,11 @@ public class DefaultDependencyService implements DependencyService {
     Map<ArtifactID, ReifiedArtifact> artifacts = new HashMap<>();
     artifacts.put(graph.root.id, graph.root);
 
-    graph.traverse(new Dependency(graph.root.id), false, (origin, destination, edgeValue, depth) -> {
+    graph.traverse(new Dependency(graph.root.id), false, null, (origin, destination, edgeValue, depth, isLast) -> {
       List<Edge<Dependency, DependencyEdgeValue>> inboundEdges = graph.getInboundEdges(destination);
       boolean alreadyCheckedAllParents = inboundEdges.size() > 0 && inboundEdges.stream().allMatch((edge) -> artifacts.containsKey(edge.getOrigin().id));
       if (alreadyCheckedAllParents) {
-        output.debug("Already checked all parents so we know the versions of them at this point. Working on node [%s]", destination);
+        output.debugln("Already checked all parents so we know the versions of them at this point. Working on node [%s]", destination);
 
         // Determine all of the versions of this dependency
         List<Edge<Dependency, DependencyEdgeValue>> significantInbound =
@@ -168,18 +168,18 @@ public class DefaultDependencyService implements DependencyService {
                                         .max(Version::compareTo)
                                         .orElse(null);
 
-        output.debug("Min [%s] and max [%s]", min, max);
+        output.debugln("Min [%s] and max [%s]", min, max);
 
         // This dependency is no longer used
         if (min == null || max == null) {
-          output.debug("NO LONGER USED");
+          output.debugln("NO LONGER USED");
           return false;
         }
 
         // Ensure min and max are compatible
         if (!destination.skipCompatibilityCheck && !min.isCompatibleWith(max)) {
-          output.debug("INCOMPATIBLE");
-          throw new CompatibilityException(destination.id, min, max);
+          output.debugln("INCOMPATIBLE");
+          throw new CompatibilityException(graph, destination, min, max);
         }
 
         // Build the artifact for this node, save it in the Map and put it in the ArtifactGraph
@@ -192,7 +192,7 @@ public class DefaultDependencyService implements DependencyService {
                             artifactGraph.addEdge(originArtifact, destinationArtifact, edge.getValue().type);
                           });
       } else {
-        output.debug("Skipping dependency [%s] for now. Not all its parents have been checked", destination);
+        output.debugln("Skipping dependency [%s] for now. Not all its parents have been checked", destination);
       }
 
       return true; // Always continue traversal
@@ -208,7 +208,7 @@ public class DefaultDependencyService implements DependencyService {
   public ResolvedArtifactGraph resolve(ArtifactGraph graph, Workflow workflow, TraversalRules configuration,
                                        DependencyListener... listeners)
       throws CyclicException, ArtifactMissingException, ProcessFailureException, MD5Exception, LicenseException {
-    output.debug("Resolving ArtifactGraph with a root of [%s]", graph.root);
+    output.debugln("Resolving ArtifactGraph with a root of [%s]", graph.root);
 
     ResolvedArtifact root = new ResolvedArtifact(graph.root.id, graph.root.version, graph.root.licenses, null, null);
     ResolvedArtifactGraph resolvedGraph = new ResolvedArtifactGraph(root);
@@ -218,7 +218,7 @@ public class DefaultDependencyService implements DependencyService {
 
     AtomicReference<GroupTraversalRule> rootTypeResolveConfiguration = new AtomicReference<>();
 
-    graph.traverse(graph.root, false, (origin, destination, group, depth) -> {
+    graph.traverse(graph.root, false, null, (origin, destination, group, depth, isLast) -> {
       // If we are at the root, check if the group is to be resolved. If we are below the root, then we need to ensure
       // that the root was setup to fetch the group transitively
       GroupTraversalRule groupTraversalRule;
@@ -279,10 +279,10 @@ public class DefaultDependencyService implements DependencyService {
                              Set<Artifact> artifactsRecursed)
       throws ArtifactMetaDataMissingException, ProcessFailureException, MD5Exception {
     dependencies.groups.forEach((type, group) -> {
-      output.debug("Loading dependency group [%s]", type);
+      output.debugln("Loading dependency group [%s]", type);
 
       for (Artifact dependency : group.dependencies) {
-        output.debug("Loading dependency [%s] skipCompatibilityCheck=[%b]", dependency, dependency.skipCompatibilityCheck);
+        output.debugln("Loading dependency [%s] skipCompatibilityCheck=[%b]", dependency, dependency.skipCompatibilityCheck);
 
         ArtifactMetaData amd = workflow.fetchMetaData(dependency);
 
@@ -290,7 +290,7 @@ public class DefaultDependencyService implements DependencyService {
         DependencyEdgeValue edge = new DependencyEdgeValue(origin.version, dependency.version, type, amd.licenses);
         graph.addEdge(new Dependency(origin.id), new Dependency(dependency.id), edge);
         if (dependency.skipCompatibilityCheck) {
-          output.debug("SKIPPING COMPATIBILITY CHECK for [%s]", dependency.id);
+          output.debugln("SKIPPING COMPATIBILITY CHECK for [%s]", dependency.id);
           graph.skipCompatibilityCheck(dependency.id);
         }
 
@@ -327,5 +327,4 @@ public class DefaultDependencyService implements DependencyService {
     workflow.publish(artifact, item + ".md5", md5File);
     workflow.publish(artifact, item, file);
   }
-
 }

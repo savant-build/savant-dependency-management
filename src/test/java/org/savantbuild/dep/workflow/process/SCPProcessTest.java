@@ -40,8 +40,7 @@ import static org.testng.Assert.assertTrue;
  * <p>
  * <pre>
  *   - Create a savanttest user with the password savantpassword (you can disable this account when you are done
- * testing
- * for security)
+ * testing for security)
  *   - Enable password authentication (edit the /etc/sshd_config file and uncomment the "PasswordAuthentication yes"
  * line)
  *   - Restart SSH (sudo launchctl unload /System/Library/LaunchDaemons/ssh.plist followed by a load)
@@ -80,7 +79,6 @@ public class SCPProcessTest extends BaseUnitTest {
     trust.trustUnknownHosts = true;
 
     SSHOptions identity = new SSHOptions();
-    identity.identity = null;
     identity.username = "savanttest";
     identity.identity = projectDir.resolve("src/test/java/org/savantbuild/dep/workflow/process/test_id_dsa").toFile();
 

@@ -15,19 +15,24 @@
  */
 package org.savantbuild.dep.domain;
 
+import org.savantbuild.dep.graph.DependencyGraph;
+import org.savantbuild.dep.graph.DependencyGraph.Dependency;
+
 /**
  * An exception that is thrown when a Version string cannot be parsed.
  *
  * @author Brian Pontarelli
  */
 public class CompatibilityException extends RuntimeException {
-  public final ArtifactID artifactID;
+  public final DependencyGraph graph;
+  public final Dependency dependency;
   public final Version min;
   public final Version max;
 
-  public CompatibilityException(ArtifactID artifactID, Version min, Version max) {
-    super("The artifact [" + artifactID + "] has incompatible versions in your dependencies. The versions are [" + min + ", " + max + "]");
-    this.artifactID = artifactID;
+  public CompatibilityException(DependencyGraph graph, Dependency dependency, Version min, Version max) {
+    super("The artifact [" + dependency.id + "] has incompatible versions in your dependencies. The versions are [" + min + ", " + max + "]");
+    this.graph = graph;
+    this.dependency = dependency;
     this.min = min;
     this.max = max;
   }

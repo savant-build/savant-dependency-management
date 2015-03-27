@@ -107,7 +107,7 @@ public class SVNProcess implements Process {
         throw new MD5Exception("MD5 mismatch when fetching item from [" + itemURI.toString() + "]");
       }
 
-      output.info("Downloaded from SubVersion at [%s]", itemURI);
+      output.infoln("Downloaded from SubVersion at [%s]", itemURI);
 
       md5File = publishWorkflow.publish(artifact, item + ".md5", md5File);
       try {
@@ -140,7 +140,7 @@ public class SVNProcess implements Process {
         throw new ProcessFailureException(artifact, "Unable to publish artifact item [" + item + "] to [" + uri + "]");
       }
 
-      output.info("Published to SubVersion at [%s]", uri);
+      output.infoln("Published to SubVersion at [%s]", uri);
       return null;
     } catch (URISyntaxException | IOException | InterruptedException e) {
       throw new ProcessFailureException(artifact, e);
@@ -155,7 +155,7 @@ public class SVNProcess implements Process {
       result = RuntimeTools.exec("svn", "export", "--force", "--non-interactive", "--no-auth-cache", uri.toString(), file.toAbsolutePath().toString());
     }
 
-    output.debug(result.output);
+    output.debugln(result.output);
 
     return result.exitCode == 0;
   }
@@ -168,7 +168,7 @@ public class SVNProcess implements Process {
       result = RuntimeTools.exec("svn", "import", "--non-interactive", "--no-auth-cache", "-m", "Published artifact", file.toAbsolutePath().toString(), uri.toString());
     }
 
-    output.debug(result.output);
+    output.debugln(result.output);
 
     return result.exitCode == 0;
   }

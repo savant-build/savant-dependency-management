@@ -60,7 +60,7 @@ public class FetchWorkflow {
    */
   public Path fetchItem(Artifact artifact, String item, PublishWorkflow publishWorkflow)
       throws ProcessFailureException, MD5Exception {
-    output.debug("Running processes %s to fetch [%s]", processes, item);
+    output.debugln("Running processes %s to fetch [%s]", processes, item);
     return processes.stream()
                     .map((process) -> process.fetch(artifact, item, publishWorkflow))
                     .filter(Objects::nonNull)

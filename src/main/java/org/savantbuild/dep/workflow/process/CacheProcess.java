@@ -138,7 +138,7 @@ public class CacheProcess implements Process {
       throw new ProcessFailureException(artifact, e);
     }
 
-    output.debug("Cached at [%s]", cacheFile);
+    output.debugln("Cached at [%s]", cacheFile);
 
     return cacheFile;
   }

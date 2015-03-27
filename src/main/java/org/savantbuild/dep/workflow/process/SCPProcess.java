@@ -123,7 +123,7 @@ public class SCPProcess implements Process {
       throw new ProcessFailureException(artifact, e);
     }
 
-    output.info("Published via SCP to [%s:%s]", server, path);
+    output.infoln("Published via SCP to [%s:%s]", server, path);
     return null;
   }
 }

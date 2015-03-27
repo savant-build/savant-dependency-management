@@ -63,6 +63,29 @@ public class DependencyGraph extends HashGraph<Dependency, DependencyEdgeValue> 
   }
 
   /**
+   * Traverses the dependency graph in a version consistent manner. This essentially guarantees that at any given node,
+   * only the dependencies for the version of the current traversal are followed. For this graph:
+   *
+   * <pre>
+   *   B -1.1----1.2--> C -1.2----1.1--> D
+   *   \--1.2----1.3---/ \-1.3----2.0--> E
+   * </pre>
+   *
+   * If we are examining B version 1.1 once we traverse to C, we will only observe D. Likewise, if we are examining B
+   * version 1.2, then we will traverse to C version 1.3 and only see E.
+   *
+   * @param consumer The graph consumer.
+   */
+  public void versionCorrectTraversal(GraphConsumer<Dependency, DependencyEdgeValue> consumer) {
+    super.traverse(
+        new Dependency(root.id),
+        false,
+        (edge, traversedEdge) -> edge.getValue().dependentVersion.equals(traversedEdge.getValue().dependencyVersion),
+        consumer
+    );
+  }
+
+  /**
    * Outputs this DependencyGraph as a GraphViz DOT file.
    *
    * @return The DOT file String.
@@ -72,7 +95,7 @@ public class DependencyGraph extends HashGraph<Dependency, DependencyEdgeValue> 
     build.append("digraph Dependencies {\n");
 
     Formatter formatter = new Formatter(build);
-    traverse(new Dependency(root.id), false, (origin, destination, edge, depth) -> {
+    traverse(new Dependency(root.id), false, null, (origin, destination, edge, depth, isLast) -> {
       formatter.format("  \"%s\" -> \"%s\" [label=\"%s\", headlabel=\"%s\", taillabel=\"%s\"];\n", origin, destination, edge.type, edge.dependentVersion, edge.dependencyVersion);
       return true;
     });
