@@ -179,7 +179,7 @@ public class Version implements Comparable<Version> {
         result = preRelease.compareTo(other.preRelease);
       } else if (preRelease != null) {
         result = -1;
-      } else {
+      } else if (other.preRelease != null) {
         result = 1;
       }
     }

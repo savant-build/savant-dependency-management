@@ -39,6 +39,10 @@ import static org.testng.Assert.fail;
 public class VersionTest extends BaseUnitTest {
   @Test
   public void compare() throws Exception {
+    // Test identity
+    assertEquals(new Version("1.1.0").compareTo(new Version("1.1.0")), 0);
+
+    // Test everything else
     assertCompareTo("2", "1");
     assertCompareTo("1.8", "1.7");
     assertCompareTo("1.8.1", "1.8.0");
@@ -82,6 +86,10 @@ public class VersionTest extends BaseUnitTest {
 
   @Test
   public void equals() {
+    // Test identity
+    assertEquals(new Version("1.1.0"), new Version("1.1.0"));
+
+    // Test parts
     assertVersionEquals("1", 1, 0, 0, null);
     assertVersionEquals("1.1", 1, 1, 0, null);
     assertVersionEquals("1.2.6", 1, 2, 6, null);
