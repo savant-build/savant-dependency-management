@@ -501,6 +501,49 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
    * Graph:
    * <p>
    * <pre>
+   *    Project(1.0.0)-------------------------------------------------------------------------------------|
+   *              |                                                                                     (1.0.0)
+   *              |                                                                                        A (1.0.0) -----> (1.0.0) A-child
+   *              |                                                                                     (1.0.0)
+   *              |                                                                                        ^
+   *              |-------------> (1.1.0)B(1.0.0) -----------------> (1.0.0)D(1.0.0)-----------------------|
+   *              |                   (1.0.0)
+   *              |                      C
+   *              |                   (1.0.0)
+   *              |----------------------|
+   * </pre>
+   * <p>
+   */
+  @Test
+  public void reduceLastPathIsPruned() throws Exception {
+    ReifiedArtifact a = new ReifiedArtifact(new ArtifactID("org.savantbuild.test", "a", "a", "jar"), new Version("1.0.0"), MapBuilder.simpleMap(License.Commercial, null));
+    ReifiedArtifact aChild = new ReifiedArtifact(new ArtifactID("org.savantbuild.test", "a-child", "a-child", "jar"), new Version("1.0.0"), MapBuilder.simpleMap(License.Commercial, null));
+    ReifiedArtifact b = new ReifiedArtifact(new ArtifactID("org.savantbuild.test", "b", "b", "jar"), new Version("1.1.0"), MapBuilder.simpleMap(License.Commercial, null));
+    ReifiedArtifact c = new ReifiedArtifact(new ArtifactID("org.savantbuild.test", "c", "c", "jar"), new Version("1.0.0"), MapBuilder.simpleMap(License.Commercial, null));
+    ReifiedArtifact d = new ReifiedArtifact(new ArtifactID("org.savantbuild.test", "d", "d", "jar"), new Version("1.1.0"), MapBuilder.simpleMap(License.Commercial, null));
+
+    DependencyGraph graph = new DependencyGraph(project);
+    graph.addEdge(new Dependency(project.id), new Dependency(a.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", MapBuilder.simpleMap(License.Commercial, null)));
+    graph.addEdge(new Dependency(project.id), new Dependency(b.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "compile", MapBuilder.simpleMap(License.Commercial, null)));
+    graph.addEdge(new Dependency(project.id), new Dependency(c.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", MapBuilder.simpleMap(License.Commercial, null)));
+    graph.addEdge(new Dependency(a.id), new Dependency(aChild.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", MapBuilder.simpleMap(License.Commercial, null)));
+    graph.addEdge(new Dependency(b.id), new Dependency(d.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", MapBuilder.simpleMap(License.Commercial, null)));
+    graph.addEdge(new Dependency(d.id), new Dependency(a.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", MapBuilder.simpleMap(License.Commercial, null)));
+
+    ArtifactGraph expected = new ArtifactGraph(project);
+    expected.addEdge(project, a, "compile");
+    expected.addEdge(project, b, "compile");
+    expected.addEdge(project, c, "compile");
+    expected.addEdge(a, aChild, "compile");
+
+    ArtifactGraph actual = service.reduce(graph);
+    assertEquals(actual, expected);
+  }
+
+  /**
+   * Graph:
+   * <p>
+   * <pre>
    *   root(1.0.0)-->(1.0.0)leaf
    *              |     * (2.0.0)
    *              |          ^

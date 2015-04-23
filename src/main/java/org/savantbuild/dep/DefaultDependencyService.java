@@ -144,58 +144,30 @@ public class DefaultDependencyService implements DependencyService {
     Map<ArtifactID, ReifiedArtifact> artifacts = new HashMap<>();
     artifacts.put(graph.root.id, graph.root);
 
+    Set<Dependency> seenAtLeastOnce = new HashSet<>();
+
     graph.traverse(new Dependency(graph.root.id), false, null, (origin, destination, edgeValue, depth, isLast) -> {
       List<Edge<Dependency, DependencyEdgeValue>> inboundEdges = graph.getInboundEdges(destination);
       boolean alreadyCheckedAllParents = inboundEdges.size() > 0 && inboundEdges.stream().allMatch((edge) -> artifacts.containsKey(edge.getOrigin().id));
       if (alreadyCheckedAllParents) {
         output.debugln("Already checked all parents so we know the versions of them at this point. Working on node [%s]", destination);
 
-        // Determine all of the versions of this dependency
-        List<Edge<Dependency, DependencyEdgeValue>> significantInbound =
-            inboundEdges.stream()
-                        .filter((edge) -> edge.getValue().dependentVersion.equals(artifacts.get(edge.getOrigin().id).version))
-                        .collect(Collectors.toList());
+        // Remove from seenAtLeastOnce
+        seenAtLeastOnce.remove(destination);
 
-        // This is the complex part, for each inbound edge, grab the one where the origin is the correct version (based
-        // on the versions we have already kept). Then for each of those, map to the dependency version (the version of
-        // the destination node). Then get the min and max.
-        Version min = significantInbound.stream()
-                                        .map((edge) -> edge.getValue().dependencyVersion)
-                                        .min(Version::compareTo)
-                                        .orElse(null);
-        Version max = significantInbound.stream()
-                                        .map((edge) -> edge.getValue().dependencyVersion)
-                                        .max(Version::compareTo)
-                                        .orElse(null);
-
-        output.debugln("Min [%s] and max [%s]", min, max);
-
-        // This dependency is no longer used
-        if (min == null || max == null) {
-          output.debugln("NO LONGER USED");
-          return false;
-        }
-
-        // Ensure min and max are compatible
-        if (!destination.skipCompatibilityCheck && !min.isCompatibleWith(max)) {
-          output.debugln("INCOMPATIBLE");
-          throw new CompatibilityException(graph, destination, min, max);
-        }
-
-        // Build the artifact for this node, save it in the Map and put it in the ArtifactGraph
-        ReifiedArtifact destinationArtifact = new ReifiedArtifact(destination.id, max, edgeValue.licenses);
-        artifacts.put(destination.id, destinationArtifact);
-
-        significantInbound.stream()
-                          .forEach((edge) -> {
-                            ReifiedArtifact originArtifact = artifacts.get(edge.getOrigin().id);
-                            artifactGraph.addEdge(originArtifact, destinationArtifact, edge.getValue().type);
-                          });
+        return checkCompatibilityAndAddToGraph(graph, artifacts, destination, inboundEdges, artifactGraph);
       } else {
         output.debugln("Skipping dependency [%s] for now. Not all its parents have been checked", destination);
+        seenAtLeastOnce.add(destination);
       }
 
       return true; // Always continue traversal
+    });
+
+    // Go through the seenAtLeastOnce set and determine if we should add any of the nodes to the graph
+    seenAtLeastOnce.forEach((dependency) -> {
+      List<Edge<Dependency, DependencyEdgeValue>> inboundEdges = graph.getInboundEdges(dependency);
+      checkCompatibilityAndAddToGraph(graph, artifacts, dependency, inboundEdges, artifactGraph);
     });
 
     return artifactGraph;
@@ -261,6 +233,59 @@ public class DefaultDependencyService implements DependencyService {
     });
 
     return resolvedGraph;
+  }
+
+  private boolean checkCompatibilityAndAddToGraph(DependencyGraph graph, Map<ArtifactID, ReifiedArtifact> artifacts,
+                                                  Dependency destination, List<Edge<Dependency, DependencyEdgeValue>> inboundEdges,
+                                                  ArtifactGraph artifactGraph) {
+    List<Edge<Dependency, DependencyEdgeValue>> significantInbound =
+        inboundEdges.stream()
+                    .filter((edge) -> artifacts.containsKey(edge.getOrigin().id))
+                    .filter((edge) -> edge.getValue().dependentVersion.equals(artifacts.get(edge.getOrigin().id).version))
+                    .collect(Collectors.toList());
+
+    // This is the complex part, for each inbound edge, grab the one where the origin is the correct version (based
+    // on the versions we have already kept). Then for each of those, map to the dependency version (the version of
+    // the destination node). Then get the min and max.
+    Version min = significantInbound.stream()
+                                    .map((edge) -> edge.getValue().dependencyVersion)
+                                    .min(Version::compareTo)
+                                    .orElse(null);
+    Version max = significantInbound.stream()
+                                    .map((edge) -> edge.getValue().dependencyVersion)
+                                    .max(Version::compareTo)
+                                    .orElse(null);
+
+    output.debugln("Min [%s] and max [%s]", min, max);
+
+    // This dependency is no longer used
+    if (min == null || max == null) {
+      output.debugln("NO LONGER USED");
+      return false;
+    }
+
+    // Ensure min and max are compatible
+    if (!destination.skipCompatibilityCheck && !min.isCompatibleWith(max)) {
+      output.debugln("INCOMPATIBLE");
+      throw new CompatibilityException(graph, destination, min, max);
+    }
+
+    DependencyEdgeValue edgeValue = significantInbound.stream()
+                                                      .filter((edge) -> edge.getValue().dependencyVersion.equals(max))
+                                                      .findFirst()
+                                                      .get()
+                                                      .getValue();
+
+    // Build the artifact for this node, save it in the Map and put it in the ArtifactGraph
+    ReifiedArtifact destinationArtifact = new ReifiedArtifact(destination.id, max, edgeValue.licenses);
+    artifacts.put(destination.id, destinationArtifact);
+
+    significantInbound.stream()
+                      .forEach((edge) -> {
+                        ReifiedArtifact originArtifact = artifacts.get(edge.getOrigin().id);
+                        artifactGraph.addEdge(originArtifact, destinationArtifact, edge.getValue().type);
+                      });
+    return true;
   }
 
   /**
