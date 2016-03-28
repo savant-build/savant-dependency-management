@@ -41,9 +41,11 @@ import static org.testng.Assert.assertTrue;
  * <pre>
  *   - Create a savanttest user with the password savantpassword (you can disable this account when you are done
  * testing for security)
- *   - Enable password authentication (edit the /etc/sshd_config file and uncomment the "PasswordAuthentication yes"
+ *   - Enable password authentication (edit the /etc/ssh/sshd_config file and uncomment the "PasswordAuthentication yes"
  * line)
  *   - Restart SSH (sudo launchctl unload /System/Library/LaunchDaemons/ssh.plist followed by a load)
+ *   - Copy the public key (src/test/java/.../process/test_id_dsa.pub) to the savantest users .ssh/authorized_keys file
+ *   - Ensure that the savanttest users .ssh directory and authorized_keys file are chmoded to 700 and 600 respectively
  * </pre>
  *
  * @author Brian Pontarelli
