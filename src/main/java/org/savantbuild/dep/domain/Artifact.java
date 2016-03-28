@@ -20,11 +20,14 @@ import java.util.Objects;
 import static java.util.Arrays.stream;
 
 /**
+ * <p>
  * This class defines an artifact as it exists across all projects, dependencies, etc. This class is the representation
  * of the artifact that is defined by its group, project, name, type and version. This object is also the representation
  * of a dependency between two project's.
+ * </p>
  * <p>
  * See the {@link #Artifact(String, boolean)} constructor for String formats of artifacts.
+ * </p>
  *
  * @author Brian Pontarelli
  */
@@ -52,8 +55,9 @@ public class Artifact {
   }
 
   /**
-   * Parses the given specification to build an artifact. The currently supported spec formats are:
    * <p>
+   * Parses the given specification to build an artifact. The currently supported spec formats are:
+   * </p>
    * <pre>
    *   group:project:version
    *   group:project:version:type
@@ -61,7 +65,7 @@ public class Artifact {
    * </pre>
    * <p>
    * Examples:
-   * <p>
+   * </p>
    * <pre>
    *   org.savantbuild.dep:savant-dependency-management:0.1
    *   org.savantbuild.dep:savant-dependency-management:0.1:jar
@@ -110,9 +114,10 @@ public class Artifact {
   }
 
   /**
+   * <p>
    * Returns the artifact file name. This does not include any path information at all and would look something like
    * this:
-   * <p>
+   * </p>
    * <pre>
    * common-collections-2.1.jar
    * </pre>
@@ -124,9 +129,10 @@ public class Artifact {
   }
 
   /**
+   * <p>
    * Returns the artifact MetaData file name. This does not include any path information at all and would look something
    * like this:
-   * <p>
+   * </p>
    * <pre>
    * common-collections-2.1.jar.amd
    * </pre>
@@ -138,9 +144,10 @@ public class Artifact {
   }
 
   /**
+   * <p>
    * Returns the artifact source file name. This does not include any path information at all and would look something
    * like this:
-   * <p>
+   * </p>
    * <pre>
    * common-collections-2.1-src.jar
    * </pre>
@@ -152,9 +159,10 @@ public class Artifact {
   }
 
   /**
+   * <p>
    * Returns the artifact test file name. This does not include any path information at all and would look something
    * like this:
-   * <p>
+   * </p>
    * <pre>
    * common-collections-test-2.1.jar
    * </pre>
@@ -166,9 +174,10 @@ public class Artifact {
   }
 
   /**
+   * <p>
    * Returns the artifact test source file name. This does not include any path information at all and would look
    * something like this:
-   * <p>
+   * </p>
    * <pre>
    * common-collections-test-2.1.jar
    * </pre>

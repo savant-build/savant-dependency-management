@@ -39,8 +39,9 @@ import org.savantbuild.security.MD5Exception;
 import org.savantbuild.util.CyclicException;
 
 /**
- * Provides all of the dependency management services. The main workflow for managing dependencies is:
  * <p>
+ * Provides all of the dependency management services. The main workflow for managing dependencies is:
+ * </p>
  * <pre>
  *   1. Download and parse all of the AMD (AbstractArtifact Meta Data) files to build a dependency graph.
  *   2. Traverse the graph and verify that it is a valid graph (doesn't contain conflicting versions of specific
@@ -107,7 +108,7 @@ public interface DependencyService {
    * Controls how resolution functions for each dependency-group. This determines if sources are fetched or if
    * transitive dependencies are fetch.
    */
-  public static class TraversalRules {
+  class TraversalRules {
     public Map<String, GroupTraversalRule> rules = new HashMap<>();
 
     public String toString() {

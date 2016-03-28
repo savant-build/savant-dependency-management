@@ -67,8 +67,8 @@ public class DependencyGraph extends HashGraph<Dependency, DependencyEdgeValue> 
    * only the dependencies for the version of the current traversal are followed. For this graph:
    *
    * <pre>
-   *   B -1.1----1.2--> C -1.2----1.1--> D
-   *   \--1.2----1.3---/ \-1.3----2.0--> E
+   *   B -1.1----1.2--&gt; C -1.2----1.1--&gt; D
+   *   \--1.2----1.3---/\-1.3----2.0--&gt; E
    * </pre>
    *
    * If we are examining B version 1.1 once we traverse to C, we will only observe D. Likewise, if we are examining B

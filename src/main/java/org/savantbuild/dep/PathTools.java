@@ -53,6 +53,8 @@ public class PathTools {
    * link, it is unlinked.
    *
    * @param path The path to delete.
+   * @throws IOException If the prune failed for any reason. This might indicate that the prune was only partially
+   * successful.
    */
   public static void prune(Path path) throws IOException {
     if (!Files.exists(path)) {

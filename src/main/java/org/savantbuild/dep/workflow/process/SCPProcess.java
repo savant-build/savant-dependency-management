@@ -48,6 +48,7 @@ public class SCPProcess implements Process {
    * Constructs the SSHProcess.
    *
    * @param output   The output.
+   * @param server   The server host name or IP address.
    * @param location The location to SCP to.
    * @param options  The SSHOptions, which must have a server setting.
    * @throws NullPointerException If any of the required options are null.
