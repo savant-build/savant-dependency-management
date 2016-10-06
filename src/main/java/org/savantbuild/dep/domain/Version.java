@@ -110,6 +110,8 @@ public class Version implements Comparable<Version> {
           minor = Integer.parseInt(num.toString());
         } else if (patch == null) {
           patch = Integer.parseInt(num.toString());
+        } else {
+          throw new VersionException("Invalid Semantic Version string [" + version + "]. A version can only have at most 3 dotted parts <major>.<minor>.<patch>");
         }
 
         num.setLength(0);
@@ -134,6 +136,8 @@ public class Version implements Comparable<Version> {
         minor = Integer.parseInt(num.toString());
       } else if (patch == null) {
         patch = Integer.parseInt(num.toString());
+      } else {
+        throw new VersionException("Invalid Semantic Version string [" + version + "]. A version can only have at most 3 dotted parts <major>.<minor>.<patch>");
       }
     }
 

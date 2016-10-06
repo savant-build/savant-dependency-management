@@ -212,6 +212,8 @@ public class VersionTest extends BaseUnitTest {
     assertVersion("3.4.5+meta-data", 3, 4, 5, false, false, true, false, false, null, "meta-data");
 
     assertBadVersion("-1.0.0");
+    assertBadVersion("1.0.0.0");
+    assertBadVersion("1.0.0.0.0");
     assertBadVersion("0.-1.0");
     assertBadVersion("0.0.-1");
     assertBadVersion("1.0.0-");
