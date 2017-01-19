@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Inversoft Inc., All Rights Reserved
+ * Copyright (c) 2013-2017, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,6 +37,8 @@ public enum License {
   BSD_4_Clause(true),
 
   CDDLV1_0(false),
+
+  CDDLV1_1(false),
 
   Commercial(true),
 
