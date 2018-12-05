@@ -69,24 +69,6 @@ public class DefaultDependencyService implements DependencyService {
   }
 
   /**
-   * Creates a temporary file.
-   *
-   * @param prefix       The prefix for the temporary file.
-   * @param suffix       The suffix for the temporary file.
-   * @param deleteOnExit If the file should be deleted when the JVM exits.
-   * @return The Path of the temporary file.
-   * @throws IOException If the create fails.
-   */
-  public static Path createTempPath(String prefix, String suffix, boolean deleteOnExit) throws IOException {
-    File file = File.createTempFile(prefix, suffix);
-    if (deleteOnExit) {
-      file.deleteOnExit();
-    }
-
-    return file.toPath();
-  }
-
-  /**
    * {@inheritDoc}
    */
   @Override
@@ -208,7 +190,7 @@ public class DefaultDependencyService implements DependencyService {
         }
       }
 
-      if (groupTraversalRule.disallowedLicenses.stream().filter(destination.licenses.keySet()::contains).findFirst().isPresent()) {
+      if (groupTraversalRule.disallowedLicenses.stream().anyMatch(destination.licenses.keySet()::contains)) {
         throw new LicenseException(destination);
       }
 
@@ -280,11 +262,10 @@ public class DefaultDependencyService implements DependencyService {
     ReifiedArtifact destinationArtifact = new ReifiedArtifact(destination.id, max, edgeValue.licenses);
     artifacts.put(destination.id, destinationArtifact);
 
-    significantInbound.stream()
-                      .forEach((edge) -> {
-                        ReifiedArtifact originArtifact = artifacts.get(edge.getOrigin().id);
-                        artifactGraph.addEdge(originArtifact, destinationArtifact, edge.getValue().type);
-                      });
+    significantInbound.forEach((edge) -> {
+      ReifiedArtifact originArtifact = artifacts.get(edge.getOrigin().id);
+      artifactGraph.addEdge(originArtifact, destinationArtifact, edge.getValue().type);
+    });
     return true;
   }
 
@@ -347,7 +328,9 @@ public class DefaultDependencyService implements DependencyService {
    */
   private void publishItem(Artifact artifact, String item, Path file, PublishWorkflow workflow) throws IOException {
     MD5 md5 = MD5.forPath(file);
-    Path md5File = createTempPath("artifact-item", "md5", true);
+    File tempFile = File.createTempFile("artifact-item", "md5");
+    tempFile.deleteOnExit();
+    Path md5File = tempFile.toPath();
     MD5.writeMD5(md5, md5File);
     workflow.publish(artifact, item + ".md5", md5File);
     workflow.publish(artifact, item, file);

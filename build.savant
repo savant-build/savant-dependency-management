@@ -26,7 +26,6 @@ project(group: "org.savantbuild", name: "savant-dependency-management", version:
 
   dependencies {
     group(name: "compile") {
-      dependency(id: "ch.ethz.ganymed:ganymed-ssh2:261.0.0")
       dependency(id: "org.savantbuild:savant-utils:${savantVersion}")
     }
     group(name: "test-compile", export: false) {
