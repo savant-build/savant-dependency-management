@@ -209,7 +209,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
       service.buildGraph(project, dependencies, workflow);
       fail("Should have failed");
     } catch (MD5Exception e) {
-      assertEquals(e.getMessage(), "MD5 mismatch when fetching item from [http://localhost:7000/test-deps/savant/org/savantbuild/test/bad-amd-md5/1.0.0/bad-amd-md5-1.0.0.jar.amd]");
+      assertEquals(e.getMessage(), "MD5 mismatch when fetching item from [http://localhost:7042/test-deps/savant/org/savantbuild/test/bad-amd-md5/1.0.0/bad-amd-md5-1.0.0.jar.amd]");
     }
   }
 
@@ -749,7 +749,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
       ArtifactGraph artifactGraph = service.reduce(graph);
       service.resolve(artifactGraph, workflow, new TraversalRules().with("compile", new GroupTraversalRule(true, true)));
     } catch (MD5Exception e) {
-      assertEquals(e.getMessage(), "MD5 mismatch when fetching item from [http://localhost:7000/test-deps/savant/org/savantbuild/test/bad-md5/1.0.0/bad-md5-1.0.0.jar]");
+      assertEquals(e.getMessage(), "MD5 mismatch when fetching item from [http://localhost:7042/test-deps/savant/org/savantbuild/test/bad-md5/1.0.0/bad-md5-1.0.0.jar]");
     }
   }
 

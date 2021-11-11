@@ -15,14 +15,13 @@
  */
 package org.savantbuild.dep.domain;
 
-import org.savantbuild.dep.domain.Version.PreRelease.PreReleasePart;
-import org.savantbuild.dep.domain.Version.PreRelease.PreReleasePart.NumberPreReleasePart;
-import org.savantbuild.dep.domain.Version.PreRelease.PreReleasePart.StringPreReleasePart;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import org.savantbuild.dep.domain.Version.PreRelease.PreReleasePart.NumberPreReleasePart;
+import org.savantbuild.dep.domain.Version.PreRelease.PreReleasePart.StringPreReleasePart;
 
 /**
  * This class models a simple three number version as well as any free form version String. It has two modes of
@@ -54,6 +53,15 @@ public class Version implements Comparable<Version> {
 
   public final PreRelease preRelease;
 
+  // Constructor used for de-serialization
+  public Version() {
+    major = 0;
+    metaData = null;
+    minor = 0;
+    patch = 0;
+    preRelease = null;
+  }
+
   /**
    * Constructs a version with the given major, minor and patch version numbers.
    *
@@ -80,8 +88,8 @@ public class Version implements Comparable<Version> {
    *
    * @param version The version String to parse.
    * @throws VersionException If the string is incorrectly formatted and does not conform to the semantic versioning
-   *                          scheme (starts with a delimiter (. or -), contains two delimiters in a row, doesn't have
-   *                          proper pre-release or meta-data information).
+   * scheme (starts with a delimiter (. or -), contains two delimiters in a row, doesn't have
+   * proper pre-release or meta-data information).
    */
   public Version(String version) {
     char start = version.charAt(0);
@@ -166,7 +174,7 @@ public class Version implements Comparable<Version> {
    *
    * @param other The other Object to compare against.
    * @return A positive integer if this Version is larger than the given version. Zero if the given Version is the exact
-   *         same as this Version. A negative integer is this Version is smaller that the given Version.
+   * same as this Version. A negative integer is this Version is smaller that the given Version.
    */
   public int compareTo(Version other) {
     int result = major - other.major;
@@ -211,6 +219,26 @@ public class Version implements Comparable<Version> {
         minor == that.minor &&
         patch == that.patch &&
         (preRelease != null ? preRelease.equals(that.preRelease) : that.preRelease == null);
+  }
+
+  public int getMajor() {
+    return major;
+  }
+
+  public String getMetaData() {
+    return metaData;
+  }
+
+  public int getMinor() {
+    return minor;
+  }
+
+  public int getPatch() {
+    return patch;
+  }
+
+  public PreRelease getPreRelease() {
+    return preRelease;
   }
 
   /**
@@ -284,9 +312,7 @@ public class Version implements Comparable<Version> {
 
     PreRelease integrationPreRelease = new PreRelease();
     if (preRelease != null) {
-      for (PreReleasePart part : preRelease.parts) {
-        integrationPreRelease.parts.add(part);
-      }
+      integrationPreRelease.parts.addAll(preRelease.parts);
     }
 
     integrationPreRelease.parts.add(new StringPreReleasePart(INTEGRATION));
@@ -300,7 +326,7 @@ public class Version implements Comparable<Version> {
    * @return A String of the version number.
    */
   public String toString() {
-    return "" + major + "." + minor + "." + patch + (preRelease != null ? "-" + preRelease.toString() : "") + (metaData != null ? "+" + metaData : "");
+    return "" + major + "." + minor + "." + patch + (preRelease != null ? "-" + preRelease : "") + (metaData != null ? "+" + metaData : "");
   }
 
   /**
@@ -421,7 +447,7 @@ public class Version implements Comparable<Version> {
      *
      * @author Brian Pontarelli
      */
-    public static interface PreReleasePart extends Comparable<PreReleasePart> {
+    public interface PreReleasePart extends Comparable<PreReleasePart> {
       /**
        * @return True if this PreReleasePart is an integration build indicator.
        */
@@ -435,7 +461,7 @@ public class Version implements Comparable<Version> {
       /**
        * A number part of the PreRelease portion of the Semantic Version String.
        */
-      public static class NumberPreReleasePart implements PreReleasePart {
+      class NumberPreReleasePart implements PreReleasePart {
         public final int value;
 
         public NumberPreReleasePart(int value) {
@@ -488,7 +514,7 @@ public class Version implements Comparable<Version> {
       /**
        * A String part of the PreRelease portion of the Semantic Version String.
        */
-      public static class StringPreReleasePart implements PreReleasePart {
+      class StringPreReleasePart implements PreReleasePart {
         public final String value;
 
         public StringPreReleasePart(String value) {

@@ -61,9 +61,9 @@ public class URLProcessTest extends BaseUnitTest {
         {makeLocalURL(), "multiple-versions", "1.0.0", projectDir.resolve("build/test/cache/org/savantbuild/test/multiple-versions/1.0.0/multiple-versions-1.0.0.jar").toString()},
         {makeLocalURL(), "leaf1", "1.0.0", projectDir.resolve("build/test/cache/org/savantbuild/test/leaf1/1.0.0/leaf1-1.0.0.jar").toString()},
         {makeLocalURL(), "integration-build", "2.1.1-{integration}", projectDir.resolve("build/test/cache/org/savantbuild/test/integration-build/2.1.1-{integration}/integration-build-2.1.1-{integration}.jar").toString()},
-        {"http://localhost:7000/test-deps/savant", "multiple-versions", "1.0.0", projectDir.resolve("build/test/cache/org/savantbuild/test/multiple-versions/1.0.0/multiple-versions-1.0.0.jar").toString()},
-        {"http://localhost:7000/test-deps/savant", "leaf1", "1.0.0", projectDir.resolve("build/test/cache/org/savantbuild/test/leaf1/1.0.0/leaf1-1.0.0.jar").toString()},
-        {"http://localhost:7000/test-deps/savant", "integration-build", "2.1.1-{integration}", projectDir.resolve("build/test/cache/org/savantbuild/test/integration-build/2.1.1-{integration}/integration-build-2.1.1-{integration}.jar").toString()}
+        {"http://localhost:7042/test-deps/savant", "multiple-versions", "1.0.0", projectDir.resolve("build/test/cache/org/savantbuild/test/multiple-versions/1.0.0/multiple-versions-1.0.0.jar").toString()},
+        {"http://localhost:7042/test-deps/savant", "leaf1", "1.0.0", projectDir.resolve("build/test/cache/org/savantbuild/test/leaf1/1.0.0/leaf1-1.0.0.jar").toString()},
+        {"http://localhost:7042/test-deps/savant", "integration-build", "2.1.1-{integration}", projectDir.resolve("build/test/cache/org/savantbuild/test/integration-build/2.1.1-{integration}/integration-build-2.1.1-{integration}.jar").toString()}
     };
   }
 
@@ -156,7 +156,7 @@ public class URLProcessTest extends BaseUnitTest {
   public Object[][] urls() {
     return new Object[][]{
         {makeLocalURL()},
-        {"http://localhost:7000/test-deps/savant"}
+        {"http://localhost:7042/test-deps/savant"}
     };
   }
 
