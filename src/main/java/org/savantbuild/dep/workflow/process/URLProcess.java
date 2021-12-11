@@ -103,7 +103,7 @@ public class URLProcess implements Process {
       try {
         itemFile = NetTools.downloadToPath(itemURI, username, password, md5);
       } catch (MD5Exception e) {
-        throw new MD5Exception("MD5 mismatch when fetching item from [" + itemURI.toString() + "]");
+        throw new MD5Exception("MD5 mismatch when fetching item from [" + itemURI + "]");
       }
 
       if (itemFile != null) {
