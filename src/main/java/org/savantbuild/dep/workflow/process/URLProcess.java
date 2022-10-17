@@ -133,4 +133,9 @@ public class URLProcess implements Process {
   public Path publish(Artifact artifact, String item, Path file) throws ProcessFailureException {
     throw new ProcessFailureException(artifact, "The [url] process doesn't allow publishing.");
   }
+
+  @Override
+  public String toString() {
+    return "URL(" + url + ")";
+  }
 }

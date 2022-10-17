@@ -13,9 +13,7 @@
  * either express or implied. See the License for the specific
  * language governing permissions and limitations under the License.
  */
-savantVersion = "1.0.0"
-
-project(group: "org.savantbuild", name: "savant-dependency-management", version: "1.0.1", licenses: ["ApacheV2_0"]) {
+project(group: "org.savantbuild", name: "savant-dependency-management", version: "2.0.0-RC.1", licenses: ["ApacheV2_0"]) {
   workflow {
     fetch {
       cache()
@@ -32,7 +30,7 @@ project(group: "org.savantbuild", name: "savant-dependency-management", version:
 
   dependencies {
     group(name: "compile") {
-      dependency(id: "org.savantbuild:savant-utils:${savantVersion}")
+      dependency(id: "org.savantbuild:savant-utils:2.0.0-RC.1")
     }
     group(name: "test-compile", export: false) {
       dependency(id: "org.testng:testng:6.8.7")
@@ -55,7 +53,7 @@ release = loadPlugin(id: "org.savantbuild.plugin:release-git:1.0.0")
 java.settings.javaVersion = "1.8"
 javaTestNG.settings.javaVersion = "1.8"
 idea.settings.moduleMap = [
-    "org.savantbuild:savant-utils:${savantVersion}":"savant-utils"
+    "org.savantbuild:savant-utils:2.0.0-RC.1": "savant-utils"
 ]
 
 target(name: "clean", description: "Cleans the project") {

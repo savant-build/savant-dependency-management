@@ -26,7 +26,7 @@ import org.savantbuild.dep.workflow.PublishWorkflow;
 import org.savantbuild.output.Output;
 
 /**
- * This is an implementation of the Process that uses the a local cache to fetch and publish artifacts.
+ * This is an implementation of the Process that uses a local cache to fetch and publish artifacts.
  *
  * @author Brian Pontarelli
  */
@@ -141,5 +141,10 @@ public class CacheProcess implements Process {
     output.debugln("Cached at [%s]", cacheFile);
 
     return cacheFile;
+  }
+
+  @Override
+  public String toString() {
+    return "Cache(" + dir + ")";
   }
 }

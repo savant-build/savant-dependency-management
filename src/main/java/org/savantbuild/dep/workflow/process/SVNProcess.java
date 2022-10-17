@@ -172,4 +172,9 @@ public class SVNProcess implements Process {
 
     return result.exitCode == 0;
   }
+
+  @Override
+  public String toString() {
+    return "SVN(" + repository + ")";
+  }
 }
