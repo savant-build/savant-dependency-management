@@ -36,7 +36,7 @@ import org.savantbuild.dep.domain.Dependencies;
 import org.savantbuild.dep.domain.Publication;
 import org.savantbuild.dep.domain.ReifiedArtifact;
 import org.savantbuild.dep.domain.ResolvedArtifact;
-import org.savantbuild.dep.domain.Version;
+import org.savantbuild.domain.Version;
 import org.savantbuild.dep.graph.ArtifactGraph;
 import org.savantbuild.dep.graph.DependencyEdgeValue;
 import org.savantbuild.dep.graph.DependencyGraph;
@@ -190,7 +190,7 @@ public class DefaultDependencyService implements DependencyService {
         }
       }
 
-      if (groupTraversalRule.disallowedLicenses.stream().anyMatch(destination.licenses.keySet()::contains)) {
+      if (groupTraversalRule.disallowedLicenses.stream().anyMatch(destination.licenses::contains)) {
         throw new LicenseException(destination);
       }
 

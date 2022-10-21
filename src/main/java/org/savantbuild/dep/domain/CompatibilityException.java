@@ -17,6 +17,7 @@ package org.savantbuild.dep.domain;
 
 import org.savantbuild.dep.graph.DependencyGraph;
 import org.savantbuild.dep.graph.DependencyGraph.Dependency;
+import org.savantbuild.domain.Version;
 
 /**
  * An exception that is thrown when a Version string cannot be parsed.

@@ -25,8 +25,13 @@ import org.savantbuild.dep.domain.ReifiedArtifact;
 public class LicenseException extends RuntimeException {
   public final ReifiedArtifact artifact;
 
+  public LicenseException(String id) {
+    super("[" + id + "] is an invalid license or is missing the license text");
+    this.artifact = null;
+  }
+
   public LicenseException(ReifiedArtifact artifact) {
-    super("The artifact [" + artifact + "] uses an invalid license " + artifact.licenses.keySet());
+    super("The artifact [" + artifact + "] uses an invalid license " + artifact.licenses);
     this.artifact = artifact;
   }
 }

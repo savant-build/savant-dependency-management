@@ -26,7 +26,6 @@ import org.savantbuild.dep.domain.ReifiedArtifact;
 import org.savantbuild.dep.workflow.PublishWorkflow;
 import org.savantbuild.lang.RuntimeTools;
 import org.savantbuild.security.MD5;
-import org.savantbuild.util.MapBuilder;
 import org.testng.annotations.BeforeMethod;
 
 import static org.testng.Assert.assertEquals;
@@ -56,7 +55,7 @@ public class SVNProcessTest extends BaseUnitTest {
   }
 
   public void run() throws Exception {
-    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:svn-process-test:1.0", MapBuilder.simpleMap(License.ApacheV2_0, null));
+    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:svn-process-test:1.0", License.Licenses.get("ApacheV2_0"));
 
     Path md5File = PathTools.createTempPath("savant-process", "md5", true);
     Path file = projectDir.resolve("src/test/java/org/savantbuild/dep/BaseUnitTest.java").toRealPath();

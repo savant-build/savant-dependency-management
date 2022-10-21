@@ -17,6 +17,8 @@ package org.savantbuild.dep.domain;
 
 import java.util.Objects;
 
+import org.savantbuild.domain.Version;
+
 import static java.util.Arrays.stream;
 
 /**

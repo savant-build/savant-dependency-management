@@ -15,8 +15,11 @@
  */
 package org.savantbuild.dep.domain;
 
-import java.util.Map;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
+
+import org.savantbuild.domain.Version;
 
 /**
  * This class defines a artifact that has been completely built by the dependency process. Usually, a Dependency (which
@@ -27,9 +30,13 @@ import java.util.Objects;
  * @author Brian Pontarelli
  */
 public class ReifiedArtifact extends Artifact {
-  public final Map<License, String> licenses;
+  public final List<License> licenses;
 
-  public ReifiedArtifact(ArtifactID id, Version version, Map<License, String> licenses) {
+  public ReifiedArtifact(ArtifactID id, Version version, License... licenses) {
+    this(id, version, Arrays.asList(licenses));
+  }
+
+  public ReifiedArtifact(ArtifactID id, Version version, List<License> licenses) {
     super(id, version, false);
     Objects.requireNonNull(licenses, "Artifacts must have a license");
     this.licenses = licenses;
@@ -41,7 +48,17 @@ public class ReifiedArtifact extends Artifact {
    * @param spec     The specification String.
    * @param licenses The licenses.
    */
-  public ReifiedArtifact(String spec, Map<License, String> licenses) {
+  public ReifiedArtifact(String spec, License... licenses) {
+    this(spec, Arrays.asList(licenses));
+  }
+
+  /**
+   * See {@link Artifact#Artifact(String, boolean)} for what is allowed for the specification String.
+   *
+   * @param spec     The specification String.
+   * @param licenses The licenses.
+   */
+  public ReifiedArtifact(String spec, List<License> licenses) {
     super(spec, false);
     Objects.requireNonNull(licenses, "Artifacts must have a license");
     this.licenses = licenses;

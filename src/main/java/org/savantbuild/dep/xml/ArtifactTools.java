@@ -23,8 +23,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.ArtifactID;
@@ -32,13 +32,11 @@ import org.savantbuild.dep.domain.ArtifactMetaData;
 import org.savantbuild.dep.domain.Dependencies;
 import org.savantbuild.dep.domain.DependencyGroup;
 import org.savantbuild.dep.domain.License;
-import org.savantbuild.dep.domain.Version;
-import org.savantbuild.dep.domain.VersionException;
+import org.savantbuild.domain.Version;
+import org.savantbuild.domain.VersionException;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
-
-import static java.util.Arrays.asList;
 
 /**
  * This class is a toolkit for handling artifact operations.
@@ -62,11 +60,11 @@ public class ArtifactTools {
       pw.println("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
       pw.printf("<artifact-meta-data>\n");
 
-      artifactMetaData.licenses.forEach((license, text) -> {
-        if (text != null) {
-          pw.printf("  <license type=\"%s\">\n<![CDATA[%s]]>\n  </license>\n", license, text);
+      artifactMetaData.licenses.forEach(license -> {
+        if (license.text != null) {
+          pw.printf("  <license type=\"%s\"><![CDATA[%s]]></license>\n", license.identifier.replace("\"", "&quot;"), license.text);
         } else {
-          pw.printf("  <license type=\"%s\"/>\n", license);
+          pw.printf("  <license type=\"%s\"/>\n", license.identifier.replace("\"", "&quot;"));
         }
       });
 
@@ -79,11 +77,13 @@ public class ArtifactTools {
             return;
           }
 
-          pw.printf("    <dependency-group name=\"%s\">\n", group.name);
+          pw.printf("    <dependency-group name=\"%s\">\n", group.name.replace("\"", "&quot;"));
 
           for (Artifact dependency : group.dependencies) {
             pw.printf("      <dependency group=\"%s\" project=\"%s\" name=\"%s\" version=\"%s\" type=\"%s\"/>\n",
-                dependency.id.group, dependency.id.project, dependency.id.name, dependency.version, dependency.id.type);
+                dependency.id.group.replace("\"", "&quot;"), dependency.id.project.replace("\"", "&quot;"),
+                dependency.id.name.replace("\"", "&quot;"), dependency.version.toString().replace("\"", "&quot;"),
+                dependency.id.type.replace("\"", "&quot;"));
           }
           pw.println("    </dependency-group>");
         });
@@ -115,15 +115,15 @@ public class ArtifactTools {
   }
 
   public static class ArtifactMetaDataHandler extends DefaultHandler {
-    public final Map<License, String> licenses = new HashMap<>();
-
-    public License currentLicense;
+    public final List<License> licenses = new ArrayList<>();
 
     public Dependencies dependencies;
 
     public DependencyGroup group;
 
     public StringBuilder licenseText;
+
+    private String licenseId;
 
     @Override
     public void characters(char[] ch, int start, int length) throws SAXException {
@@ -136,13 +136,19 @@ public class ArtifactTools {
     public void endElement(String uri, String localName, String qName) throws SAXException {
       if (qName.equals("license")) {
         String text = licenseText.toString().trim();
-        if (text.length() > 0) {
-          licenses.put(currentLicense, text);
-        } else {
-          licenses.put(currentLicense, null);
+        if (text.trim().isEmpty()) {
+          text = null;
         }
 
-        currentLicense = null;
+        try {
+          License license = License.parse(licenseId, text);
+          licenses.add(license);
+        } catch (IllegalArgumentException e) {
+          throw new SAXException("Invalid AMD file. The license [" + licenseId + "] is not an allowed license type. Allowable values are " +
+              License.Licenses.keySet() + " plus the custom license types of [Commercial, Other, OtherDistributableOpenSource, OtherNonDistributableOpenSource]", e);
+        }
+
+        licenseId = null;
         licenseText = null;
       }
     }
@@ -194,15 +200,9 @@ public class ArtifactTools {
 
           break;
         case "license":
-          String type = attributes.getValue("type");
-          if (type == null) {
+          licenseId = attributes.getValue("type");
+          if (licenseId == null) {
             throw new SAXException("Invalid AMD file. The license elements must contain a [type] attribute");
-          }
-
-          try {
-            this.currentLicense = License.valueOf(type);
-          } catch (IllegalArgumentException e) {
-            throw new SAXException("Invalid AMD file. The license [" + type + "] is not an allowed license type. Allowable values are " + asList(License.values()), e);
           }
 
           licenseText = new StringBuilder();

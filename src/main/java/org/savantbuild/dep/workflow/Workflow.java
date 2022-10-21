@@ -21,7 +21,7 @@ import java.nio.file.Path;
 
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.ArtifactMetaData;
-import org.savantbuild.dep.domain.VersionException;
+import org.savantbuild.domain.VersionException;
 import org.savantbuild.dep.workflow.process.NegativeCacheException;
 import org.savantbuild.dep.workflow.process.ProcessFailureException;
 import org.savantbuild.dep.xml.ArtifactTools;

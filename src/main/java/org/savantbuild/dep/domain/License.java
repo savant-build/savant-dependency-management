@@ -16,59 +16,210 @@
 
 package org.savantbuild.dep.domain;
 
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+
+import org.savantbuild.dep.LicenseException;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 /**
- * Enumeration for licenses.
+ * Domain for licenses.
  *
  * @author Brian Pontarelli
  */
-public enum License {
-  ApacheV1_0(false),
+@JsonIgnoreProperties(ignoreUnknown = true)
+public final class License {
+  public static final Set<String> CustomLicenses = new HashSet<>();
 
-  ApacheV1_1(false),
+  public static final Map<String, LicenseTextException> Exceptions = new HashMap<>();
 
-  ApacheV2_0(false),
+  public static final Map<String, License> Licenses = new HashMap<>();
 
-  BSD(true),
+  @JsonProperty("detailsUrl")
+  public String detailsURL;
 
-  BSD_2_Clause(true),
+  public LicenseTextException exception;
 
-  BSD_3_Clause(true),
+  @JsonProperty("isFsfLibre")
+  public boolean fsfLibre;
 
-  BSD_4_Clause(true),
+  @JsonProperty("licenseId")
+  public String identifier;
 
-  CDDLV1_0(false),
+  public String name;
 
-  CDDLV1_1(false),
+  @JsonProperty("isOsiApproved")
+  public boolean osiApproved;
 
-  Commercial(true),
+  public String reference;
 
-  EclipseV1_0(false),
+  public List<String> seeAlso;
 
-  GPLV1_0(false),
+  public String text;
 
-  GPLV2_0(false),
+  /**
+   * For testing and JSON handling only.
+   */
+  public License() {
+  }
 
-  GPLV2_0_CE(false),
+  /**
+   * Creates a commercial or non-standard license.
+   *
+   * @param identifier The required license id.
+   * @param text       The required license text.
+   */
+  public License(String identifier, String text) {
+    boolean badId = !CustomLicenses.contains(identifier) && !Licenses.containsKey(identifier);
+    if (text == null || text.trim().isEmpty() || badId) {
+      throw new LicenseException(identifier);
+    }
 
-  GPLV3_0(false),
+    this.identifier = identifier;
+    this.text = text;
+  }
 
-  LGPLV2_1(false),
+  public License(License other) {
+    this.detailsURL = other.detailsURL;
+    this.exception = other.exception;
+    this.fsfLibre = other.fsfLibre;
+    this.identifier = other.identifier;
+    this.name = other.name;
+    this.osiApproved = other.osiApproved;
+    this.reference = other.reference;
+    this.seeAlso = other.seeAlso;
+    this.text = other.text;
+  }
 
-  LGPLV3_0(false),
+  public License(License other, LicenseTextException exception) {
+    this(other);
+    this.exception = exception;
+  }
 
-  MIT(true),
+  public static License parse(String identifier, String text) {
+    if (text != null) {
+      return new License(identifier, text);
+    }
 
-  Other(true),
+    if (CustomLicenses.contains(identifier)) {
+      throw new LicenseException(identifier);
+    }
 
-  OtherDistributableOpenSource(true),
+    String[] parts = identifier.split("\\s+WITH\\s+");
+    License license = Licenses.get(parts[0]);
+    if (license == null) {
+      throw new LicenseException(parts[0]);
+    }
 
-  OtherNonDistributableOpenSource(true),
+    LicenseTextException exception = null;
+    if (parts.length == 2) {
+      exception = Exceptions.get(parts[1]);
+      if (exception == null) {
+        throw new LicenseException(parts[1]);
+      }
+    }
 
-  Public_Domain(false);
+    return exception != null ? new License(license, exception) : license;
+  }
 
-  public final boolean requiresText;
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (!(o instanceof License)) return false;
+    final License license = (License) o;
+    return Objects.equals(identifier, license.identifier);
+  }
 
-  License(boolean requiresText) {
-    this.requiresText = requiresText;
+  @Override
+  public int hashCode() {
+    return Objects.hash(identifier);
+  }
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  private static class LicenseExceptionText {
+    public String licenseExceptionText;
+  }
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  private static class LicenseExceptions {
+    public List<LicenseTextException> exceptions = new ArrayList<>();
+  }
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  private static class LicenseText {
+    public String licenseText;
+  }
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  private static class Licenses {
+    public List<License> licenses = new ArrayList<>();
+  }
+
+  static {
+    try (InputStream is = License.class.getResourceAsStream("/licenses.json")) {
+      ObjectMapper objectMapper = new ObjectMapper();
+      Licenses licenses = objectMapper.readerFor(Licenses.class).readValue(is);
+      for (License license : licenses.licenses) {
+        Licenses.put(license.identifier, license);
+
+        try (InputStream ltis = License.class.getResourceAsStream("/license-details/" + license.identifier + ".json")) {
+          LicenseText text = objectMapper.readerFor(LicenseText.class).readValue(ltis);
+          license.text = text.licenseText;
+        } catch (Exception e) {
+          throw new IllegalStateException(e);
+        }
+      }
+    } catch (Exception e) {
+      throw new IllegalStateException(e);
+    }
+
+    try (InputStream is = License.class.getResourceAsStream("/exceptions.json")) {
+      ObjectMapper objectMapper = new ObjectMapper();
+      LicenseExceptions exceptions = objectMapper.readerFor(LicenseExceptions.class).readValue(is);
+      for (LicenseTextException le : exceptions.exceptions) {
+        Exceptions.put(le.identifier, le);
+
+        try (InputStream ltis = License.class.getResourceAsStream("/license-exceptions/" + le.identifier + ".json")) {
+          LicenseExceptionText text = objectMapper.readerFor(LicenseExceptionText.class).readValue(ltis);
+          le.text = text.licenseExceptionText;
+        } catch (Exception e) {
+          throw new IllegalStateException(e);
+        }
+      }
+    } catch (Exception e) {
+      throw new IllegalStateException(e);
+    }
+
+    Licenses.put("ApacheV1_0", Licenses.get("Apache-1.0"));
+    Licenses.put("ApacheV1_1", Licenses.get("Apache-1.1"));
+    Licenses.put("ApacheV2_0", Licenses.get("Apache-2.0"));
+    Licenses.put("BSD", Licenses.get("0BSD"));
+    Licenses.put("BSD_2_Clause", Licenses.get("BSD-2-Clause"));
+    Licenses.put("BSD_3_Clause", Licenses.get("BSD-3-Clause"));
+    Licenses.put("BSD_4_Clause", Licenses.get("BSD-4-Clause"));
+    Licenses.put("CDDLV1_0", Licenses.get("CDDL-1.0"));
+    Licenses.put("CDDLV1_1", Licenses.get("CDDL-1.1"));
+    Licenses.put("EclipseV1_0", Licenses.get("EPL-1.0"));
+    Licenses.put("GPLV1_0", Licenses.get("GPL-1.0-only"));
+    Licenses.put("GPLV2_0", Licenses.get("GPL-2.0-only"));
+    Licenses.put("GPLV2_0_CE", new License(Licenses.get("GPL-2.0-only"), Exceptions.get("classpath-exception-2.0")));
+    Licenses.put("GPLV3_0", Licenses.get("GPL-3.0-only"));
+    Licenses.put("LGPLV2_1", Licenses.get("LGPL-2.1-only"));
+    Licenses.put("LGPLV3_0", Licenses.get("LGPL-3.0-only"));
+    Licenses.put("Public_Domain", Licenses.get("NIST-PD"));
+
+    CustomLicenses.add("Commercial");
+    CustomLicenses.add("Other");
+    CustomLicenses.add("OtherDistributableOpenSource");
+    CustomLicenses.add("OtherNonDistributableOpenSource");
   }
 }

@@ -15,11 +15,12 @@
  */
 package org.savantbuild.dep.graph;
 
-import java.util.Map;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 
 import org.savantbuild.dep.domain.License;
-import org.savantbuild.dep.domain.Version;
+import org.savantbuild.domain.Version;
 
 /**
  * This class stores the information for edges between artifacts in the graph.
@@ -31,11 +32,15 @@ public class DependencyEdgeValue {
 
   public final Version dependentVersion;
 
-  public final Map<License, String> licenses;
+  public final List<License> licenses;
 
   public final String type;
 
-  public DependencyEdgeValue(Version dependentVersion, Version dependencyVersion, String type, Map<License, String> licenses) {
+  public DependencyEdgeValue(Version dependentVersion, Version dependencyVersion, String type, License... licenses) {
+    this(dependentVersion, dependencyVersion, type, Arrays.asList(licenses));
+  }
+
+  public DependencyEdgeValue(Version dependentVersion, Version dependencyVersion, String type, List<License> licenses) {
     Objects.requireNonNull(dependentVersion, "DependencyEdgeValue requires a dependentVersion");
     Objects.requireNonNull(dependencyVersion, "DependencyEdgeValue requires a dependencyVersion");
     Objects.requireNonNull(type, "DependencyEdgeValue requires a type");
@@ -71,6 +76,6 @@ public class DependencyEdgeValue {
   }
 
   public String toString() {
-    return dependentVersion.toString() + " ---(type=" + type + ",licenses=" + licenses.keySet() + ")--> " + dependencyVersion.toString();
+    return dependentVersion + " ---(type=" + type + ",licenses=" + licenses + ")--> " + dependencyVersion;
   }
 }

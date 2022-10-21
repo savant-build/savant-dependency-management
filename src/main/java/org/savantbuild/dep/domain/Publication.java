@@ -68,6 +68,6 @@ public class Publication {
   }
 
   public String toString() {
-    return artifact.toString() + "{licenses:" + metaData.licenses.keySet() + "}{file:" + file.toString() + "}{source:" + (sourceFile != null ? sourceFile.toString() : "none") + "}";
+    return artifact + "{licenses:" + metaData.licenses + "}{file:" + file + "}{source:" + (sourceFile != null ? sourceFile.toString() : "none") + "}";
   }
 }
