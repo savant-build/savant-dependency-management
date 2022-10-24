@@ -35,7 +35,7 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 
 /**
- * This class tests the SavantInternetFetchProcess class.
+ * This class tests the URLProcess class.
  *
  * @author Brian Pontarelli
  */

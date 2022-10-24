@@ -132,6 +132,21 @@ public class Artifact {
 
   /**
    * <p>
+   * Returns the artifact POM file name. This does not include any path information at all and would look something like
+   * this:
+   * </p>
+   * <pre>
+   * common-collections-2.1.pom
+   * </pre>
+   *
+   * @return The file name.
+   */
+  public String getArtifactFilePOM() {
+    return prefix() + ".pom";
+  }
+
+  /**
+   * <p>
    * Returns the artifact MetaData file name. This does not include any path information at all and would look something
    * like this:
    * </p>

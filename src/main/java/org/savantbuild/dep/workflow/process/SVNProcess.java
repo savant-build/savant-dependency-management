@@ -118,7 +118,7 @@ public class SVNProcess implements Process {
       }
 
       return itemFile;
-    } catch (IOException | URISyntaxException | InterruptedException e) {
+    } catch (IOException | InterruptedException e) {
       throw new ProcessFailureException(artifact, e);
     }
   }
@@ -142,7 +142,7 @@ public class SVNProcess implements Process {
 
       output.infoln("Published to SubVersion at [%s]", uri);
       return null;
-    } catch (URISyntaxException | IOException | InterruptedException e) {
+    } catch (IOException | InterruptedException e) {
       throw new ProcessFailureException(artifact, e);
     }
   }

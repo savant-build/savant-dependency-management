@@ -18,7 +18,6 @@ package org.savantbuild.dep.workflow.process;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
@@ -64,7 +63,7 @@ public class URLProcess implements Process {
   }
 
   /**
-   * Throws an exception. This isn't supported yet.
+   * Throws an exception. This isn't supported.
    */
   @Override
   public void deleteIntegrationBuilds(Artifact artifact) throws ProcessFailureException {
@@ -121,7 +120,7 @@ public class URLProcess implements Process {
     } catch (FileNotFoundException e) {
       // Special case for file:// URLs
       return null;
-    } catch (IOException | URISyntaxException e) {
+    } catch (IOException e) {
       throw new ProcessFailureException(artifact, e);
     }
   }

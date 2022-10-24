@@ -105,7 +105,36 @@ public final class License {
     this.exception = exception;
   }
 
-  public static License parse(String identifier, String text) {
+  /**
+   * Tries to determine the license using a URL.
+   *
+   * @param url The URL of the license text.
+   * @return The License if it can be found or null if it doesn't exist.
+   */
+  public static License lookupByURL(String url) {
+    String httpsURL = url.replace("http:", "https:");
+    String httpURL = url.replace("https:", "http:");
+    for (License license : Licenses.values()) {
+      if (license.seeAlso.contains(url) ||
+          license.seeAlso.stream()
+                         .anyMatch(seeAlso -> seeAlso.startsWith(httpsURL) || seeAlso.startsWith(httpURL) || httpsURL.startsWith(seeAlso) || httpURL.startsWith(seeAlso))) {
+        return license;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Parses a Savant SPDX identifier to determine the type of license. Savant supports additional license types and flexible
+   * license text.
+   *
+   * @param identifier The Savant SPDX id.
+   * @param text       (Optional) The license text.
+   * @return The license and never null
+   * @throws LicenseException If the identifier was invalid.
+   */
+  public static License parse(String identifier, String text) throws LicenseException {
     if (text != null) {
       return new License(identifier, text);
     }
