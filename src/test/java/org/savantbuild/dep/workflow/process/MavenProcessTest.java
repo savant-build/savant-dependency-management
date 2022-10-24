@@ -23,17 +23,10 @@ import org.savantbuild.dep.PathTools;
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.License;
 import org.savantbuild.dep.domain.ReifiedArtifact;
-import org.savantbuild.dep.maven.MavenTools;
 import org.savantbuild.dep.workflow.PublishWorkflow;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import com.sun.net.httpserver.HttpServer;
 import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertNull;
 
 /**
  * This class tests the MavenProcess class.
