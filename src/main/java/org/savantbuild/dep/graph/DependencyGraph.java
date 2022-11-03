@@ -20,10 +20,11 @@ import java.util.Formatter;
 import org.savantbuild.dep.domain.ArtifactID;
 import org.savantbuild.dep.domain.ReifiedArtifact;
 import org.savantbuild.dep.graph.DependencyGraph.Dependency;
+import org.savantbuild.util.Graph.EdgeFilter.SingleTraversalEdgeFilter;
 import org.savantbuild.util.HashGraph;
 
 /**
- * This class is a artifact and dependency version of the Graph.
+ * This class is an artifact and dependency version of the Graph.
  *
  * @author Brian Pontarelli
  */
@@ -32,11 +33,6 @@ public class DependencyGraph extends HashGraph<Dependency, DependencyEdgeValue> 
 
   public DependencyGraph(ReifiedArtifact root) {
     this.root = root;
-  }
-
-  public void skipCompatibilityCheck(ArtifactID id) {
-    HashNode<Dependency, DependencyEdgeValue> node = getNode(new Dependency(id));
-    node.value.skipCompatibilityCheck = true;
   }
 
   @Override
@@ -62,27 +58,9 @@ public class DependencyGraph extends HashGraph<Dependency, DependencyEdgeValue> 
     return result;
   }
 
-  /**
-   * Traverses the dependency graph in a version consistent manner. This essentially guarantees that at any given node,
-   * only the dependencies for the version of the current traversal are followed. For this graph:
-   *
-   * <pre>
-   *   B -1.1----1.2--&gt; C -1.2----1.1--&gt; D
-   *   \--1.2----1.3---/\-1.3----2.0--&gt; E
-   * </pre>
-   *
-   * If we are examining B version 1.1 once we traverse to C, we will only observe D. Likewise, if we are examining B
-   * version 1.2, then we will traverse to C version 1.3 and only see E.
-   *
-   * @param consumer The graph consumer.
-   */
-  public void versionCorrectTraversal(GraphConsumer<Dependency, DependencyEdgeValue> consumer) {
-    super.traverse(
-        new Dependency(root.id),
-        false,
-        (edge, traversedEdge) -> edge.getValue().dependentVersion.equals(traversedEdge.getValue().dependencyVersion),
-        consumer
-    );
+  public void skipCompatibilityCheck(ArtifactID id) {
+    HashNode<Dependency, DependencyEdgeValue> node = getNode(new Dependency(id));
+    node.value.skipCompatibilityCheck = true;
   }
 
   /**
@@ -95,7 +73,7 @@ public class DependencyGraph extends HashGraph<Dependency, DependencyEdgeValue> 
     build.append("digraph Dependencies {\n");
 
     Formatter formatter = new Formatter(build);
-    traverse(new Dependency(root.id), false, null, (origin, destination, edge, depth, isLast) -> {
+    traverse(new Dependency(root.id), false, new SingleTraversalEdgeFilter<>(), (origin, destination, edge, depth, isLast) -> {
       formatter.format("  \"%s\" -> \"%s\" [label=\"%s\", headlabel=\"%s\", taillabel=\"%s\"];\n", origin, destination, edge.type, edge.dependentVersion, edge.dependencyVersion);
       return true;
     });
@@ -106,6 +84,29 @@ public class DependencyGraph extends HashGraph<Dependency, DependencyEdgeValue> 
 
   public String toString() {
     return toDOT();
+  }
+
+  /**
+   * Traverses the dependency graph in a version consistent manner. This essentially guarantees that at any given node,
+   * only the dependencies for the version of the current traversal are followed. For this graph:
+   *
+   * <pre>
+   *   B -1.1----1.2--&gt; C -1.2----1.1--&gt; D
+   *   \--1.2----1.3---/\-1.3----2.0--&gt; E
+   * </pre>
+   * <p>
+   * If we are examining B version 1.1 once we traverse to C, we will only observe D. Likewise, if we are examining B
+   * version 1.2, then we will traverse to C version 1.3 and only see E.
+   *
+   * @param consumer The graph consumer.
+   */
+  public void versionCorrectTraversal(GraphConsumer<Dependency, DependencyEdgeValue> consumer) {
+    super.traverse(
+        new Dependency(root.id),
+        false,
+        (edge, traversedEdge) -> edge.getValue().dependentVersion.equals(traversedEdge.getValue().dependencyVersion),
+        consumer
+    );
   }
 
   public static class Dependency {

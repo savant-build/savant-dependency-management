@@ -36,7 +36,7 @@ public class DependencyGroup {
    * Constructs a Dependency group.
    *
    * @param name         The name of the group (compile, run, etc).
-   * @param export       Whether or not this group is exported or not.
+   * @param export       Whether this group is exported or not.
    * @param dependencies The initial dependencies of the group.
    * @throws NullPointerException If the type parameter is null.
    */

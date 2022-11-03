@@ -13,7 +13,7 @@
  * either express or implied. See the License for the specific
  * language governing permissions and limitations under the License.
  */
-package org.savantbuild.dep.workflow;
+package org.savantbuild.dep.maven.workflow;
 
 import java.io.File;
 import java.io.IOException;
@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.List;
 
 import org.savantbuild.dep.domain.Artifact;
+import org.savantbuild.dep.workflow.FetchWorkflow;
 import org.savantbuild.dep.workflow.process.Process;
 import org.savantbuild.dep.workflow.process.ProcessFailureException;
 
@@ -33,10 +34,10 @@ import org.savantbuild.dep.workflow.process.ProcessFailureException;
  *
  * @author Brian Pontarelli
  */
-public class PublishWorkflow {
+public class MavenPublishWorkflow {
   public final List<Process> processes = new ArrayList<>();
 
-  public PublishWorkflow(Process... processes) {
+  public MavenPublishWorkflow(Process... processes) {
     Collections.addAll(this.processes, processes);
   }
 

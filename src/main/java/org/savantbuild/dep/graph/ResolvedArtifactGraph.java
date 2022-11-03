@@ -20,6 +20,7 @@ import java.util.Formatter;
 import org.savantbuild.dep.domain.ArtifactID;
 import org.savantbuild.dep.domain.ResolvedArtifact;
 import org.savantbuild.lang.Classpath;
+import org.savantbuild.util.Graph.EdgeFilter.SingleTraversalEdgeFilter;
 import org.savantbuild.util.HashGraph;
 
 /**
@@ -36,22 +37,6 @@ public class ResolvedArtifactGraph extends HashGraph<ResolvedArtifact, String> {
     this.root = root;
   }
 
-  /**
-   * Brute force traverses the graph and locates the Path for the given artifact. This only needs the ArtifactID because
-   * this graph will never contain two versions of the same artifact.
-   *
-   * @param id The id.
-   * @return The Path or null if the graph doesn't contain the given Artifact.
-   */
-  public java.nio.file.Path getPath(ArtifactID id) {
-    ResolvedArtifact match = find(root, (artifact) -> artifact.id.equals(id));
-    if (match != null) {
-      return match.file;
-    }
-
-    return null;
-  }
-
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -66,6 +51,22 @@ public class ResolvedArtifactGraph extends HashGraph<ResolvedArtifact, String> {
 
     final ResolvedArtifactGraph that = (ResolvedArtifactGraph) o;
     return root.equals(that.root);
+  }
+
+  /**
+   * Brute force traverses the graph and locates the Path for the given artifact. This only needs the ArtifactID because
+   * this graph will never contain two versions of the same artifact.
+   *
+   * @param id The id.
+   * @return The Path or null if the graph doesn't contain the given Artifact.
+   */
+  public java.nio.file.Path getPath(ArtifactID id) {
+    ResolvedArtifact match = find(root, (artifact) -> artifact.id.equals(id));
+    if (match != null) {
+      return match.file;
+    }
+
+    return null;
   }
 
   @Override
@@ -99,7 +100,7 @@ public class ResolvedArtifactGraph extends HashGraph<ResolvedArtifact, String> {
     build.append("digraph ResolvedArtifactGraph {\n");
 
     Formatter formatter = new Formatter(build);
-    traverse(root, false, null, (origin, destination, edge, depth, isLast) -> {
+    traverse(root, false, new SingleTraversalEdgeFilter<>(), (origin, destination, edge, depth, isLast) -> {
       formatter.format("  \"%s\" -> \"%s\" [label=\"%s\"];\n", origin, destination, edge);
       return true;
     });

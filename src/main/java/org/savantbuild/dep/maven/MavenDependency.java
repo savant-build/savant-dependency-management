@@ -15,6 +15,8 @@
  */
 package org.savantbuild.dep.maven;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 import org.savantbuild.dep.domain.ReifiedArtifact;
@@ -26,6 +28,8 @@ import org.savantbuild.dep.domain.ReifiedArtifact;
  */
 public class MavenDependency extends POM {
   public String classifier;
+
+  public List<MavenExclusion> exclusions = new ArrayList<>();
 
   public String optional;
 
@@ -47,14 +51,21 @@ public class MavenDependency extends POM {
     this.scope = scope;
   }
 
+  public MavenDependency(String group, String id, String version, String scope, boolean optional, List<MavenExclusion> exclusions) {
+    super(group, id, version);
+    this.scope = scope;
+    this.optional = "" + optional;
+    this.exclusions.addAll(exclusions);
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
     if (!(o instanceof MavenDependency)) return false;
     if (!super.equals(o)) return false;
     final MavenDependency that = (MavenDependency) o;
-    return Objects.equals(classifier, that.classifier) && Objects.equals(optional, that.optional) &&
-        Objects.equals(scope, that.scope) && Objects.equals(type, that.type);
+    return Objects.equals(classifier, that.classifier) && Objects.equals(exclusions, that.exclusions) &&
+        Objects.equals(optional, that.optional) && Objects.equals(scope, that.scope) && Objects.equals(type, that.type);
   }
 
   public String getArtifactName() {
@@ -75,13 +86,17 @@ public class MavenDependency extends POM {
 
   @Override
   public int hashCode() {
-    return Objects.hash(super.hashCode(), classifier, optional, scope, type);
+    return Objects.hash(super.hashCode(), classifier, exclusions, optional, scope, type);
+  }
+
+  public String toSpecification() {
+    return group + ":" + id + ":" + version + (type != null ? ":" + type : "");
   }
 
   public String toString() {
     if ((classifier != null && classifier.trim().length() > 0)) {
-      return group + ":" + id + ":" + id + "-" + classifier + ":" + version + ":" + (type == null ? "jar" : type) + "[" + scope + "]";
+      return group + ":" + id + ":" + id + "-" + classifier + ":" + version + ":" + (type == null ? "jar" : type) + "{" + scope + "}";
     }
-    return super.toString() + ":" + (type == null ? "jar" : type) + "[" + scope + "]";
+    return super.toString() + ":" + (type == null ? "jar" : type) + "{" + scope + "}";
   }
 }

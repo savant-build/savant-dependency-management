@@ -19,8 +19,11 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collection;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -76,7 +79,7 @@ public class DefaultDependencyService implements DependencyService {
       throws ArtifactMetaDataMissingException, ProcessFailureException, MD5Exception {
     output.debugln("Building DependencyGraph with a root of [%s]", project);
     DependencyGraph graph = new DependencyGraph(project);
-    populateGraph(graph, project, dependencies, workflow, new HashSet<>());
+    populateGraph(graph, project, dependencies, workflow, new HashSet<>(), new LinkedList<>());
     return graph;
   }
 
@@ -271,7 +274,7 @@ public class DefaultDependencyService implements DependencyService {
 
   /**
    * Recursively populates the DependencyGraph starting with the given origin and its dependencies. This fetches the
-   * ArtifactMetaData for all of the dependencies and performs a breadth first traversal of the graph. If an dependency
+   * ArtifactMetaData for all the dependencies and performs a breadth first traversal of the graph. If a dependency
    * has already been encountered and traversed, this does not traverse it again. The Set is used to track the
    * dependencies that have already been encountered.
    *
@@ -282,12 +285,20 @@ public class DefaultDependencyService implements DependencyService {
    * @param artifactsRecursed The set of artifacts already resolved and recursed for.
    */
   private void populateGraph(DependencyGraph graph, ReifiedArtifact origin, Dependencies dependencies, Workflow workflow,
-                             Set<Artifact> artifactsRecursed)
+                             Set<Artifact> artifactsRecursed, Deque<List<ArtifactID>> exclusions)
       throws ArtifactMetaDataMissingException, ProcessFailureException, MD5Exception {
     dependencies.groups.forEach((type, group) -> {
       output.debugln("Loading dependency group [%s]", type);
 
       for (Artifact dependency : group.dependencies) {
+        boolean excluded = exclusions.stream()
+                                     .flatMap(Collection::stream)
+                                     .anyMatch(exclusion -> DependencyTools.matchesExclusion(dependency.id, exclusion));
+        if (excluded) {
+          output.debugln("Ignoring dependency [%s] because one of it's dependents excluded it", dependency);
+          continue;
+        }
+
         output.debugln("Loading dependency [%s] skipCompatibilityCheck=[%b]", dependency, dependency.skipCompatibilityCheck);
 
         ArtifactMetaData amd = workflow.fetchMetaData(dependency);
@@ -308,7 +319,9 @@ public class DefaultDependencyService implements DependencyService {
         // Recurse
         if (amd.dependencies != null) {
           ReifiedArtifact artifact = amd.toLicensedArtifact(dependency);
-          populateGraph(graph, artifact, amd.dependencies, workflow, artifactsRecursed);
+          exclusions.push(dependency.exclusions);
+          populateGraph(graph, artifact, amd.dependencies, workflow, artifactsRecursed, exclusions);
+          exclusions.pop();
         }
 
         // Add the artifact to the list

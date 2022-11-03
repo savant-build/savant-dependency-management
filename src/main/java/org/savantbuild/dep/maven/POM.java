@@ -104,6 +104,9 @@ public class POM {
         dep.version = resolveDependencyVersion(dep);
       }
       dep.version = MavenTools.replaceProperties(dep.version, allProperties);
+      if (dep.version == null) {
+        throw new POMException("Unable to resolve version for Maven dependency [" + dep + "]");
+      }
     }
 
     return allDeps;
@@ -124,7 +127,7 @@ public class POM {
       return parent.resolveDependencyScope(dependency);
     }
 
-    return optional.map(mavenArtifact -> mavenArtifact.scope).orElse(null);
+    return optional.map(mavenArtifact -> mavenArtifact.scope).orElse("compile");
   }
 
   public String resolveDependencyVersion(MavenDependency dependency) {

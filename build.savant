@@ -13,7 +13,7 @@
  * either express or implied. See the License for the specific
  * language governing permissions and limitations under the License.
  */
-project(group: "org.savantbuild", name: "savant-dependency-management", version: "2.0.0-RC.3", licenses: ["ApacheV2_0"]) {
+project(group: "org.savantbuild", name: "savant-dependency-management", version: "2.0.0-RC.4", licenses: ["ApacheV2_0"]) {
   workflow {
     fetch {
       cache()
@@ -24,17 +24,31 @@ project(group: "org.savantbuild", name: "savant-dependency-management", version:
     }
   }
 
+  mavenWorkflow {
+    fetch {
+      mavenCache()
+      url(url: "https://repo1.maven.org/maven2")
+    }
+    publish {
+      matchCache()
+    }
+    versionMappings {
+      map(id: "com.fasterxml.jackson.core:jackson-transitive:2.13.4.Final:jar", savantVersion: "2.13.4")
+    }
+  }
+
   publishWorkflow {
     subversion(repository: "https://svn.savantbuild.org")
   }
 
   dependencies {
     group(name: "compile") {
-      dependency(id: "com.fasterxml.jackson.core:jackson-annotations:2.13.4:jar")
-      dependency(id: "com.fasterxml.jackson.core:jackson-core:2.13.4:jar")
-      dependency(id: "com.fasterxml.jackson.core:jackson-databind:2.13.4:jar")
-      dependency(id: "org.savantbuild:savant-utils:2.0.0-RC.3")
-      dependency(id: "org.savantbuild:savant-version:2.0.0-RC.3")
+      // com.fasterxml.jackson.core:jackson-annotations:2.13.4.Final -> com.fasterxml.jackson.core:jackson-core:2.13.4.Final
+      dependency(id: "com.fasterxml.jackson.core:jackson-annotations:2.13.4:jar", mavenVersion: "2.13.4.Final") // -> POM graph -> Savant graph
+      dependency(id: "com.fasterxml.jackson.core:jackson-core:2.13.4:jar", mavenVersion: "2.13.4.Final") // -> POM graph
+      dependency(id: "com.fasterxml.jackson.core:jackson-databind:2.13.4:jar") // -> POM graph
+      dependency(id: "org.savantbuild:savant-utils:2.0.0-RC.4.{integration}") // -> Savant graph
+      dependency(id: "org.savantbuild:savant-version:2.0.0-RC.4.{integration}") // -> Savant graph
     }
     group(name: "test-compile", export: false) {
       dependency(id: "org.testng:testng:6.8.7")
@@ -57,8 +71,8 @@ release = loadPlugin(id: "org.savantbuild.plugin:release-git:2.0.0-RC.2")
 java.settings.javaVersion = "1.8"
 javaTestNG.settings.javaVersion = "1.8"
 idea.settings.moduleMap = [
-    "org.savantbuild:savant-utils:2.0.0-RC.3.{integration}"  : "savant-utils",
-    "org.savantbuild:savant-version:2.0.0-RC.3.{integration}": "savant-version"
+    "org.savantbuild:savant-utils:2.0.0-RC.4.{integration}"  : "savant-utils",
+    "org.savantbuild:savant-version:2.0.0-RC.4.{integration}": "savant-version"
 ]
 
 target(name: "clean", description: "Cleans the project") {

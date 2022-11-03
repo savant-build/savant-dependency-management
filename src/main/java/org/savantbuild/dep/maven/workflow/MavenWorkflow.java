@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Inversoft Inc., All Rights Reserved
+ * Copyright (c) 2022, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,18 +13,33 @@
  * either express or implied. See the License for the specific
  * language governing permissions and limitations under the License.
  */
-package org.savantbuild.dep.workflow;
+package org.savantbuild.dep.maven.workflow;
 
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 import org.savantbuild.dep.domain.Artifact;
+import org.savantbuild.dep.domain.ArtifactID;
 import org.savantbuild.dep.domain.ArtifactMetaData;
-import org.savantbuild.domain.VersionException;
+import org.savantbuild.dep.maven.MavenDependency;
+import org.savantbuild.dep.maven.MavenTools;
+import org.savantbuild.dep.maven.POM;
+import org.savantbuild.dep.workflow.ArtifactMetaDataMissingException;
+import org.savantbuild.dep.workflow.ArtifactMissingException;
+import org.savantbuild.dep.workflow.FetchWorkflow;
+import org.savantbuild.dep.workflow.PublishWorkflow;
 import org.savantbuild.dep.workflow.process.NegativeCacheException;
 import org.savantbuild.dep.workflow.process.ProcessFailureException;
 import org.savantbuild.dep.xml.ArtifactTools;
+import org.savantbuild.domain.Version;
+import org.savantbuild.domain.VersionException;
+import org.savantbuild.output.Output;
 import org.savantbuild.security.MD5Exception;
 import org.xml.sax.SAXException;
 
@@ -33,14 +48,19 @@ import org.xml.sax.SAXException;
  *
  * @author Brian Pontarelli
  */
-public class Workflow {
+public class MavenWorkflow {
   public final FetchWorkflow fetchWorkflow;
+
+  public final Map<String, Artifact> mappings = new HashMap<>();
+
+  public final Output output;
 
   public final PublishWorkflow publishWorkflow;
 
-  public Workflow(FetchWorkflow fetchWorkflow, PublishWorkflow publishWorkflow) {
+  public MavenWorkflow(FetchWorkflow fetchWorkflow, PublishWorkflow publishWorkflow, Output output) {
     this.fetchWorkflow = fetchWorkflow;
     this.publishWorkflow = publishWorkflow;
+    this.output = output;
   }
 
   /**
@@ -80,12 +100,22 @@ public class Workflow {
       throws ArtifactMetaDataMissingException, ProcessFailureException, MD5Exception {
     Path file = fetchWorkflow.fetchItem(artifact, artifact.getArtifactMetaDataFile(), publishWorkflow);
     if (file == null) {
+      // Try the POM
+      file = fetchWorkflow.fetchItem(artifact, artifact.getArtifactPOMFile(), publishWorkflow);
+      if (file != null) {
+        POM pom = loadPOM(artifact, publishWorkflow);
+        return translatePOM(pom);
+      }
+    }
+
+    if (file == null) {
       throw new ArtifactMetaDataMissingException(artifact);
     }
 
     try {
       return ArtifactTools.parseArtifactMetaData(file);
-    } catch (IllegalArgumentException | NullPointerException | SAXException | ParserConfigurationException | IOException | VersionException e) {
+    } catch (IllegalArgumentException | NullPointerException | SAXException | ParserConfigurationException |
+             IOException | VersionException e) {
       throw new ProcessFailureException(artifact, e);
     }
   }
@@ -114,5 +144,43 @@ public class Workflow {
       // search for the source JAR should stop immediately.
       return null;
     }
+  }
+
+  private POM loadPOM(Artifact artifact, PublishWorkflow publishWorkflow) {
+    // We can directly load a POM or translate an AMD to a POM
+    Path file = fetchWorkflow.fetchItem(artifact, artifact.getArtifactPOMFile(), publishWorkflow);
+    if (file == null) {
+      return null;
+    }
+
+    POM pom = MavenTools.parsePOM(file, output);
+
+    // Recusrively load the parent POM and any dependencies that are `import`
+    if (pom.parentGroup != null && pom.parentId != null && pom.parentVersion != null) {
+      Artifact parentPOM = new Artifact(new ArtifactID(pom.parentGroup, pom.parentId, pom.parentId, "pom"), new Version(pom.parentVersion), false);
+      pom.parent = loadPOM(parentPOM, publishWorkflow);
+    }
+
+    List<MavenDependency> newDefs = new ArrayList<>();
+    Iterator<MavenDependency> it = pom.dependenciesDefinitions.iterator();
+    while (it.hasNext()) {
+      MavenDependency dependency = it.next();
+      if (dependency.scope == null || !dependency.scope.equalsIgnoreCase("import")) {
+        continue;
+      }
+
+      Artifact dep = new Artifact(new ArtifactID(dependency.group, dependency.id, dependency.id, "pom"), new Version(dependency.version), false);
+      POM dependencyPOM = loadPOM(dep, publishWorkflow);
+      it.remove(); // Remove the import
+      newDefs.addAll(dependencyPOM.dependenciesDefinitions);
+    }
+
+    pom.dependenciesDefinitions.addAll(newDefs);
+
+    return pom;
+  }
+
+  private ArtifactMetaData translatePOM(POM pom) {
+    return new ArtifactMetaData(MavenTools.toSavantDependencies(pom, mappings), MavenTools.toSavantLicenses(pom));
   }
 }

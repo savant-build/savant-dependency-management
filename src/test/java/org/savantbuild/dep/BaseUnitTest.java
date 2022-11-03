@@ -61,8 +61,15 @@ public abstract class BaseUnitTest {
     cache = projectDir.resolve("build/test/cache");
 
     workflow = new Workflow(
-        new FetchWorkflow(output, new CacheProcess(output, cache.toString()), new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null)),
-        new PublishWorkflow(new CacheProcess(output, cache.toString()))
+        new FetchWorkflow(
+            output,
+            new CacheProcess(output, cache.toString()),
+            new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null)
+        ),
+        new PublishWorkflow(
+            new CacheProcess(output, cache.toString())
+        ),
+        output
     );
   }
 

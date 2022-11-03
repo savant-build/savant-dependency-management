@@ -22,7 +22,7 @@ import java.util.Objects;
 import org.savantbuild.domain.Version;
 
 /**
- * This class defines a artifact that has been completely built by the dependency process. Usually, a Dependency (which
+ * This class defines an artifact that has been completely built by the dependency process. Usually, a Dependency (which
  * is an abstract artifact specialization) has the AMD file downloaded. That file contains additional information that
  * the dependent project doesn't know about the artifact. The information in the AMD file combined with the information
  * from the Dependency results in this class.
@@ -38,6 +38,12 @@ public class ReifiedArtifact extends Artifact {
 
   public ReifiedArtifact(ArtifactID id, Version version, List<License> licenses) {
     super(id, version, false);
+    Objects.requireNonNull(licenses, "Artifacts must have a license");
+    this.licenses = licenses;
+  }
+
+  public ReifiedArtifact(ArtifactID id, Version version, List<ArtifactID> exclusions, List<License> licenses) {
+    super(id, version, false, exclusions);
     Objects.requireNonNull(licenses, "Artifacts must have a license");
     this.licenses = licenses;
   }

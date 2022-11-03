@@ -61,7 +61,7 @@ public class ArtifactTools {
       pw.printf("<artifact-meta-data>\n");
 
       artifactMetaData.licenses.forEach(license -> {
-        if (license.text != null) {
+        if (license.text != null && license.customText) {
           pw.printf("  <license type=\"%s\"><![CDATA[%s]]></license>\n", license.identifier.replace("\"", "&quot;"), license.text);
         } else {
           pw.printf("  <license type=\"%s\"/>\n", license.identifier.replace("\"", "&quot;"));
@@ -80,11 +80,22 @@ public class ArtifactTools {
           pw.printf("    <dependency-group name=\"%s\">\n", group.name.replace("\"", "&quot;"));
 
           for (Artifact dependency : group.dependencies) {
-            pw.printf("      <dependency group=\"%s\" project=\"%s\" name=\"%s\" version=\"%s\" type=\"%s\"/>\n",
+            pw.printf("      <dependency group=\"%s\" project=\"%s\" name=\"%s\" version=\"%s\" type=\"%s\">\n",
                 dependency.id.group.replace("\"", "&quot;"), dependency.id.project.replace("\"", "&quot;"),
                 dependency.id.name.replace("\"", "&quot;"), dependency.version.toString().replace("\"", "&quot;"),
                 dependency.id.type.replace("\"", "&quot;"));
+
+            if (dependency.exclusions.size() > 0) {
+              for (ArtifactID exclusion : dependency.exclusions) {
+                pw.printf("        <exclusion group=\"%s\" project=\"%s\" name=\"%s\" type=\"%s\"/>\n",
+                    exclusion.group.replace("\"", "&quot;"), exclusion.project.replace("\"", "&quot;"),
+                    exclusion.name.replace("\"", "&quot;"), exclusion.type.replace("\"", "&quot;"));
+              }
+            }
+
+            pw.printf("      </dependency>\n");
           }
+
           pw.println("    </dependency-group>");
         });
 
@@ -115,15 +126,21 @@ public class ArtifactTools {
   }
 
   public static class ArtifactMetaDataHandler extends DefaultHandler {
+    public final List<ArtifactID> exclusions = new ArrayList<>();
+
     public final List<License> licenses = new ArrayList<>();
 
     public Dependencies dependencies;
 
+    public ArtifactID dependencyId;
+
+    public Version dependencyVersion;
+
     public DependencyGroup group;
 
-    public StringBuilder licenseText;
+    public String licenseId;
 
-    private String licenseId;
+    public StringBuilder licenseText;
 
     @Override
     public void characters(char[] ch, int start, int length) throws SAXException {
@@ -150,6 +167,11 @@ public class ArtifactTools {
 
         licenseId = null;
         licenseText = null;
+      } else if (qName.equals("dependency")) {
+        group.dependencies.add(new Artifact(dependencyId, dependencyVersion, false, exclusions));
+        dependencyId = null;
+        dependencyVersion = null;
+        exclusions.clear();
       }
     }
 
@@ -170,34 +192,57 @@ public class ArtifactTools {
 
           break;
         case "dependency":
-          String dependencyGroup = attributes.getValue("group");
-          if (dependencyGroup == null) {
+          String group = attributes.getValue("group");
+          if (group == null) {
             throw new SAXException("Invalid AMD file. The dependency elements must specify a [group] attribute");
           }
-          String dependencyProject = attributes.getValue("project");
-          if (dependencyProject == null) {
+          String project = attributes.getValue("project");
+          if (project == null) {
             throw new SAXException("Invalid AMD file. The dependency elements must specify a [project] attribute");
           }
-          String dependencyName = attributes.getValue("name");
-          if (dependencyName == null) {
+          name = attributes.getValue("name");
+          if (name == null) {
             throw new SAXException("Invalid AMD file. The dependency elements must specify a [name] attribute");
           }
-          String dependencyType = attributes.getValue("type");
-          if (dependencyType == null) {
+          String type = attributes.getValue("type");
+          if (type == null) {
             throw new SAXException("Invalid AMD file. The dependency elements must specify a [type] attribute");
           }
-          String dependencyVersion = attributes.getValue("version");
-          if (dependencyVersion == null) {
+          String version = attributes.getValue("version");
+          if (version == null) {
             throw new SAXException("Invalid AMD file. The dependency elements must specify a [version] attribute");
           }
 
-          if (group == null) {
+          if (this.group == null) {
             throw new SAXException("Invalid AMD file. A dependency doesn't appear to be inside a dependency-group element");
           }
 
-          Artifact dependency = new Artifact(new ArtifactID(dependencyGroup, dependencyProject, dependencyName, dependencyType), new Version(dependencyVersion), false);
-          group.dependencies.add(dependency);
+          dependencyId = new ArtifactID(group, project, name, type);
+          dependencyVersion = new Version(version);
+          break;
+        case "exclusion":
+          group = attributes.getValue("group");
+          if (group == null) {
+            throw new SAXException("Invalid AMD file. The exclusion elements must specify a [group] attribute");
+          }
+          project = attributes.getValue("project");
+          if (project == null) {
+            throw new SAXException("Invalid AMD file. The exclusion elements must specify a [project] attribute");
+          }
+          name = attributes.getValue("name");
+          if (name == null) {
+            throw new SAXException("Invalid AMD file. The exclusion elements must specify a [name] attribute");
+          }
+          type = attributes.getValue("type");
+          if (type == null) {
+            throw new SAXException("Invalid AMD file. The exclusion elements must specify a [type] attribute");
+          }
 
+          if (dependencyId == null || dependencyVersion == null) {
+            throw new SAXException("Invalid AMD file. An exclusion doesn't appear to be inside a dependency element");
+          }
+
+          exclusions.add(new ArtifactID(group, project, name, type));
           break;
         case "license":
           licenseId = attributes.getValue("type");
@@ -206,7 +251,6 @@ public class ArtifactTools {
           }
 
           licenseText = new StringBuilder();
-
           break;
         case "artifact-meta-data":
           if (attributes.getValue("license") != null) {

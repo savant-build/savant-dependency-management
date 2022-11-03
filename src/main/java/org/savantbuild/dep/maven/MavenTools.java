@@ -113,7 +113,7 @@ public class MavenTools {
       if (propertiesNode != null) {
         NodeList propertyList = propertiesNode.getChildNodes();
         for (int i = 0; i < propertyList.getLength(); i++) {
-          String name = propertyList.item(i).getAttributes().getNamedItem("name").getNodeValue();
+          String name = propertyList.item(i).getNodeName();
           String value = propertyList.item(i).getTextContent().trim();
           pom.properties.put(name, value);
         }
@@ -180,19 +180,41 @@ public class MavenTools {
     return value;
   }
 
-  public static Dependencies toSavantDependencies(POM pom) {
+  public static Dependencies toSavantDependencies(POM pom, Map<String, Artifact> mappings) {
     Dependencies savantDependencies = new Dependencies();
     pom.resolveAllDependencies().forEach(dep -> {
       String groupName = dep.scope;
+      if (dep.optional != null && dep.optional.equalsIgnoreCase("true")) {
+        groupName += "-optional";
+      }
+
       DependencyGroup savantDependencyGroup = savantDependencies.groups.get(groupName);
       if (savantDependencyGroup == null) {
         savantDependencyGroup = new DependencyGroup(groupName, true);
         savantDependencies.groups.put(groupName, savantDependencyGroup);
       }
 
+      List<ArtifactID> exclusions = new ArrayList<>();
+      if (dep.exclusions.size() > 0) {
+        for (MavenExclusion exclusion : dep.exclusions) {
+          exclusions.add(new ArtifactID(exclusion.group, exclusion.id, exclusion.id, "*"));
+        }
+      }
+
       List<License> licenses = toSavantLicenses(pom);
-      dep.savantArtifact = new ReifiedArtifact(new ArtifactID(dep.group, dep.id, dep.getArtifactName(), (dep.type == null ? "jar" : dep.type)), new Version(dep.version), licenses);
-      savantDependencyGroup.dependencies.add(new Artifact(dep.savantArtifact.id, dep.savantArtifact.version, false));
+      Artifact mapping = mappings.get(dep.toSpecification());
+      if (mapping != null) {
+        dep.savantArtifact = new ReifiedArtifact(mapping.id, mapping.version, licenses);
+      } else {
+        dep.savantArtifact = new ReifiedArtifact(
+            new ArtifactID(dep.group, dep.id, dep.getArtifactName(), (dep.type == null ? "jar" : dep.type)),
+            new Version(dep.version),
+            exclusions,
+            licenses
+        );
+      }
+
+      savantDependencyGroup.dependencies.add(new Artifact(dep.savantArtifact.id, dep.savantArtifact.version, false, exclusions));
     });
 
     return savantDependencies;
@@ -249,12 +271,19 @@ public class MavenTools {
     artifact.optional = childText(dependencyNode, "optional");
     artifact.scope = childText(dependencyNode, "scope");
 
-    NodeList exclusions = dependencyNode.getElementsByTagName("exclusions");
-    if (exclusions.getLength() > 0) {
-      throw new POMException("Savant is currently not able to support Maven POMs with exclusions. These really should " +
-          "never exist and it is an indicator that a project somewhere in the dependency graph incorrectly specified a dependency. " +
-          "For example, they might have marked a `test` dependency as `compile`. This forces exclusions downstream to avoid shipping " +
-          "bad dependencies. We'll eventually figure this out, but for now, you'll need to use the Savant Maven Bridge to fix this.");
+    Element exclusions = firstChild(dependencyNode, "exclusions");
+    if (exclusions != null) {
+      NodeList exclusionList = exclusions.getElementsByTagName("exclusion");
+      for (int i = 0; i < exclusionList.getLength(); i++) {
+        if (exclusionList.item(i).getNodeType() != Node.ELEMENT_NODE) {
+          continue;
+        }
+
+        Element exclusion = (Element) exclusionList.item(i);
+        String group = childText(exclusion, "groupId");
+        String id = childText(exclusion, "artifactId");
+        artifact.exclusions.add(new MavenExclusion(group, id));
+      }
     }
 
     return artifact;

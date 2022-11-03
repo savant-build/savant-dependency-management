@@ -44,6 +44,8 @@ public final class License {
 
   public static final Map<String, License> Licenses = new HashMap<>();
 
+  public boolean customText;
+
   @JsonProperty("detailsUrl")
   public String detailsURL;
 
@@ -84,11 +86,13 @@ public final class License {
       throw new LicenseException(identifier);
     }
 
+    this.customText = true;
     this.identifier = identifier;
     this.text = text;
   }
 
   public License(License other) {
+    this.customText = other.customText;
     this.detailsURL = other.detailsURL;
     this.exception = other.exception;
     this.fsfLibre = other.fsfLibre;

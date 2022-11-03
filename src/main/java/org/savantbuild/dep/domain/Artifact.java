@@ -15,6 +15,9 @@
  */
 package org.savantbuild.dep.domain;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 
 import org.savantbuild.domain.Version;
@@ -34,11 +37,20 @@ import static java.util.Arrays.stream;
  * @author Brian Pontarelli
  */
 public class Artifact {
+  public final List<ArtifactID> exclusions;
+
   public final ArtifactID id;
 
   public final boolean skipCompatibilityCheck;
 
   public final Version version;
+
+  /**
+   * Shorthand for {@link Artifact#Artifact(ArtifactID, Version, boolean, List)} that passes in null for the exclusions.
+   */
+  public Artifact(ArtifactID id, Version version, boolean skipCompatibilityCheck) {
+    this(id, version, skipCompatibilityCheck, null);
+  }
 
   /**
    * Constructs an Artifact with the given ID and version.
@@ -47,13 +59,26 @@ public class Artifact {
    * @param version                The version of the artifact.
    * @param skipCompatibilityCheck Determines if the compatibility check is skipped for this artifact or not.
    */
-  public Artifact(ArtifactID id, Version version, boolean skipCompatibilityCheck) {
+  public Artifact(ArtifactID id, Version version, boolean skipCompatibilityCheck, List<ArtifactID> exclusions) {
     Objects.requireNonNull(id, "Artifacts must have an ArtifactID");
     Objects.requireNonNull(version, "Artifacts must have a Version");
 
     this.id = id;
     this.skipCompatibilityCheck = skipCompatibilityCheck;
     this.version = version;
+
+    if (exclusions != null) {
+      this.exclusions = Collections.unmodifiableList(new ArrayList<>(exclusions));
+    } else {
+      this.exclusions = Collections.emptyList();
+    }
+  }
+
+  /**
+   * Shorthand for {@link Artifact#Artifact(String, boolean, List)} that passes in null for the exclusions.
+   */
+  public Artifact(String spec, boolean skipCompatibilityCheck) {
+    this(spec, skipCompatibilityCheck, null);
   }
 
   /**
@@ -76,15 +101,19 @@ public class Artifact {
    *
    * @param spec                   The spec.
    * @param skipCompatibilityCheck Determines if the compatibility check is skipped for this artifact or not.
+   * @param exclusions             (Optional) Any exclusions of the artifact.
    */
-  public Artifact(String spec, boolean skipCompatibilityCheck) {
+  public Artifact(String spec, boolean skipCompatibilityCheck, List<ArtifactID> exclusions) {
+    Objects.requireNonNull(spec, "Artifacts must have a full specification");
+
     this.skipCompatibilityCheck = skipCompatibilityCheck;
+
     String[] parts = spec.split(":");
     if (parts.length < 3) {
       throw new IllegalArgumentException("Invalid artifact specification [" + spec + "]. It must have 3, 4, or 5 parts");
     }
 
-    if (stream(parts).filter(String::isEmpty).count() > 0) {
+    if (stream(parts).anyMatch(String::isEmpty)) {
       throw new IllegalArgumentException("Invalid artifact specification [" + spec + "]. One of the parts is empty (i.e. foo::3.0");
     }
 
@@ -100,19 +129,20 @@ public class Artifact {
     } else {
       throw new IllegalArgumentException("Invalid artifact specification [" + spec + "]. It must have 3, 4, or 5 parts");
     }
+
+    if (exclusions != null) {
+      this.exclusions = Collections.unmodifiableList(new ArrayList<>(exclusions));
+    } else {
+      this.exclusions = Collections.emptyList();
+    }
   }
 
   @Override
   public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || !(o instanceof Artifact)) {
-      return false;
-    }
-
-    Artifact artifact = (Artifact) o;
-    return id.equals(artifact.id) && version.equals(artifact.version);
+    if (this == o) return true;
+    if (!(o instanceof Artifact)) return false;
+    final Artifact artifact = (Artifact) o;
+    return Objects.equals(exclusions, artifact.exclusions) && Objects.equals(id, artifact.id) && Objects.equals(version, artifact.version);
   }
 
   /**
@@ -141,7 +171,7 @@ public class Artifact {
    *
    * @return The file name.
    */
-  public String getArtifactFilePOM() {
+  public String getArtifactPOMFile() {
     return prefix() + ".pom";
   }
 
@@ -207,13 +237,11 @@ public class Artifact {
 
   @Override
   public int hashCode() {
-    int result = id.hashCode();
-    result = 31 * result + version.hashCode();
-    return result;
+    return Objects.hash(exclusions, id, version);
   }
 
   /**
-   * @return Whether or not the version of this artifact is an integration build version.
+   * @return Whether the version of this artifact is an integration build version.
    */
   public boolean isIntegrationBuild() {
     return version.isIntegration();

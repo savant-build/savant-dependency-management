@@ -58,6 +58,6 @@ public class ArtifactMetaData {
   }
 
   public ReifiedArtifact toLicensedArtifact(Artifact dependency) {
-    return new ReifiedArtifact(dependency.id, dependency.version, licenses);
+    return new ReifiedArtifact(dependency.id, dependency.version, dependency.exclusions, licenses);
   }
 }
