@@ -192,6 +192,9 @@ public class MavenTools {
     Dependencies savantDependencies = new Dependencies();
     pom.resolveAllDependencies().forEach(dep -> {
       String groupName = dep.scope;
+      if (groupName.equalsIgnoreCase("test")) {
+        groupName = "test-compile";
+      }
       if (dep.optional != null && dep.optional.equalsIgnoreCase("true")) {
         groupName += "-optional";
       }

@@ -47,14 +47,6 @@ import static org.testng.Assert.assertTrue;
  * @author Brian Pontarelli
  */
 public class WorkflowTest extends BaseUnitTest {
-  private final Path expectedAMD = Paths.get("build/test/cache/org/apache/groovy/groovy/4.0.5/groovy-4.0.5.jar.amd");
-
-  private final Path expectedAMD_MD5 = Paths.get("build/test/cache/org/apache/groovy/groovy/4.0.5/groovy-4.0.5.jar.amd.md5");
-
-  private final Path expectedPOM = Paths.get("build/test/cache/org/apache/groovy/groovy/4.0.5/groovy-4.0.5.pom");
-
-  private final Path expectedPOM_MD5 = Paths.get("build/test/cache/org/apache/groovy/groovy/4.0.5/groovy-4.0.5.pom.md5");
-
   @Test
   public void mavenCentral() throws Exception {
     Path cache = projectDir.resolve("build/test/cache");
@@ -101,12 +93,12 @@ public class WorkflowTest extends BaseUnitTest {
     );
     assertEquals(amd.dependencies, expected);
 
-    assertTrue(Files.isRegularFile(expectedPOM));
-    assertTrue(Files.isRegularFile(expectedPOM_MD5));
+    assertTrue(Files.isRegularFile(Paths.get("build/test/cache/org/apache/groovy/groovy/4.0.5/groovy-4.0.5.pom")));
+    assertTrue(Files.isRegularFile(Paths.get("build/test/cache/org/apache/groovy/groovy/4.0.5/groovy-4.0.5.pom.md5")));
 
     // AMDs are not written to the cache. They are stored in memory
-    assertFalse(Files.isRegularFile(expectedAMD));
-    assertFalse(Files.isRegularFile(expectedAMD_MD5));
+    assertFalse(Files.isRegularFile(Paths.get("build/test/cache/org/apache/groovy/groovy/4.0.5/groovy-4.0.5.jar.amd")));
+    assertFalse(Files.isRegularFile(Paths.get("build/test/cache/org/apache/groovy/groovy/4.0.5/groovy-4.0.5.jar.amd.md5")));
   }
 
   @Test
@@ -144,35 +136,47 @@ public class WorkflowTest extends BaseUnitTest {
     assertNotNull(amd);
 
     Dependencies expected = new Dependencies(
+        new DependencyGroup("compile", true,
+            new Artifact("io.netty:netty-common:4.1.65", "4.1.65.Final", false, Collections.emptyList()),
+            new Artifact("io.netty:netty-buffer:4.1.65", "4.1.65.Final", false, Collections.emptyList()),
+            new Artifact("io.netty:netty-transport:4.1.65", "4.1.65.Final", false, Collections.emptyList()),
+            new Artifact("io.netty:netty-handler:4.1.65", "4.1.65.Final", false, Collections.emptyList()),
+            new Artifact("io.netty:netty-handler-proxy:4.1.65", "4.1.65.Final", false, Collections.emptyList()),
+            new Artifact("io.netty:netty-codec-http:4.1.65", "4.1.65.Final", false, Collections.emptyList()),
+            new Artifact("io.netty:netty-codec-http2:4.1.65", "4.1.65.Final", false, Collections.emptyList()),
+            new Artifact("io.netty:netty-resolver:4.1.65", "4.1.65.Final", false, Collections.emptyList()),
+            new Artifact("io.netty:netty-resolver-dns:4.1.65", "4.1.65.Final", false, Collections.emptyList()),
+            new Artifact("com.fasterxml.jackson.core:jackson-core:2.11.3"),
+            new Artifact("com.fasterxml.jackson.core:jackson-databind:2.11.3")
+        ),
         new DependencyGroup("compile-optional", true,
-            new Artifact("org.codehaus.gpars:gpars:1.2.1", null, false,
-                Collections.singletonList(
-                    new ArtifactID("org.codehaus.groovy:groovy-all:*")
-                )
-            ),
-            new Artifact("org.apache.ivy:ivy:2.5.0", null, false,
-                Collections.singletonList(
-                    new ArtifactID("*:*:*")
-                )
-            ),
-            new Artifact("com.thoughtworks.xstream:xstream:1.4.19", null, false,
-                Arrays.asList(
-                    new ArtifactID("junit:junit:*"),
-                    new ArtifactID("xpp3:xpp3_min:*"),
-                    new ArtifactID("xmlpull:xmlpull:*"),
-                    new ArtifactID("jmock:jmock:*")
-                )
-            ),
-            new Artifact("org.fusesource.jansi:jansi:2.4.0")
+            new Artifact("io.netty:netty-transport-native-epoll:4.1.65", "4.1.65.Final", false, Collections.emptyList()),
+            new Artifact("io.netty:netty-transport-native-kqueue:4.1.65", "4.1.65.Final", false, Collections.emptyList()),
+            new Artifact("io.vertx:vertx-codegen:3.9.8"),
+            new Artifact("io.vertx:vertx-docgen:0.9.2")
+        ),
+        new DependencyGroup("provided", true,
+            new Artifact("log4j:log4j:1.2.17"),
+            new Artifact("org.apache.logging.log4j:log4j-api:2.8.2"),
+            new Artifact("org.apache.logging.log4j:log4j-core:2.8.2"),
+            new Artifact("org.slf4j:slf4j-api:1.7.21")
+        ),
+        new DependencyGroup("test-compile", true,
+            new Artifact("junit:junit:4.13.1"),
+            new Artifact("org.apache.directory.server:apacheds-protocol-dns:1.5.7"),
+            new Artifact("org.assertj:assertj-core:3.4.1"),
+            new Artifact("org.slf4j:slf4j-simple:1.7.21"),
+            new Artifact("io.netty:netty-tcnative-boringssl-static:2.0.39", "2.0.39.Final", false, Collections.emptyList()),
+            new Artifact("org.openjdk.jmh:jmh-core:1.19")
         )
     );
     assertEquals(amd.dependencies, expected);
 
-    assertTrue(Files.isRegularFile(expectedPOM));
-    assertTrue(Files.isRegularFile(expectedPOM_MD5));
+    assertTrue(Files.isRegularFile(Paths.get("build/test/cache/io/vertx/vertx-core/3.9.8/vertx-core-3.9.8.pom")));
+    assertTrue(Files.isRegularFile(Paths.get("build/test/cache/io/vertx/vertx-core/3.9.8/vertx-core-3.9.8.pom.md5")));
 
     // AMDs are not written to the cache. They are stored in memory
-    assertFalse(Files.isRegularFile(expectedAMD));
-    assertFalse(Files.isRegularFile(expectedAMD_MD5));
+    assertFalse(Files.isRegularFile(Paths.get("build/test/cache/io/vertx/vertx-core/3.9.8/vertx-core-3.9.8.jar.amd")));
+    assertFalse(Files.isRegularFile(Paths.get("build/test/cache/io/vertx/vertx-core/3.9.8/vertx-core-3.9.8.jar.amd.md5")));
   }
 }
