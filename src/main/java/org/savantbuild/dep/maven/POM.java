@@ -20,7 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * The necessary information from the POM.
@@ -76,70 +76,114 @@ public class POM {
     return Objects.hash(id, group, version);
   }
 
+  public List<MavenDependency> imports() {
+    return dependenciesDefinitions.stream()
+                                  .filter(def -> def.scope.equalsIgnoreCase("import"))
+                                  .collect(Collectors.toList());
+  }
+
+  public void removeDependencyDefinition(MavenDependency def) {
+    dependenciesDefinitions.remove(def);
+  }
+
+  public void replaceKnownVariablesAndFillInDependencies() {
+    Map<String, String> allProperties = resolveAllProperties();
+    group = MavenTools.replaceProperties(group, allProperties);
+    id = MavenTools.replaceProperties(id, allProperties);
+    version = MavenTools.replaceProperties(version, allProperties);
+    parentGroup = MavenTools.replaceProperties(parentGroup, allProperties);
+    parentId = MavenTools.replaceProperties(parentId, allProperties);
+    parentVersion = MavenTools.replaceProperties(parentVersion, allProperties);
+
+    for (MavenDependency def : dependenciesDefinitions) {
+      fillInDependency(def, allProperties);
+    }
+
+    for (MavenDependency dep : dependencies) {
+      fillInDependency(dep, allProperties);
+    }
+  }
+
   public List<MavenDependency> resolveAllDependencies() {
-    Map<String, String> allProperties = new HashMap<>(properties);
     List<MavenDependency> allDeps = new ArrayList<>(dependencies);
     POM current = parent;
     while (current != null) {
       allDeps.addAll(current.dependencies);
+      current = current.parent;
+    }
+
+    return allDeps;
+  }
+
+  public List<MavenDependency> resolveAllDependencyDefinitions() {
+    List<MavenDependency> allDefinitions = new ArrayList<>(dependenciesDefinitions);
+    POM current = parent;
+    while (current != null) {
+      allDefinitions.addAll(current.dependenciesDefinitions);
+      current = current.parent;
+    }
+
+    return allDefinitions;
+  }
+
+  public Map<String, String> resolveAllProperties() {
+    Map<String, String> allProperties = new HashMap<>(properties);
+    POM current = parent;
+    while (current != null) {
       current.properties.forEach(allProperties::putIfAbsent);
       current.properties.forEach((key, value) -> allProperties.putIfAbsent("parent." + key, value));
       current.properties.forEach((key, value) -> allProperties.putIfAbsent("project.parent." + key, value));
       current = current.parent;
     }
 
-    // Now resolve everything
-    for (MavenDependency dep : allDeps) {
-      if (dep.optional == null) {
-        dep.optional = resolveDependencyOptional(dep);
-      }
-      dep.optional = MavenTools.replaceProperties(dep.optional, allProperties);
-
-      if (dep.scope == null) {
-        dep.scope = resolveDependencyScope(dep);
-      }
-      dep.scope = MavenTools.replaceProperties(dep.scope, allProperties);
-
-      if (dep.version == null) {
-        dep.version = resolveDependencyVersion(dep);
-      }
-      dep.version = MavenTools.replaceProperties(dep.version, allProperties);
-      if (dep.version == null) {
-        throw new POMException("Unable to resolve version for Maven dependency [" + dep + "]");
-      }
-    }
-
-    return allDeps;
+    return allProperties;
   }
 
-  public String resolveDependencyOptional(MavenDependency dependency) {
-    Optional<MavenDependency> optional = dependenciesDefinitions.stream().filter((def) -> def.group.equals(dependency.group) && def.id.equals(dependency.id)).findFirst();
-    if (!optional.isPresent() && parent != null) {
-      return parent.resolveDependencyOptional(dependency);
-    }
-
-    return optional.map(mavenArtifact -> mavenArtifact.optional).orElse(null);
-  }
-
-  public String resolveDependencyScope(MavenDependency dependency) {
-    Optional<MavenDependency> optional = dependenciesDefinitions.stream().filter((def) -> def.group.equals(dependency.group) && def.id.equals(dependency.id)).findFirst();
-    if (!optional.isPresent() && parent != null) {
-      return parent.resolveDependencyScope(dependency);
-    }
-
-    return optional.map(mavenArtifact -> mavenArtifact.scope).orElse("compile");
-  }
-
-  public String resolveDependencyVersion(MavenDependency dependency) {
-    Optional<MavenDependency> optional = dependenciesDefinitions.stream().filter((def) -> def.group.equals(dependency.group) && def.id.equals(dependency.id)).findFirst();
-    if (!optional.isPresent() && parent != null) {
-      return parent.resolveDependencyVersion(dependency);
-    }
-
-    return optional.map(mavenArtifact -> mavenArtifact.version).orElse(null);
+  public String toSpecification() {
+    return group + ":" + id + ":" + version;
   }
 
   public String toString() {
     return group + ":" + id + ":" + version;
+  }
+
+  private void fillInDependency(MavenDependency dep, Map<String, String> allProperties) {
+    dep.group = MavenTools.replaceProperties(dep.group, properties);
+    dep.id = MavenTools.replaceProperties(dep.id, properties);
+    dep.type = MavenTools.replaceProperties(dep.type, properties);
+    dep.scope = MavenTools.replaceProperties(dep.scope, properties);
+    dep.version = MavenTools.replaceProperties(dep.version, properties);
+    dep.classifier = MavenTools.replaceProperties(dep.classifier, properties);
+
+    List<MavenDependency> allDefinitions = resolveAllDependencyDefinitions();
+    if (dep.optional == null) {
+      dep.optional = allDefinitions.stream()
+                                   .filter(def -> def.group.equals(dep.group) && def.id.equals(dep.id))
+                                   .findFirst()
+                                   .map(def -> def.optional)
+                                   .orElse(null);
+    }
+    dep.optional = MavenTools.replaceProperties(dep.optional, allProperties);
+
+    if (dep.scope == null) {
+      dep.scope = allDefinitions.stream()
+                                .filter(def -> def.group.equals(dep.group) && def.id.equals(dep.id))
+                                .findFirst()
+                                .map(def -> def.scope)
+                                .orElse(null);
+    }
+    dep.scope = MavenTools.replaceProperties(dep.scope, allProperties);
+    if (dep.scope == null) {
+      dep.scope = "compile";
+    }
+
+    if (dep.version == null) {
+      dep.version = allDefinitions.stream()
+                                  .filter(def -> def.group.equals(dep.group) && def.id.equals(dep.id))
+                                  .findFirst()
+                                  .map(def -> def.version)
+                                  .orElse(null);
+    }
+    dep.version = MavenTools.replaceProperties(dep.version, allProperties);
   }
 }

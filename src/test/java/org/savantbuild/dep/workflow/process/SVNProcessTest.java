@@ -23,6 +23,7 @@ import org.savantbuild.dep.PathTools;
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.License;
 import org.savantbuild.dep.domain.ReifiedArtifact;
+import org.savantbuild.dep.domain.ResolvableItem;
 import org.savantbuild.dep.workflow.PublishWorkflow;
 import org.savantbuild.lang.RuntimeTools;
 import org.savantbuild.security.MD5;
@@ -62,10 +63,13 @@ public class SVNProcessTest extends BaseUnitTest {
     MD5.writeMD5(MD5.forBytes(Files.readAllBytes(file), "BaseTest.java"), md5File);
 
     SVNProcess process = new SVNProcess(output, "file:///" + projectDir.resolve("build/test/svn-repository").toRealPath(), null, null);
-    process.publish(artifact, artifact.getArtifactFile() + ".md5", md5File);
-    process.publish(artifact, artifact.getArtifactFile(), file);
+    ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile() + ".md5");
+    process.publish(item, md5File);
 
-    process.fetch(artifact, artifact.getArtifactFile(), new PublishWorkflow(new CacheProcess(output, cache.toString())));
+    item = new ResolvableItem(item, artifact.getArtifactFile());
+    process.publish(item, file);
+
+    process.fetch(item, new PublishWorkflow(new CacheProcess(output, cache.toString())));
     assertTrue(Files.isRegularFile(projectDir.resolve("build/test/cache/org/savantbuild/test/svn-process-test/1.0.0/svn-process-test-1.0.0.jar")));
     assertTrue(Files.isRegularFile(projectDir.resolve("build/test/cache/org/savantbuild/test/svn-process-test/1.0.0/svn-process-test-1.0.0.jar.md5")));
   }

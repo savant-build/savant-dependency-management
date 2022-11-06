@@ -15,7 +15,7 @@
  */
 package org.savantbuild.dep.workflow.process;
 
-import org.savantbuild.dep.domain.Artifact;
+import org.savantbuild.dep.domain.ResolvableItem;
 
 /**
  * Thrown when a process encounters a failure (network failure, IO exception, etc.).
@@ -23,25 +23,19 @@ import org.savantbuild.dep.domain.Artifact;
  * @author Brian Pontarelli
  */
 public class ProcessFailureException extends RuntimeException {
-  public final Artifact artifact;
-
-  public ProcessFailureException(Artifact artifact) {
-    super("A process failed for the artifact [" + artifact + "].");
-    this.artifact = artifact;
+  public ProcessFailureException(ResolvableItem item) {
+    super("A process failed for the artifact [" + item + "].");
   }
 
-  public ProcessFailureException(Artifact artifact, Throwable cause) {
-    super("A process failed for the artifact [" + artifact + "]." + (cause != null ? " The original error is [" + cause.getMessage() + "]\n" : "\n"), cause);
-    this.artifact = artifact;
+  public ProcessFailureException(ResolvableItem item, Throwable cause) {
+    super("A process failed for the artifact [" + item + "]." + (cause != null ? " The original error is [" + cause.getMessage() + "]\n" : "\n"), cause);
   }
 
-  public ProcessFailureException(Artifact artifact, String message) {
+  public ProcessFailureException(String message) {
     super(message);
-    this.artifact = artifact;
   }
 
-  public ProcessFailureException(Artifact artifact, String message, Throwable cause) {
+  public ProcessFailureException(String message, Throwable cause) {
     super(message, cause);
-    this.artifact = artifact;
   }
 }

@@ -38,6 +38,7 @@ import org.savantbuild.dep.domain.CompatibilityException;
 import org.savantbuild.dep.domain.Dependencies;
 import org.savantbuild.dep.domain.Publication;
 import org.savantbuild.dep.domain.ReifiedArtifact;
+import org.savantbuild.dep.domain.ResolvableItem;
 import org.savantbuild.dep.domain.ResolvedArtifact;
 import org.savantbuild.domain.Version;
 import org.savantbuild.dep.graph.ArtifactGraph;
@@ -98,15 +99,20 @@ public class DefaultDependencyService implements DependencyService {
 
     output.infoln("Publishing [%s]", publication);
 
+    ResolvableItem item = new ResolvableItem(publication.artifact.id.group, publication.artifact.id.project, publication.artifact.id.name,
+        publication.artifact.version.toString(), publication.artifact.getArtifactMetaDataFile());
     try {
       Path amdFile = ArtifactTools.generateXML(publication.metaData);
-      publishItem(publication.artifact, publication.artifact.getArtifactMetaDataFile(), amdFile, workflow);
-      publishItem(publication.artifact, publication.artifact.getArtifactFile(), publication.file, workflow);
+      publishItem(item, amdFile, workflow);
+
+      item = new ResolvableItem(item, publication.artifact.getArtifactFile());
+      publishItem(item, publication.file, workflow);
 
       if (publication.sourceFile != null) {
-        publishItem(publication.artifact, publication.artifact.getArtifactSourceFile(), publication.sourceFile, workflow);
+        item = new ResolvableItem(item, publication.artifact.getArtifactSourceFile());
+        publishItem(item, publication.sourceFile, workflow);
       } else {
-        workflow.publishNegative(publication.artifact, publication.artifact.getArtifactSourceFile());
+        workflow.publishNegative(item);
       }
     } catch (IOException e) {
       throw new PublishException(publication, e);
@@ -233,18 +239,18 @@ public class DefaultDependencyService implements DependencyService {
     // on the versions we have already kept). Then for each of those, map to the dependency version (the version of
     // the destination node). Then get the min and max.
     Version min = significantInbound.stream()
-                                    .map((edge) -> edge.getValue().dependencyVersion)
+                                    .map(edge -> edge.getValue().dependencyVersion)
                                     .min(Version::compareTo)
                                     .orElse(null);
     Version max = significantInbound.stream()
-                                    .map((edge) -> edge.getValue().dependencyVersion)
+                                    .map(edge -> edge.getValue().dependencyVersion)
                                     .max(Version::compareTo)
                                     .orElse(null);
 
     output.debugln("Min [%s] and max [%s]", min, max);
 
     // This dependency is no longer used
-    if (min == null || max == null) {
+    if (min == null) {
       output.debugln("NO LONGER USED");
       return false;
     }
@@ -333,19 +339,22 @@ public class DefaultDependencyService implements DependencyService {
   /**
    * Publishes a single item for the given artifact.
    *
-   * @param artifact The artifact.
    * @param item     The item to publish.
    * @param file     The file to publish.
    * @param workflow The publish workflow.
    * @throws IOException If the publication fails.
    */
-  private void publishItem(Artifact artifact, String item, Path file, PublishWorkflow workflow) throws IOException {
+  private void publishItem(ResolvableItem item, Path file, PublishWorkflow workflow) throws IOException {
+    // Publish the MD5
     MD5 md5 = MD5.forPath(file);
     File tempFile = File.createTempFile("artifact-item", "md5");
     tempFile.deleteOnExit();
     Path md5File = tempFile.toPath();
     MD5.writeMD5(md5, md5File);
-    workflow.publish(artifact, item + ".md5", md5File);
-    workflow.publish(artifact, item, file);
+    ResolvableItem md5Item = new ResolvableItem(item, item.item + ".md5");
+    workflow.publish(md5Item, md5File);
+
+    // Now publish the item itself
+    workflow.publish(item, file);
   }
 }

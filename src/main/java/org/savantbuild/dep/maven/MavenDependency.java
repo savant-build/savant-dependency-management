@@ -89,10 +89,6 @@ public class MavenDependency extends POM {
     return Objects.hash(super.hashCode(), classifier, exclusions, optional, scope, type);
   }
 
-  public String toSpecification() {
-    return group + ":" + id + ":" + version + (type != null ? ":" + type : "");
-  }
-
   public String toString() {
     if ((classifier != null && classifier.trim().length() > 0)) {
       return group + ":" + id + ":" + id + "-" + classifier + ":" + version + ":" + (type == null ? "jar" : type) + "{" + scope + "}";

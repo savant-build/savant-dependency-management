@@ -61,12 +61,12 @@ public class MavenToolsTest extends BaseUnitTest {
     assertEquals(dependencies, new Dependencies(
         new DependencyGroup(
             "compile-optional", true,
-            new Artifact("org.codehaus.gpars:gpars:1.2.1", false, Collections.singletonList(new ArtifactID("org.codehaus.groovy:groovy-all"))),
-            new Artifact("org.apache.ivy:ivy:2.5.0", false, Collections.singletonList(new ArtifactID("*:*"))),
-            new Artifact("com.thoughtworks.xstream:xstream:1.4.19", false, Arrays.asList(
-                new ArtifactID("junit:junit"), new ArtifactID("xpp3:xpp3_min"), new ArtifactID("xmlpull:xmlpull"), new ArtifactID("jmock:jmock")
+            new Artifact("org.codehaus.gpars:gpars:1.2.1", null, false, Collections.singletonList(new ArtifactID("org.codehaus.groovy:groovy-all:*"))),
+            new Artifact("org.apache.ivy:ivy:2.5.0", null, false, Collections.singletonList(new ArtifactID("*:*:*:*"))),
+            new Artifact("com.thoughtworks.xstream:xstream:1.4.19", null, false, Arrays.asList(
+                new ArtifactID("junit:junit:*"), new ArtifactID("xpp3:xpp3_min:*"), new ArtifactID("xmlpull:xmlpull:*"), new ArtifactID("jmock:jmock:*")
             )),
-            new Artifact("org.fusesource.jansi:jansi:2.4.0", false)
+            new Artifact("org.fusesource.jansi:jansi:2.4.0")
         )
     ));
   }

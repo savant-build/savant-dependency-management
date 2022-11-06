@@ -168,7 +168,7 @@ public class ArtifactTools {
         licenseId = null;
         licenseText = null;
       } else if (qName.equals("dependency")) {
-        group.dependencies.add(new Artifact(dependencyId, dependencyVersion, false, exclusions));
+        group.dependencies.add(new Artifact(dependencyId, dependencyVersion, exclusions));
         dependencyId = null;
         dependencyVersion = null;
         exclusions.clear();

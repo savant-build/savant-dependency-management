@@ -37,19 +37,19 @@ public class ReifiedArtifact extends Artifact {
   }
 
   public ReifiedArtifact(ArtifactID id, Version version, List<License> licenses) {
-    super(id, version, false);
+    super(id, version);
     Objects.requireNonNull(licenses, "Artifacts must have a license");
     this.licenses = licenses;
   }
 
   public ReifiedArtifact(ArtifactID id, Version version, List<ArtifactID> exclusions, List<License> licenses) {
-    super(id, version, false, exclusions);
+    super(id, version, exclusions);
     Objects.requireNonNull(licenses, "Artifacts must have a license");
     this.licenses = licenses;
   }
 
   /**
-   * See {@link Artifact#Artifact(String, boolean)} for what is allowed for the specification String.
+   * See {@link Artifact#Artifact(String)} for what is allowed for the specification String.
    *
    * @param spec     The specification String.
    * @param licenses The licenses.
@@ -59,13 +59,13 @@ public class ReifiedArtifact extends Artifact {
   }
 
   /**
-   * See {@link Artifact#Artifact(String, boolean)} for what is allowed for the specification String.
+   * See {@link Artifact#Artifact(String)} for what is allowed for the specification String.
    *
    * @param spec     The specification String.
    * @param licenses The licenses.
    */
   public ReifiedArtifact(String spec, List<License> licenses) {
-    super(spec, false);
+    super(spec);
     Objects.requireNonNull(licenses, "Artifacts must have a license");
     this.licenses = licenses;
   }

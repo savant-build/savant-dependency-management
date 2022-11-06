@@ -30,10 +30,10 @@ import org.savantbuild.dep.domain.Dependencies;
 import org.savantbuild.dep.domain.DependencyGroup;
 import org.savantbuild.dep.domain.License;
 import org.savantbuild.dep.domain.ReifiedArtifact;
-import org.savantbuild.dep.maven.workflow.process.MavenProcess;
 import org.savantbuild.dep.workflow.FetchWorkflow;
 import org.savantbuild.dep.workflow.PublishWorkflow;
 import org.savantbuild.dep.workflow.Workflow;
+import org.savantbuild.domain.Version;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;
@@ -78,17 +78,17 @@ public class WorkflowTest extends BaseUnitTest {
 
     Dependencies expected = new Dependencies(
         new DependencyGroup("compile-optional", true,
-            new Artifact("org.codehaus.gpars:gpars:1.2.1", false,
+            new Artifact("org.codehaus.gpars:gpars:1.2.1", null, false,
                 Collections.singletonList(
                     new ArtifactID("org.codehaus.groovy:groovy-all:*")
                 )
             ),
-            new Artifact("org.apache.ivy:ivy:2.5.0", false,
+            new Artifact("org.apache.ivy:ivy:2.5.0", null, false,
                 Collections.singletonList(
                     new ArtifactID("*:*:*")
                 )
             ),
-            new Artifact("com.thoughtworks.xstream:xstream:1.4.19", false,
+            new Artifact("com.thoughtworks.xstream:xstream:1.4.19", null, false,
                 Arrays.asList(
                     new ArtifactID("junit:junit:*"),
                     new ArtifactID("xpp3:xpp3_min:*"),
@@ -96,7 +96,7 @@ public class WorkflowTest extends BaseUnitTest {
                     new ArtifactID("jmock:jmock:*")
                 )
             ),
-            new Artifact("org.fusesource.jansi:jansi:2.4.0", false)
+            new Artifact("org.fusesource.jansi:jansi:2.4.0")
         )
     );
     assertEquals(amd.dependencies, expected);
@@ -125,7 +125,19 @@ public class WorkflowTest extends BaseUnitTest {
         ),
         output
     );
-    workflow.mappings.put("io.netty:netty-all:4.1.43.Final", new Artifact("io.netty:netty:4.1.43", false));
+    workflow.mappings.put("io.netty:netty-all:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-buffer:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-codec-http:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-codec-http2:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-common:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-handler:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-handler-proxy:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-resolver:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-resolver-dns:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-tcnative-boringssl-static:2.0.39.Final", new Version("2.0.39"));
+    workflow.mappings.put("io.netty:netty-transport:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-transport-native-epoll:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-transport-native-kqueue:4.1.65.Final", new Version("4.1.65"));
 
     Artifact artifact = new ReifiedArtifact("io.vertx:vertx-core:3.9.8", License.Licenses.get("Apache-2.0"));
     ArtifactMetaData amd = workflow.fetchMetaData(artifact);
@@ -133,17 +145,17 @@ public class WorkflowTest extends BaseUnitTest {
 
     Dependencies expected = new Dependencies(
         new DependencyGroup("compile-optional", true,
-            new Artifact("org.codehaus.gpars:gpars:1.2.1", false,
+            new Artifact("org.codehaus.gpars:gpars:1.2.1", null, false,
                 Collections.singletonList(
                     new ArtifactID("org.codehaus.groovy:groovy-all:*")
                 )
             ),
-            new Artifact("org.apache.ivy:ivy:2.5.0", false,
+            new Artifact("org.apache.ivy:ivy:2.5.0", null, false,
                 Collections.singletonList(
                     new ArtifactID("*:*:*")
                 )
             ),
-            new Artifact("com.thoughtworks.xstream:xstream:1.4.19", false,
+            new Artifact("com.thoughtworks.xstream:xstream:1.4.19", null, false,
                 Arrays.asList(
                     new ArtifactID("junit:junit:*"),
                     new ArtifactID("xpp3:xpp3_min:*"),
@@ -151,7 +163,7 @@ public class WorkflowTest extends BaseUnitTest {
                     new ArtifactID("jmock:jmock:*")
                 )
             ),
-            new Artifact("org.fusesource.jansi:jansi:2.4.0", false)
+            new Artifact("org.fusesource.jansi:jansi:2.4.0")
         )
     );
     assertEquals(amd.dependencies, expected);

@@ -17,13 +17,12 @@ package org.savantbuild.dep.workflow.process;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
 
 import org.savantbuild.dep.PathTools;
-import org.savantbuild.dep.domain.Artifact;
+import org.savantbuild.dep.domain.ResolvableItem;
 import org.savantbuild.dep.workflow.PublishWorkflow;
 import org.savantbuild.lang.RuntimeTools;
 import org.savantbuild.lang.RuntimeTools.ProcessResult;
@@ -61,29 +60,20 @@ public class SVNProcess implements Process {
   }
 
   /**
-   * Not implemented yet.
-   */
-  @Override
-  public void deleteIntegrationBuilds(Artifact artifact) throws ProcessFailureException {
-    throw new ProcessFailureException(artifact, "The [svn] process doesn't allow deleting of integration builds.");
-  }
-
-  /**
    * Fetches the artifact from the SubVersion repository by performing an export to a temporary file and checking the
    * MD5 sum if it exists.
    *
-   * @param artifact        The artifact to fetch and store.
    * @param item            The item to fetch.
    * @param publishWorkflow The publish workflow used to publish the artifact after it has been successfully fetched.
    * @return The File or null if it doesn't exist.
    * @throws ProcessFailureException If the SVN fetch failed.
    */
   @Override
-  public Path fetch(Artifact artifact, String item, PublishWorkflow publishWorkflow)
+  public Path fetch(ResolvableItem item, PublishWorkflow publishWorkflow)
       throws ProcessFailureException {
     try {
       Path md5File = PathTools.createTempPath("savant-svn-process", "export", true);
-      URI md5URI = NetTools.build(repository, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString(), item + ".md5");
+      URI md5URI = NetTools.build(repository, item.group.replace('.', '/'), item.project, item.version, item.item + ".md5");
       if (!export(md5URI, md5File)) {
         return null;
       }
@@ -93,58 +83,63 @@ public class SVNProcess implements Process {
         md5 = MD5.load(md5File);
       } catch (IOException e) {
         Files.delete(md5File);
-        throw new ProcessFailureException(artifact, e);
+        throw new ProcessFailureException(item, e);
       }
 
       Path itemFile = PathTools.createTempPath("savant-svn-process", "export", true);
-      URI itemURI = NetTools.build(repository, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString(), item);
+      URI itemURI = NetTools.build(repository, item.group.replace('.', '/'), item.project, item.version.toString(), item.item);
       if (!export(itemURI, itemFile)) {
         return null;
       }
 
       MD5 itemMD5 = MD5.forPath(itemFile);
       if (!itemMD5.equals(md5)) {
-        throw new MD5Exception("MD5 mismatch when fetching item from [" + itemURI.toString() + "]");
+        throw new MD5Exception("MD5 mismatch when fetching item from [" + itemURI + "]");
       }
 
       output.infoln("Downloaded from SubVersion at [%s]", itemURI);
 
-      md5File = publishWorkflow.publish(artifact, item + ".md5", md5File);
+      ResolvableItem md5Item = new ResolvableItem(item, item.item + ".md5");
+      md5File = publishWorkflow.publish(md5Item, md5File);
       try {
-        itemFile = publishWorkflow.publish(artifact, item, itemFile);
+        itemFile = publishWorkflow.publish(item, itemFile);
       } catch (ProcessFailureException e) {
         Files.delete(md5File);
-        throw new ProcessFailureException(artifact, e);
+        throw new ProcessFailureException(item, e);
       }
 
       return itemFile;
     } catch (IOException | InterruptedException e) {
-      throw new ProcessFailureException(artifact, e);
+      throw new ProcessFailureException(item, e);
     }
   }
 
   /**
    * Publishes the given artifact item into the SubVersion repository.
    *
-   * @param artifact     The artifact that the item might be associated with.
-   * @param item         The name of the item to publish.
-   * @param artifactFile The file that is the item.
+   * @param item     The item to publish.
+   * @param itemFile The file that is the item.
    * @return Always null.
    * @throws ProcessFailureException If the publish fails.
    */
   @Override
-  public Path publish(Artifact artifact, String item, Path artifactFile) throws ProcessFailureException {
+  public Path publish(ResolvableItem item, Path itemFile) throws ProcessFailureException {
     try {
-      URI uri = NetTools.build(repository, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString(), item);
-      if (!imprt(uri, artifactFile)) {
-        throw new ProcessFailureException(artifact, "Unable to publish artifact item [" + item + "] to [" + uri + "]");
+      URI uri = NetTools.build(repository, item.group.replace('.', '/'), item.project, item.version, item.item);
+      if (!imprt(uri, itemFile)) {
+        throw new ProcessFailureException("Unable to publish artifact item [" + item + "] to [" + uri + "]");
       }
 
       output.infoln("Published to SubVersion at [%s]", uri);
       return null;
     } catch (IOException | InterruptedException e) {
-      throw new ProcessFailureException(artifact, e);
+      throw new ProcessFailureException(item, e);
     }
+  }
+
+  @Override
+  public String toString() {
+    return "SVN(" + repository + ")";
   }
 
   private boolean export(URI uri, Path file) throws IOException, InterruptedException {
@@ -171,10 +166,5 @@ public class SVNProcess implements Process {
     output.debugln(result.output);
 
     return result.exitCode == 0;
-  }
-
-  @Override
-  public String toString() {
-    return "SVN(" + repository + ")";
   }
 }

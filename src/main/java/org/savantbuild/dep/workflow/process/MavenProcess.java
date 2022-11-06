@@ -13,9 +13,8 @@
  * either express or implied. See the License for the specific
  * language governing permissions and limitations under the License.
  */
-package org.savantbuild.dep.maven.workflow.process;
+package org.savantbuild.dep.workflow.process;
 
-import org.savantbuild.dep.workflow.process.URLProcess;
 import org.savantbuild.output.Output;
 
 /**

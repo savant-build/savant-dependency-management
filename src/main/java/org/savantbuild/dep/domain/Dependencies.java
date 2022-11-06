@@ -19,6 +19,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * This class models a set of dependencies on Dependency (artifacts) objects broken into DependencyGroups.
@@ -48,9 +49,9 @@ public class Dependencies {
   }
 
   /**
-   * Collects all of the artifacts from all of the groups.
+   * Collects all the artifacts from all the groups.
    *
-   * @return All of the artifacts.
+   * @return All the artifacts.
    */
   public Set<Artifact> getAllArtifacts() {
     Set<Artifact> set = new HashSet<>();
@@ -61,5 +62,10 @@ public class Dependencies {
   @Override
   public int hashCode() {
     return groups.hashCode();
+  }
+
+  @Override
+  public String toString() {
+    return "{\n\t" + groups.values().stream().map(DependencyGroup::toString).collect(Collectors.joining("\n")) + "}\n";
   }
 }

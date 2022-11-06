@@ -18,13 +18,22 @@ package org.savantbuild.dep.workflow;
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.ArtifactMetaData;
-import org.savantbuild.domain.VersionException;
+import org.savantbuild.dep.domain.ResolvableItem;
+import org.savantbuild.dep.maven.MavenDependency;
+import org.savantbuild.dep.maven.MavenTools;
+import org.savantbuild.dep.maven.POM;
 import org.savantbuild.dep.workflow.process.NegativeCacheException;
 import org.savantbuild.dep.workflow.process.ProcessFailureException;
 import org.savantbuild.dep.xml.ArtifactTools;
+import org.savantbuild.domain.Version;
+import org.savantbuild.domain.VersionException;
+import org.savantbuild.output.Output;
 import org.savantbuild.security.MD5Exception;
 import org.xml.sax.SAXException;
 
@@ -36,11 +45,16 @@ import org.xml.sax.SAXException;
 public class Workflow {
   public final FetchWorkflow fetchWorkflow;
 
+  public final Map<String, Version> mappings = new HashMap<>();
+
+  public final Output output;
+
   public final PublishWorkflow publishWorkflow;
 
-  public Workflow(FetchWorkflow fetchWorkflow, PublishWorkflow publishWorkflow) {
+  public Workflow(FetchWorkflow fetchWorkflow, PublishWorkflow publishWorkflow, Output output) {
     this.fetchWorkflow = fetchWorkflow;
     this.publishWorkflow = publishWorkflow;
+    this.output = output;
   }
 
   /**
@@ -52,11 +66,18 @@ public class Workflow {
    * @return The Path of the artifact and never null.
    * @throws ArtifactMissingException If the artifact could not be found.
    * @throws ProcessFailureException If any of the processes encountered a failure while attempting to fetch the
-   * artifact.
+   *     artifact.
    * @throws MD5Exception If the item's MD5 file did not match the item.
    */
   public Path fetchArtifact(Artifact artifact) throws ArtifactMissingException, ProcessFailureException, MD5Exception {
-    Path file = fetchWorkflow.fetchItem(artifact, artifact.getArtifactFile(), publishWorkflow);
+    ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile());
+    Path file = fetchWorkflow.fetchItem(item, publishWorkflow);
+    if (file == null && artifact.nonSemanticVersion != null) {
+      // Try the bad version
+      item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.nonSemanticVersion, artifact.getArtifactNonSemanticFile());
+      file = fetchWorkflow.fetchItem(item, publishWorkflow);
+    }
+
     if (file == null) {
       throw new ArtifactMissingException(artifact);
     }
@@ -73,20 +94,28 @@ public class Workflow {
    * @return The ArtifactMetaData object and never null.
    * @throws ArtifactMetaDataMissingException If the AMD file could not be found.
    * @throws ProcessFailureException If any of the processes encountered a failure while attempting to fetch the AMD
-   * file.
+   *     file.
    * @throws MD5Exception If the item's MD5 file did not match the item.
    */
-  public ArtifactMetaData fetchMetaData(Artifact artifact)
-      throws ArtifactMetaDataMissingException, ProcessFailureException, MD5Exception {
-    Path file = fetchWorkflow.fetchItem(artifact, artifact.getArtifactMetaDataFile(), publishWorkflow);
+  public ArtifactMetaData fetchMetaData(Artifact artifact) throws ArtifactMetaDataMissingException, ProcessFailureException, MD5Exception {
+    ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactMetaDataFile());
+    Path file = fetchWorkflow.fetchItem(item, publishWorkflow);
+    if (file == null) {
+      POM pom = loadPOM(artifact, publishWorkflow);
+      if (pom != null) {
+        return translatePOM(pom);
+      }
+    }
+
     if (file == null) {
       throw new ArtifactMetaDataMissingException(artifact);
     }
 
     try {
       return ArtifactTools.parseArtifactMetaData(file);
-    } catch (IllegalArgumentException | NullPointerException | SAXException | ParserConfigurationException | IOException | VersionException e) {
-      throw new ProcessFailureException(artifact, e);
+    } catch (IllegalArgumentException | NullPointerException | SAXException | ParserConfigurationException |
+             IOException | VersionException e) {
+      throw new ProcessFailureException(item, e);
     }
   }
 
@@ -97,15 +126,27 @@ public class Workflow {
    *
    * @param artifact The artifact to fetch the source for.
    * @return The Path of the source or null if it doesn't exist.
-   * @throws ProcessFailureException If any of the processes encountered a failure while attempting to fetch the source
-   * file.
+   * @throws ProcessFailureException If any of the processes encountered a failure while attempting to fetch the
+   *     source file.
    * @throws MD5Exception If the item's MD5 file did not match the item.
    */
   public Path fetchSource(Artifact artifact) throws ProcessFailureException, MD5Exception {
     try {
-      Path file = fetchWorkflow.fetchItem(artifact, artifact.getArtifactSourceFile(), publishWorkflow);
+      ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactSourceFile());
+      Path file = fetchWorkflow.fetchItem(item, publishWorkflow);
       if (file == null) {
-        publishWorkflow.publishNegative(artifact, artifact.getArtifactSourceFile());
+        item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactAlternativeSourceFile());
+        file = fetchWorkflow.fetchItem(item, publishWorkflow);
+      }
+
+      if (file == null && artifact.nonSemanticVersion != null) {
+        item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.nonSemanticVersion, artifact.getArtifactNonSemanticAlternativeSourceFile());
+        file = fetchWorkflow.fetchItem(item, publishWorkflow);
+      }
+
+      if (file == null) {
+        item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactSourceFile());
+        publishWorkflow.publishNegative(item);
       }
 
       return file;
@@ -114,5 +155,66 @@ public class Workflow {
       // search for the source JAR should stop immediately.
       return null;
     }
+  }
+
+  private POM loadPOM(Artifact artifact, PublishWorkflow publishWorkflow) {
+    // We can directly load a POM or translate an AMD to a POM
+    ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactPOMFile());
+    Path file = fetchWorkflow.fetchItem(item, publishWorkflow);
+
+    // Try the POM with the bad version
+    if (artifact.nonSemanticVersion != null) {
+      item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.nonSemanticVersion, artifact.getArtifactNonSemanticPOMFile());
+      file = fetchWorkflow.fetchItem(item, publishWorkflow);
+    }
+
+    if (file == null) {
+      return null;
+    }
+
+    POM pom = MavenTools.parsePOM(file, output);
+    pom.replaceKnownVariablesAndFillInDependencies();
+
+    // Recusrively load the parent POM and any dependencies that are `import`
+    if (pom.parentGroup != null && pom.parentId != null && pom.parentVersion != null) {
+      POM parent = new POM(pom.parentGroup, pom.parentId, pom.parentVersion);
+      Artifact parentPOM = MavenTools.toArtifact(parent, "pom", mappings);
+      pom.parent = loadPOM(parentPOM, publishWorkflow);
+    }
+
+    // Now that we have the parents (recursively), load all the variables and fix top-level POM definitions
+    pom.replaceKnownVariablesAndFillInDependencies();
+    if (pom.group == null) {
+      pom.group = pom.parent.group;
+    }
+    if (pom.version == null) {
+      pom.version = pom.parent.version;
+    }
+
+    // Load the imports in the POM until there are no more imports. Each iteration needs to fill in variables
+    List<MavenDependency> imports = pom.imports();
+    while (imports.size() > 0) {
+      for (MavenDependency anImport : imports) {
+        Artifact dep = MavenTools.toArtifact(anImport, "pom", mappings);
+        POM importPOM = loadPOM(dep, publishWorkflow);
+        if (importPOM == null) {
+          throw new ProcessFailureException("Unable to import Maven dependency definitions into a POM because the referenced import could not be found. [" + dep + "]");
+        }
+
+        pom.removeDependencyDefinition(anImport);
+        pom.dependenciesDefinitions.addAll(importPOM.dependenciesDefinitions);
+      }
+
+      imports = pom.imports();
+    }
+
+    // Fill in variables again in case there are new ones. This also fills out any missing dependencies
+    pom.replaceKnownVariablesAndFillInDependencies();
+
+    return pom;
+  }
+
+  private ArtifactMetaData translatePOM(POM pom) {
+    return new ArtifactMetaData(MavenTools.toSavantDependencies(pom, mappings), MavenTools.toSavantLicenses(pom));
   }
 }

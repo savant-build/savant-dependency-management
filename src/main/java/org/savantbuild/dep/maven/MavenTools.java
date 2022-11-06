@@ -24,6 +24,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -35,6 +36,7 @@ import org.savantbuild.dep.domain.DependencyGroup;
 import org.savantbuild.dep.domain.License;
 import org.savantbuild.dep.domain.ReifiedArtifact;
 import org.savantbuild.domain.Version;
+import org.savantbuild.domain.VersionException;
 import org.savantbuild.output.Output;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -170,7 +172,7 @@ public class MavenTools {
 
   public static String replaceProperties(String value, Map<String, String> properties) {
     if (value == null) {
-      return null;
+      return value;
     }
 
     for (String key : properties.keySet()) {
@@ -180,7 +182,13 @@ public class MavenTools {
     return value;
   }
 
-  public static Dependencies toSavantDependencies(POM pom, Map<String, Artifact> mappings) {
+  public static Artifact toArtifact(POM pom, String type, Map<String, Version> mappings) {
+    Version version = determineVersion(pom, mappings);
+    ArtifactID id = new ArtifactID(pom.group, pom.id, pom.id, type);
+    return new Artifact(id, version, pom.version, null);
+  }
+
+  public static Dependencies toSavantDependencies(POM pom, Map<String, Version> mappings) {
     Dependencies savantDependencies = new Dependencies();
     pom.resolveAllDependencies().forEach(dep -> {
       String groupName = dep.scope;
@@ -201,20 +209,9 @@ public class MavenTools {
         }
       }
 
-      List<License> licenses = toSavantLicenses(pom);
-      Artifact mapping = mappings.get(dep.toSpecification());
-      if (mapping != null) {
-        dep.savantArtifact = new ReifiedArtifact(mapping.id, mapping.version, licenses);
-      } else {
-        dep.savantArtifact = new ReifiedArtifact(
-            new ArtifactID(dep.group, dep.id, dep.getArtifactName(), (dep.type == null ? "jar" : dep.type)),
-            new Version(dep.version),
-            exclusions,
-            licenses
-        );
-      }
-
-      savantDependencyGroup.dependencies.add(new Artifact(dep.savantArtifact.id, dep.savantArtifact.version, false, exclusions));
+      Version mapping = determineVersion(dep, mappings);
+      dep.savantArtifact = new ReifiedArtifact(new ArtifactID(dep.group, dep.id, dep.getArtifactName(), (dep.type == null ? "jar" : dep.type)), mapping, exclusions, Collections.emptyList());
+      savantDependencyGroup.dependencies.add(new Artifact(dep.savantArtifact.id, dep.savantArtifact.version, exclusions));
     });
 
     return savantDependencies;
@@ -247,6 +244,22 @@ public class MavenTools {
     }
 
     return null;
+  }
+
+  private static Version determineVersion(POM pom, Map<String, Version> mappings) {
+    Version version;
+    try {
+      version = new Version(pom.version);
+    } catch (VersionException e) {
+      // Look up the mapping
+      String key = pom.toSpecification();
+      version = mappings.get(key);
+      if (version == null) {
+        throw new VersionException("Invalid Version in the dependency graph from a Maven dependency [" + pom.toSpecification() + "]. You must specify a semantic version mapping for Savant to properly handle Maven dependencies.");
+      }
+    }
+
+    return version;
   }
 
   private static Element firstChild(Element root, String childName) {

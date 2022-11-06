@@ -172,11 +172,11 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     // Used for build and publish tests
     dependencies = new Dependencies(
         new DependencyGroup("compile", true,
-            new Artifact(multipleVersions.id, new Version("1.0.0"), false),
-            new Artifact(multipleVersionsDifferentDeps.id, new Version("1.0.0"), false)
+            new Artifact(multipleVersions.id, new Version("1.0.0")),
+            new Artifact(multipleVersionsDifferentDeps.id, new Version("1.0.0"))
         ),
         new DependencyGroup("runtime", true,
-            new Artifact(intermediate.id, new Version("1.0.0"), false)
+            new Artifact(intermediate.id, new Version("1.0.0"))
         )
     );
 
@@ -221,7 +221,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
       service.buildGraph(project, dependencies, workflow);
       fail("Should have failed");
     } catch (ArtifactMetaDataMissingException e) {
-      assertEquals(e.artifactMissingAMD, new Artifact("org.savantbuild.test:missing-amd:1.0.0", false));
+      assertEquals(e.artifactMissingAMD, new Artifact("org.savantbuild.test:missing-amd:1.0.0"));
     }
   }
 
@@ -232,7 +232,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
       service.buildGraph(project, dependencies, workflow);
       fail("Should have failed");
     } catch (ArtifactMetaDataMissingException e) {
-      assertEquals(e.artifactMissingAMD, new Artifact("org.savantbuild.test:missing:1.0.0", false));
+      assertEquals(e.artifactMissingAMD, new Artifact("org.savantbuild.test:missing:1.0.0"));
     }
   }
 
@@ -243,7 +243,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
       service.buildGraph(project, dependencies, workflow);
       fail("Should have failed");
     } catch (ArtifactMetaDataMissingException e) {
-      assertEquals(e.artifactMissingAMD, new Artifact("org.savantbuild.test:missing-md5:1.0.0", false));
+      assertEquals(e.artifactMissingAMD, new Artifact("org.savantbuild.test:missing-md5:1.0.0"));
     }
   }
 
@@ -269,11 +269,11 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
 
     dependencies = new Dependencies(
         new DependencyGroup("compile", true,
-            new Artifact(multipleVersions.id, new Version("1.0.0"), false, Collections.singletonList(leaf1.id)),
-            new Artifact(multipleVersionsDifferentDeps.id, new Version("1.0.0"), false)
+            new Artifact(multipleVersions.id, new Version("1.0.0"), Collections.singletonList(leaf1.id)),
+            new Artifact(multipleVersionsDifferentDeps.id, new Version("1.0.0"))
         ),
         new DependencyGroup("runtime", true,
-            new Artifact(exclusions.id, new Version("1.0.0"), false)
+            new Artifact(exclusions.id, new Version("1.0.0"))
         )
     );
 
@@ -304,11 +304,11 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
 
     dependencies = new Dependencies(
         new DependencyGroup("compile", true,
-            new Artifact(multipleVersions.id, new Version("1.0.0"), false, Collections.singletonList(leaf1.id)),
-            new Artifact(multipleVersionsDifferentDeps.id, new Version("1.0.0"), false)
+            new Artifact(multipleVersions.id, new Version("1.0.0"), Collections.singletonList(leaf1.id)),
+            new Artifact(multipleVersionsDifferentDeps.id, new Version("1.0.0"))
         ),
         new DependencyGroup("runtime", true,
-            new Artifact(intermediate.id, new Version("1.0.0"), false, Arrays.asList(integrationBuild.id, leaf2_2.id))
+            new Artifact(intermediate.id, new Version("1.0.0"), Arrays.asList(integrationBuild.id, leaf2_2.id))
         )
     );
 
@@ -339,11 +339,11 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
 
     dependencies = new Dependencies(
         new DependencyGroup("compile", true,
-            new Artifact(multipleVersions.id, new Version("1.0.0"), false, Collections.singletonList(new ArtifactID("*:*:*:*"))),
-            new Artifact(multipleVersionsDifferentDeps.id, new Version("1.0.0"), false)
+            new Artifact(multipleVersions.id, new Version("1.0.0"), Collections.singletonList(new ArtifactID("*:*:*:*"))),
+            new Artifact(multipleVersionsDifferentDeps.id, new Version("1.0.0"))
         ),
         new DependencyGroup("runtime", true,
-            new Artifact(intermediate.id, new Version("1.0.0"), false, Collections.singletonList(new ArtifactID("*:*:*:*")))
+            new Artifact(intermediate.id, new Version("1.0.0"), Collections.singletonList(new ArtifactID("*:*:*:*")))
         )
     );
 
@@ -353,7 +353,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
 
   @Test
   public void publishMissingFile() {
-    Artifact artifact = new Artifact("org.savantbuild.test:publication-with-source:1.0.0", false);
+    Artifact artifact = new Artifact("org.savantbuild.test:publication-with-source:1.0.0");
     ArtifactMetaData amd = new ArtifactMetaData(dependencies, License.Licenses.get("BSD_2_Clause"));
     Publication publication = new Publication(artifact, amd, projectDir.resolve("MissingFile.txt"), null);
     PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, projectDir.resolve("build/test/publish").toString()));
@@ -366,7 +366,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
 
   @Test
   public void publishMissingSourceFile() {
-    Artifact artifact = new Artifact("org.savantbuild.test:publication-with-source:1.0.0", false);
+    Artifact artifact = new Artifact("org.savantbuild.test:publication-with-source:1.0.0");
     ArtifactMetaData amd = new ArtifactMetaData(dependencies, License.Licenses.get("BSD_2_Clause"));
     Publication publication = new Publication(artifact, amd, projectDir.resolve("src/test/java/org/savantbuild/dep/TestFile.txt"), Paths.get("MissingFile.txt"));
     PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, projectDir.resolve("build/test/publish").toString()));
@@ -381,7 +381,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
   public void publishWithSource() throws IOException {
     PathTools.prune(projectDir.resolve("build/test/publish"));
 
-    Artifact artifact = new Artifact("org.savantbuild.test:publication-with-source:1.0.0", false);
+    Artifact artifact = new Artifact("org.savantbuild.test:publication-with-source:1.0.0");
     ArtifactMetaData amd = new ArtifactMetaData(dependencies, License.Licenses.get("BSD_2_Clause"));
     Publication publication = new Publication(artifact, amd, projectDir.resolve("src/test/java/org/savantbuild/dep/TestFile.txt"), projectDir.resolve("src/test/java/org/savantbuild/dep/TestFile.txt"));
     PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, projectDir.resolve("build/test/publish").toString()));
@@ -404,7 +404,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
   public void publishWithoutSource() throws IOException {
     PathTools.prune(projectDir.resolve("build/test/publish"));
 
-    Artifact artifact = new Artifact("org.savantbuild.test:publication-without-source:1.0.0", false);
+    Artifact artifact = new Artifact("org.savantbuild.test:publication-without-source:1.0.0");
     ArtifactMetaData amd = new ArtifactMetaData(dependencies, License.Licenses.get("BSD_2_Clause"));
     Publication publication = new Publication(artifact, amd, projectDir.resolve("src/test/java/org/savantbuild/dep/TestFile.txt"), null);
     PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, projectDir.resolve("build/test/publish").toString()));
@@ -865,7 +865,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
       ArtifactGraph artifactGraph = service.reduce(graph);
       service.resolve(artifactGraph, workflow, new TraversalRules().with("compile", new GroupTraversalRule(true, true)));
     } catch (ArtifactMissingException e) {
-      assertEquals(e.artifact, new Artifact("org.savantbuild.test:missing-item:1.0.0", false));
+      assertEquals(e.artifact, new Artifact("org.savantbuild.test:missing-item:1.0.0"));
     }
   }
 
@@ -946,7 +946,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
   private Dependencies makeSimpleDependencies(String dependency) {
     return new Dependencies(
         new DependencyGroup("compile", true,
-            new Artifact(dependency, false)
+            new Artifact(dependency)
         )
     );
   }
@@ -959,7 +959,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
    */
   private DependencyGraph makeSimpleGraph(String dependency) {
     DependencyGraph graph = new DependencyGraph(project);
-    Artifact artifact = new Artifact(dependency, false);
+    Artifact artifact = new Artifact(dependency);
     graph.addEdge(new Dependency(project.id), new Dependency(artifact.id), new DependencyEdgeValue(project.version, artifact.version, "compile", new License()));
     return graph;
   }

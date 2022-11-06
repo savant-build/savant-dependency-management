@@ -84,15 +84,15 @@ public class ArtifactToolsTest extends BaseUnitTest {
    */
   @Test
   public void xml() throws Exception {
-    Artifact d1 = new Artifact("group_name\"quoted\":project_name:name\"quoted\":1.0.0:type", false);
-    Artifact d2 = new Artifact("group_name2:project_name2\"quoted\":name2:2.0.0:type2", false);
-    Artifact d3 = new Artifact("group_name3:project_name3:name3:3.0.0+\"quoted\":type3\"quoted\"", false);
-    Artifact d4 = new Artifact("group_name4:project_name4:name4:4.0.0:type4", false, Arrays.asList(
+    Artifact d1 = new Artifact("group_name\"quoted\":project_name:name\"quoted\":1.0.0:type");
+    Artifact d2 = new Artifact("group_name2:project_name2\"quoted\":name2:2.0.0:type2");
+    Artifact d3 = new Artifact("group_name3:project_name3:name3:3.0.0+\"quoted\":type3\"quoted\"");
+    Artifact d4 = new Artifact("group_name4:project_name4:name4:4.0.0:type4", null, false, Arrays.asList(
         new ArtifactID("org.example:exclude-1"),
         new ArtifactID("org.example:exclude-2:zip"),
         new ArtifactID("org.example:exclude-3:exclude-4:xml")
     ));
-    Artifact d5 = new Artifact("group_name5:project_name5:name5:5.0.0:type5", false, Arrays.asList(
+    Artifact d5 = new Artifact("group_name5:project_name5:name5:5.0.0:type5", null, false, Arrays.asList(
         new ArtifactID("org.example:exclude-1"),
         new ArtifactID("org.example:exclude-2:zip"),
         new ArtifactID("org.example:exclude-3:exclude-4:xml")

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Inversoft Inc., All Rights Reserved
+ * Copyright (c) 2022, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,16 +15,20 @@
  */
 package org.savantbuild.dep.workflow.process;
 
-import org.savantbuild.dep.domain.ResolvableItem;
+import org.savantbuild.output.Output;
 
 /**
- * This class denotes that a negative cache was stored for an artifact item of some sort and that it should not be
- * resolved again.
+ * This is an implementation of the Process that uses a local cache to fetch and publish artifacts.
  *
  * @author Brian Pontarelli
  */
-public class NegativeCacheException extends ProcessFailureException {
-  public NegativeCacheException(ResolvableItem item) {
-    super(item);
+public class MavenCacheProcess extends CacheProcess {
+  public MavenCacheProcess(Output output, String dir) {
+    super(output, dir != null ? dir : System.getProperty("user.home") + "/.m2/repository");
+  }
+
+  @Override
+  public String toString() {
+    return "MavenCache(" + dir + ")";
   }
 }

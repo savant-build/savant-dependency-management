@@ -22,7 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
 
-import org.savantbuild.dep.domain.Artifact;
+import org.savantbuild.dep.domain.ResolvableItem;
 import org.savantbuild.dep.workflow.PublishWorkflow;
 import org.savantbuild.net.NetTools;
 import org.savantbuild.output.Output;
@@ -63,27 +63,18 @@ public class URLProcess implements Process {
   }
 
   /**
-   * Throws an exception. This isn't supported.
-   */
-  @Override
-  public void deleteIntegrationBuilds(Artifact artifact) throws ProcessFailureException {
-    throw new ProcessFailureException(artifact, "The [url] process doesn't support deleting integration builds.");
-  }
-
-  /**
    * Using the URL spec given, this method connects to the URL, reads the file from the URL and stores the file in the
    * local cache store. The artifact is used to determine the local cache store directory and file name.
    *
-   * @param artifact        The artifact being fetched and stored
-   * @param publishWorkflow The publishWorkflow to publish the artifact if found.
    * @param item            The item to fetch.
+   * @param publishWorkflow The publishWorkflow to publish the artifact if found.
    * @return The File of the artifact after it has been published.
    */
   @Override
-  public Path fetch(Artifact artifact, String item, PublishWorkflow publishWorkflow)
+  public Path fetch(ResolvableItem item, PublishWorkflow publishWorkflow)
       throws ProcessFailureException {
     try {
-      URI md5URI = NetTools.build(url, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString(), item + ".md5");
+      URI md5URI = NetTools.build(url, item.group.replace('.', '/'), item.project, item.version, item.item + ".md5");
       Path md5File = NetTools.downloadToPath(md5URI, username, password, null);
       if (md5File == null) {
         return null;
@@ -94,10 +85,10 @@ public class URLProcess implements Process {
         md5 = MD5.load(md5File);
       } catch (IOException e) {
         Files.delete(md5File);
-        throw new ProcessFailureException(artifact, e);
+        throw new ProcessFailureException(item, e);
       }
 
-      URI itemURI = NetTools.build(url, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString(), item);
+      URI itemURI = NetTools.build(url, item.group.replace('.', '/'), item.project, item.version.toString(), item.item);
       Path itemFile;
       try {
         itemFile = NetTools.downloadToPath(itemURI, username, password, md5);
@@ -107,12 +98,13 @@ public class URLProcess implements Process {
 
       if (itemFile != null) {
         output.infoln("Downloaded from [%s]", itemURI);
-        md5File = publishWorkflow.publish(artifact, item + ".md5", md5File);
+        ResolvableItem md5Item = new ResolvableItem(item, item.item + ".md5");
+        md5File = publishWorkflow.publish(md5Item, md5File);
         try {
-          itemFile = publishWorkflow.publish(artifact, item, itemFile);
+          itemFile = publishWorkflow.publish(item, itemFile);
         } catch (ProcessFailureException e) {
           Files.delete(md5File);
-          throw new ProcessFailureException(artifact, e);
+          throw new ProcessFailureException(item, e);
         }
       }
 
@@ -121,7 +113,7 @@ public class URLProcess implements Process {
       // Special case for file:// URLs
       return null;
     } catch (IOException e) {
-      throw new ProcessFailureException(artifact, e);
+      throw new ProcessFailureException(item, e);
     }
   }
 
@@ -129,8 +121,8 @@ public class URLProcess implements Process {
    * Throws an exception. This isn't supported yet.
    */
   @Override
-  public Path publish(Artifact artifact, String item, Path file) throws ProcessFailureException {
-    throw new ProcessFailureException(artifact, "The [url] process doesn't allow publishing.");
+  public Path publish(ResolvableItem item, Path file) throws ProcessFailureException {
+    throw new ProcessFailureException("The [url] process doesn't allow publishing.");
   }
 
   @Override

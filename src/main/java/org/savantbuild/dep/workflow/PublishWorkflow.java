@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.savantbuild.dep.domain.Artifact;
+import org.savantbuild.dep.domain.ResolvableItem;
 import org.savantbuild.dep.workflow.process.Process;
 import org.savantbuild.dep.workflow.process.ProcessFailureException;
 
@@ -41,17 +41,6 @@ public class PublishWorkflow {
   }
 
   /**
-   * Deletes all the files that contain integration build versions.
-   *
-   * @param artifact The artifact information used to publish.
-   */
-  public void deleteIntegrationBuilds(Artifact artifact) {
-    for (Process process : processes) {
-      process.deleteIntegrationBuilds(artifact);
-    }
-  }
-
-  /**
    * @return The process list.
    */
   public List<Process> getProcesses() {
@@ -61,16 +50,15 @@ public class PublishWorkflow {
   /**
    * Publishes the item using the processes in this workflow.
    *
-   * @param artifact The artifact if needed.
-   * @param item     The name of the item being published.
-   * @param file     The file that is the artifact contents.
+   * @param item The item being published.
+   * @param file The file that is the item contents.
    * @return A file that can be used to reference the artifact for paths and other constructs.
    * @throws ProcessFailureException If the artifact could not be published for any reason.
    */
-  public Path publish(Artifact artifact, String item, Path file) throws ProcessFailureException {
+  public Path publish(ResolvableItem item, Path file) throws ProcessFailureException {
     Path result = null;
     for (Process process : processes) {
-      Path temp = process.publish(artifact, item, file);
+      Path temp = process.publish(item, file);
       if (result == null) {
         result = temp;
       }
@@ -80,13 +68,12 @@ public class PublishWorkflow {
   }
 
   /**
-   * Publishes a negative file for the artifact item. This file is empty, but signals Savant not to attempt to fetch
-   * that specific item again, since it doesn't exist.
+   * Publishes a negative file for the item. This file is empty, but signals Savant not to attempt to fetch that
+   * specific item again, since it doesn't exist.
    *
-   * @param artifact The artifact information used to publish.
-   * @param item     The item that the negative is being published for.
+   * @param item The item that the negative is being published for.
    */
-  public void publishNegative(Artifact artifact, String item) {
+  public void publishNegative(ResolvableItem item) {
     Path itemFile;
     try {
       File tempFile = File.createTempFile("savant-item", "neg");
@@ -100,7 +87,8 @@ public class PublishWorkflow {
 
     for (Process process : processes) {
       try {
-        process.publish(artifact, item + ".neg", itemFile);
+        ResolvableItem negItem = new ResolvableItem(item, item.item + ".neg");
+        process.publish(negItem, itemFile);
       } catch (ProcessFailureException e) {
         // Continue since this is okay.
       }
