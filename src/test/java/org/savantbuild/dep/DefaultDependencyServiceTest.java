@@ -202,11 +202,10 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
   @BeforeMethod
   public void beforeMethodStartFileServer() throws IOException {
     server = makeFileServer(null, null);
-    // TODO : uncomment
-//    PathTools.prune(cache);
-//    PathTools.prune(mavenCache);
-//    assertFalse(Files.isDirectory(cache));
-//    assertFalse(Files.isDirectory(mavenCache));
+    PathTools.prune(cache);
+    PathTools.prune(mavenCache);
+    assertFalse(Files.isDirectory(cache));
+    assertFalse(Files.isDirectory(mavenCache));
   }
 
   @Test
@@ -330,7 +329,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
 
   @Test
   public void buildGraphWithNonSemanticVersions() {
-    output.enableDebug();
+//    output.enableDebug();
 
     dependencies = new Dependencies(
         new DependencyGroup("compile", true,
@@ -402,7 +401,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
 
   @Test
   public void mavenCentralComplex() {
-    output.enableDebug();
+//    output.enableDebug();
 
     dependencies = new Dependencies(
         new DependencyGroup("compile", true,

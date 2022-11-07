@@ -13,8 +13,10 @@ If the project defines the versions in a mapping section, it can be used for the
 
 ```groovy
 project() {
-  semanticVersions {
-    mapping(id: "org.badver:badver-direct:1.0.0.Final", version: "1.0.0")
+  workflow {
+    semanticVersions {
+      mapping(id: "org.badver:badver-direct:1.0.0.Final", version: "1.0.0")
+    }
   }
 
   dependencies {
@@ -37,8 +39,10 @@ The project needs a place to store transitive version mappings:
 
 ```groovy
 project() {
-  semanticVersions {
-    mapping(id: "org.badver:badver-transitive:1.0.0.Final", version: "1.0.0")
+  workflow {
+    semanticVersions {
+      mapping(id: "org.badver:badver-transitive:1.0.0.Final", version: "1.0.0")
+    }
   }
   
   dependencies {
@@ -73,9 +77,11 @@ graph
 
 ```groovy
 project() {
-  semanticVersions {
-    mapping(id: "org.badver:badver-direct:1.0.0.Final", version: "1.0.0")
-    mapping(id: "org.badver:badver-transitive:1.0.0.Final", version: "1.0.0")
+  workflow {
+    semanticVersions {
+      mapping(id: "org.badver:badver-direct:1.0.0.Final", version: "1.0.0")
+      mapping(id: "org.badver:badver-transitive:1.0.0.Final", version: "1.0.0")
+    }
   }
   
   dependencies {
@@ -94,9 +100,11 @@ During traversal, if we store the good and bad versions on the Artifact, we can 
 
 ```groovy
 project() {
-  semanticVersions {
-    mapping(id: "org.badver:badver-direct:1.0.0.Final", version: "1.0.0")
-    mapping(id: "org.badver:badver-transitive:1.0.0.Final", version: "1.0.0")
+  workflow {
+    semanticVersions {
+      mapping(id: "org.badver:badver-direct:1.0.0.Final", version: "1.0.0")
+      mapping(id: "org.badver:badver-transitive:1.0.0.Final", version: "1.0.0")
+    }
   }
   
   dependencies {

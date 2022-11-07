@@ -154,20 +154,6 @@ public class WorkflowTest extends BaseUnitTest {
             new Artifact("io.netty:netty-transport-native-kqueue:4.1.65", "4.1.65.Final", false, Collections.emptyList()),
             new Artifact("io.vertx:vertx-codegen:3.9.8"),
             new Artifact("io.vertx:vertx-docgen:0.9.2")
-        ),
-        new DependencyGroup("provided", true,
-            new Artifact("log4j:log4j:1.2.17"),
-            new Artifact("org.apache.logging.log4j:log4j-api:2.8.2"),
-            new Artifact("org.apache.logging.log4j:log4j-core:2.8.2"),
-            new Artifact("org.slf4j:slf4j-api:1.7.21")
-        ),
-        new DependencyGroup("test-compile", true,
-            new Artifact("junit:junit:4.13.1"),
-            new Artifact("org.apache.directory.server:apacheds-protocol-dns:1.5.7"),
-            new Artifact("org.assertj:assertj-core:3.4.1"),
-            new Artifact("org.slf4j:slf4j-simple:1.7.21"),
-            new Artifact("io.netty:netty-tcnative-boringssl-static:2.0.39", "2.0.39.Final", false, Collections.emptyList()),
-            new Artifact("org.openjdk.jmh:jmh-core:1.19")
         )
     );
     assertEquals(amd.dependencies, expected);
