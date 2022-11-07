@@ -460,6 +460,31 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
   }
 
   @Test
+  public void mavenCentralCircularDependencyButOptional() {
+//    output.enableDebug();
+
+    dependencies = new Dependencies(
+        new DependencyGroup("compile", true,
+            new Artifact("org.apache.groovy:groovy:4.0.6")
+        )
+    );
+
+    workflow = new Workflow(
+        new FetchWorkflow(
+            output,
+            new MavenCacheProcess(output, mavenCache.toString()),
+            new MavenProcess(output, "https://repo1.maven.org/maven2", null, null)
+        ),
+        new PublishWorkflow(
+            new MavenCacheProcess(output, mavenCache.toString())
+        ),
+        output
+    );
+
+    service.buildGraph(project, dependencies, workflow);
+  }
+
+  @Test
   public void publishMissingFile() {
     Artifact artifact = new Artifact("org.savantbuild.test:publication-with-source:1.0.0");
     ArtifactMetaData amd = new ArtifactMetaData(dependencies, License.Licenses.get("BSD_2_Clause"));

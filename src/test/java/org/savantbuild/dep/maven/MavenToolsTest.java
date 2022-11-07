@@ -20,10 +20,7 @@ import java.util.Arrays;
 import java.util.Collections;
 
 import org.savantbuild.dep.BaseUnitTest;
-import org.savantbuild.dep.domain.Artifact;
-import org.savantbuild.dep.domain.ArtifactID;
 import org.savantbuild.dep.domain.Dependencies;
-import org.savantbuild.dep.domain.DependencyGroup;
 import org.savantbuild.output.SystemOutOutput;
 import org.testng.annotations.Test;
 
@@ -57,17 +54,8 @@ public class MavenToolsTest extends BaseUnitTest {
     );
     assertEquals(pom.licenses, Collections.singletonList(new MavenLicense("repo", "The Apache Software License, Version 2.0", "http://www.apache.org/licenses/LICENSE-2.0.txt")));
 
+    // Everything is optional
     Dependencies dependencies = MavenTools.toSavantDependencies(pom, Collections.emptyMap());
-    assertEquals(dependencies, new Dependencies(
-        new DependencyGroup(
-            "compile-optional", true,
-            new Artifact("org.codehaus.gpars:gpars:1.2.1", null, false, Collections.singletonList(new ArtifactID("org.codehaus.groovy:groovy-all:*"))),
-            new Artifact("org.apache.ivy:ivy:2.5.0", null, false, Collections.singletonList(new ArtifactID("*:*:*:*"))),
-            new Artifact("com.thoughtworks.xstream:xstream:1.4.19", null, false, Arrays.asList(
-                new ArtifactID("junit:junit:*"), new ArtifactID("xpp3:xpp3_min:*"), new ArtifactID("xmlpull:xmlpull:*"), new ArtifactID("jmock:jmock:*")
-            )),
-            new Artifact("org.fusesource.jansi:jansi:2.4.0")
-        )
-    ));
+    assertEquals(dependencies, new Dependencies());
   }
 }

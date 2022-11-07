@@ -20,6 +20,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.savantbuild.dep.BaseUnitTest;
 import org.savantbuild.dep.domain.Artifact;
@@ -43,7 +45,10 @@ import static org.testng.Assert.assertTrue;
 public class ArtifactToolsTest extends BaseUnitTest {
   @Test
   public void parse() throws Exception {
-    ArtifactMetaData amd = ArtifactTools.parseArtifactMetaData(projectDir.resolve("src/test/resources/amd.xml"), Collections.emptyMap());
+    Map<String, Version> mappings = new HashMap<>();
+    mappings.put("org.example.test:badver:1.0.0.Final", new Version("1.0.0"));
+
+    ArtifactMetaData amd = ArtifactTools.parseArtifactMetaData(projectDir.resolve("src/test/resources/amd.xml"), mappings);
     assertEquals(amd.licenses, Arrays.asList(License.Licenses.get("ApacheV2_0"), new License("BSD_2_Clause", "Override the BSD license.")));
     assertEquals(amd.dependencies.groups.size(), 2);
     assertEquals(amd.dependencies.groups.get("runtime").dependencies.size(), 2);
@@ -65,7 +70,7 @@ public class ArtifactToolsTest extends BaseUnitTest {
         new ArtifactID("org.example", "exclude-3", "exclude-4", "zip")
     ));
 
-    assertEquals(amd.dependencies.groups.get("compile").dependencies.size(), 2);
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.size(), 3);
     assertEquals(amd.dependencies.groups.get("compile").name, "compile");
     assertEquals(amd.dependencies.groups.get("compile").dependencies.get(0).id.group, "org.example.test");
     assertEquals(amd.dependencies.groups.get("compile").dependencies.get(0).id.project, "test-project3");
@@ -78,6 +83,13 @@ public class ArtifactToolsTest extends BaseUnitTest {
     assertEquals(amd.dependencies.groups.get("compile").dependencies.get(1).id.name, "test-project4");
     assertEquals(amd.dependencies.groups.get("compile").dependencies.get(1).version, new Version("4.0.0"));
     assertEquals(amd.dependencies.groups.get("compile").dependencies.get(1).id.type, "jar");
+
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(2).id.group, "org.example.test");
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(2).id.project, "badver");
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(2).id.name, "badver");
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(2).version, new Version("1.0.0"));
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(2).nonSemanticVersion, "1.0.0.Final");
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(2).id.type, "jar");
   }
 
   /**
@@ -98,6 +110,7 @@ public class ArtifactToolsTest extends BaseUnitTest {
         new ArtifactID("org.example:exclude-2:zip"),
         new ArtifactID("org.example:exclude-3:exclude-4:xml")
     ));
+    Artifact d6 = new Artifact("badver:badver:badver:6.0.0:jar", "6.0.0.Final", false, Collections.emptyList());
 
     DependencyGroup compile = new DependencyGroup("compile", true);
     compile.dependencies.add(d1);
@@ -105,6 +118,7 @@ public class ArtifactToolsTest extends BaseUnitTest {
 
     DependencyGroup runtime = new DependencyGroup("runtime", true);
     runtime.dependencies.add(d3);
+    runtime.dependencies.add(d6);
 
     DependencyGroup compileOptional = new DependencyGroup("compile-optional", true);
     compileOptional.dependencies.add(d4);
@@ -132,7 +146,10 @@ public class ArtifactToolsTest extends BaseUnitTest {
     deps.groups.remove("test");
 
     // Then load and compare
-    ArtifactMetaData amdOut = ArtifactTools.parseArtifactMetaData(tmp, Collections.emptyMap());
+    Map<String, Version> mappings = new HashMap<>();
+    mappings.put("badver:badver:6.0.0.Final", new Version("6.0.0"));
+
+    ArtifactMetaData amdOut = ArtifactTools.parseArtifactMetaData(tmp, mappings);
     assertEquals(amd, amdOut);
 
     Files.delete(tmp);

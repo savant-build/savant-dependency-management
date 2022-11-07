@@ -57,8 +57,10 @@ public class MavenTools {
   public static final String VersionError = "Invalid Version in the dependency graph from a Maven dependency [%s]. You must " +
       "specify a semantic version mapping for Savant to properly handle Maven dependencies. This goes at the top-level of the build file and looks like this:\n\n" +
       "project(...) {\n" +
-      "  semanticVersions {\n" +
-      "    mapping(id: \"org.badver:badver:1.0.0.Final\", version: \"1.0.0\")\n" +
+      "  workflow {\n" +
+      "    semanticVersions {\n" +
+      "      mapping(id: \"org.badver:badver:1.0.0.Final\", version: \"1.0.0\")\n" +
+      "    }\n" +
       "  }\n" +
       "}";
 
@@ -184,15 +186,12 @@ public class MavenTools {
     pom.resolveAllDependencies().forEach(dep -> {
       String groupName = dep.scope;
 
-      // Skip provided and test dependencies because there are POMs that include dependencies in these groups that don't actually exist.
-      // Plus, we don't really need to depend on these in real-world scenarios
-      if (groupName.equalsIgnoreCase("provided") || groupName.equalsIgnoreCase("test") || groupName.equalsIgnoreCase("system")) {
+      // Skip provided, test, system, and optional dependencies because Maven specifies that none of these dependencies
+      // are transitive and none should exist in classpaths. In reality, Maven sucks so hard that there are actual POMs
+      // in the wild that have circular dependencies and others that reference POMs that don't actually exist.
+      if (groupName.equalsIgnoreCase("provided") || groupName.equalsIgnoreCase("test") || groupName.equalsIgnoreCase("system") ||
+          (dep.optional != null && dep.optional.equalsIgnoreCase("true"))) {
         return;
-      }
-
-      // Fix lame Maven deps
-      if (dep.optional != null && dep.optional.equalsIgnoreCase("true")) {
-        groupName += "-optional";
       }
 
       DependencyGroup savantDependencyGroup = savantDependencies.groups.get(groupName);
