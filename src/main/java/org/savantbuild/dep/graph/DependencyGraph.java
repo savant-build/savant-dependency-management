@@ -74,7 +74,7 @@ public class DependencyGraph extends HashGraph<Dependency, DependencyEdgeValue> 
 
     Formatter formatter = new Formatter(build);
     traverse(new Dependency(root.id), false, new SingleTraversalEdgeFilter<>(), (origin, destination, edge, depth, isLast) -> {
-      formatter.format("  \"%s\" -> \"%s\" [label=\"%s\", headlabel=\"%s\", taillabel=\"%s\"];\n", origin, destination, edge.type, edge.dependentVersion, edge.dependencyVersion);
+      formatter.format("  \"%s\" -> \"%s\" [label=\"%s\", headlabel=\"%s\", taillabel=\"%s\"];\n", origin, destination, edge, edge.dependentVersion, edge.dependencyVersion);
       return true;
     });
 

@@ -47,18 +47,17 @@ public abstract class BaseUnitTest {
 
   public static Path cache;
 
+  public static Path mavenCache;
+
   public static Path projectDir;
 
   public static Workflow workflow;
 
   @BeforeSuite
   public static void setup() {
-    projectDir = Paths.get("");
-    if (!Files.isRegularFile(projectDir.resolve("LICENSE"))) {
-      projectDir = projectDir.resolve("../savant-dependency-management");
-    }
-
+    projectDir = Paths.get("../savant-dependency-management");
     cache = projectDir.resolve("build/test/cache");
+    mavenCache = projectDir.resolve("build/test/maven-cache");
 
     workflow = new Workflow(
         new FetchWorkflow(

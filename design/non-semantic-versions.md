@@ -13,13 +13,13 @@ If the project defines the versions in a mapping section, it can be used for the
 
 ```groovy
 project() {
-  versions {
-    mapping(id: "org.badver:badver:1.0.0", nonSemVer: "1.0.0.Final")
+  semanticVersions {
+    mapping(id: "org.badver:badver-direct:1.0.0.Final", version: "1.0.0")
   }
 
   dependencies {
     group(type: "compile") {
-      dependency(id: "org.badver:badver:1.0.0")
+      dependency(id: "org.badver:badver-direct:1.0.0")
     }
   }
 }
@@ -37,8 +37,8 @@ The project needs a place to store transitive version mappings:
 
 ```groovy
 project() {
-  versions {
-    mapping(id: "org.badver:badver-transitive:1.0.0", nonSemVer: "1.0.0.Final")
+  semanticVersions {
+    mapping(id: "org.badver:badver-transitive:1.0.0.Final", version: "1.0.0")
   }
   
   dependencies {
@@ -49,19 +49,33 @@ project() {
 }
 ```
 
+The AMD file for `goodver` needs to look like this:
+
+```xml
+<artifactMetaData>
+  <dependencies>
+    <dependency-group name="compile">
+      <dependency group="org.badver" project="badver" name="badver" version="1.0.0.Final" type="jar"/>
+    </dependency-group>
+  </dependencies>
+</artifactMetaData>
+```
+
+The version is not semantic, but it does not force the `goodver` project's semantic version choice on the current project. When we resolve, we will store the bad version in the `nonSemanticVersion` member field and then use the mapping to figure out the semantic version for the current project.
+
 ## Direct w/ transitives
 
 ```mermaid
 graph
-    A[Project] --> B[org.badver:badver:1.0.0.Final]
+    A[Project] --> B[org.badver:badver-direct:1.0.0.Final]
     B --> C[org.badver:badver-transitive:1.0.0.Final]
 ```
 
 ```groovy
 project() {
-  versions {
-    mapping(id: "org.badver:badver:1.0.0", nonSemVer: "1.0.0.Final")
-    mapping(id: "org.badver:badver-transitive:1.0.0", nonSemVer: "1.0.0.Final")
+  semanticVersions {
+    mapping(id: "org.badver:badver-direct:1.0.0.Final", version: "1.0.0")
+    mapping(id: "org.badver:badver-transitive:1.0.0.Final", version: "1.0.0")
   }
   
   dependencies {
@@ -81,15 +95,14 @@ During traversal, if we store the good and bad versions on the Artifact, we can 
 ```groovy
 project() {
   semanticVersions {
-    mapping(badId: "org.badver:badver:1.0.0.Final", version: "1.0.0")
-    mapping(badId: "org.badver:badver-direct:1.0.0.Final", version: "1.0.0")
-    mapping(badId: "org.badver:badver-transitive:1.0.0.Final", version: "1.0.0")
+    mapping(id: "org.badver:badver-direct:1.0.0.Final", version: "1.0.0")
+    mapping(id: "org.badver:badver-transitive:1.0.0.Final", version: "1.0.0")
   }
   
   dependencies {
     group(type: "compile") {
+      dependency(id: "org.badver:badver-direct:1.0.0")
       dependency(id: "org.goodver:goodver:1.0.0")
-      dependency(id: "org.badver:badver:1.0.0")
     }
   }
 }

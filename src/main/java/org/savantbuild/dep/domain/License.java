@@ -116,6 +116,10 @@ public final class License {
    * @return The License if it can be found or null if it doesn't exist.
    */
   public static License lookupByURL(String url) {
+    if (url == null) {
+      return null;
+    }
+
     String httpsURL = url.replace("http:", "https:");
     String httpURL = url.replace("https:", "http:");
     for (License license : Licenses.values()) {
@@ -169,12 +173,17 @@ public final class License {
     if (this == o) return true;
     if (!(o instanceof License)) return false;
     final License license = (License) o;
-    return Objects.equals(identifier, license.identifier);
+    return Objects.equals(identifier, license.identifier) && Objects.equals(exception, license.exception) &&
+        Objects.equals(customText, license.customText) && Objects.equals(text, license.text);
   }
 
   @Override
   public int hashCode() {
     return Objects.hash(identifier);
+  }
+
+  public String toString() {
+    return identifier;
   }
 
   @JsonIgnoreProperties(ignoreUnknown = true)

@@ -263,7 +263,7 @@ public class Artifact {
    * @return The file name.
    */
   public String getArtifactPOMFile() {
-    return prefix() + ".pom";
+    return id.project + "-" + version + ".pom";
   }
 
   /**
@@ -329,7 +329,7 @@ public class Artifact {
   }
 
   private String nonSemanticPrefix() {
-    return id.name + "-" + nonSemanticVersion;
+    return id.project + "-" + nonSemanticVersion;
   }
 
   private String prefix() {

@@ -18,9 +18,12 @@ package org.savantbuild.dep;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 import org.savantbuild.dep.DependencyService.TraversalRules;
@@ -42,8 +45,14 @@ import org.savantbuild.dep.graph.DependencyGraph.Dependency;
 import org.savantbuild.dep.graph.ResolvedArtifactGraph;
 import org.savantbuild.dep.workflow.ArtifactMetaDataMissingException;
 import org.savantbuild.dep.workflow.ArtifactMissingException;
+import org.savantbuild.dep.workflow.FetchWorkflow;
 import org.savantbuild.dep.workflow.PublishWorkflow;
+import org.savantbuild.dep.workflow.Workflow;
 import org.savantbuild.dep.workflow.process.CacheProcess;
+import org.savantbuild.dep.workflow.process.MavenCacheProcess;
+import org.savantbuild.dep.workflow.process.MavenProcess;
+import org.savantbuild.dep.workflow.process.URLProcess;
+import org.savantbuild.dep.xml.ArtifactTools;
 import org.savantbuild.domain.Version;
 import org.savantbuild.security.MD5;
 import org.savantbuild.security.MD5Exception;
@@ -193,8 +202,11 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
   @BeforeMethod
   public void beforeMethodStartFileServer() throws IOException {
     server = makeFileServer(null, null);
-    PathTools.prune(cache);
-    assertFalse(Files.isDirectory(cache));
+    // TODO : uncomment
+//    PathTools.prune(cache);
+//    PathTools.prune(mavenCache);
+//    assertFalse(Files.isDirectory(cache));
+//    assertFalse(Files.isDirectory(mavenCache));
   }
 
   @Test
@@ -317,6 +329,43 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
   }
 
   @Test
+  public void buildGraphWithNonSemanticVersions() {
+    output.enableDebug();
+
+    dependencies = new Dependencies(
+        new DependencyGroup("compile", true,
+            new Artifact("org.savantbuild.test:has-non-semantic-versioned-dep:1.0.0")
+        )
+    );
+
+    workflow = new Workflow(
+        new FetchWorkflow(
+            output,
+            new CacheProcess(output, cache.toString()),
+            new MavenCacheProcess(output, mavenCache.toString()),
+            new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null),
+            new MavenProcess(output, "http://localhost:7042/test-deps/maven", null, null)
+        ),
+        new PublishWorkflow(
+            new CacheProcess(output, cache.toString()),
+            new MavenCacheProcess(output, mavenCache.toString())
+        ),
+        output
+    );
+    workflow.mappings.put("org.savantbuild.test:badver:1.0.0.Final", new Version("1.0.0"));
+
+    ArtifactID nonSemanticId = new ArtifactID("org.savantbuild.test:has-non-semantic-versioned-dep");
+    ArtifactID badVerId = new ArtifactID("org.savantbuild.test:badver");
+    DependencyGraph expected = new DependencyGraph(project);
+    expected.addEdge(new Dependency(project.id), new Dependency(nonSemanticId), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("GPLV2_0", null)));
+    expected.addEdge(new Dependency(nonSemanticId), new Dependency(badVerId), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("Apache-2.0", null)));
+    expected.addEdge(new Dependency(badVerId), new Dependency(leaf1_1.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("Commercial", "Commercial license")));
+
+    DependencyGraph actual = service.buildGraph(project, dependencies, workflow);
+    assertEquals(actual, expected);
+  }
+
+  @Test
   public void buildGraphWithWildcardExclusions() {
     // Override to add exclusions but notice that the exclusions are brought back in because the intermediate pulls leaf1 transitively back in through multipleVersions.
     // The only exclusion that survives is through intermediate's exclusion of leaf2_2 in the main project build file
@@ -352,6 +401,66 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
   }
 
   @Test
+  public void mavenCentralComplex() {
+    output.enableDebug();
+
+    dependencies = new Dependencies(
+        new DependencyGroup("compile", true,
+            new Artifact("io.vertx:vertx-core:3.9.8")
+        )
+    );
+
+    workflow = new Workflow(
+        new FetchWorkflow(
+            output,
+            new CacheProcess(output, cache.toString()),
+            new MavenCacheProcess(output, mavenCache.toString()),
+            new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null),
+            new MavenProcess(output, "https://repo1.maven.org/maven2", null, null)
+        ),
+        new PublishWorkflow(
+            new CacheProcess(output, cache.toString()),
+            new MavenCacheProcess(output, mavenCache.toString())
+        ),
+        output
+    );
+    workflow.mappings.put("io.netty:netty-all:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-buffer:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-codec:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-codec-dns:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-codec-http:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-codec-http2:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-codec-socks:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-common:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-dev-tools:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-handler:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-handler-proxy:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-jni-util:0.0.3.Final", new Version("0.0.3"));
+    workflow.mappings.put("io.netty:netty-parent:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-resolver:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-resolver-dns:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-tcnative:2.0.39.Final", new Version("2.0.39"));
+    workflow.mappings.put("io.netty:netty-tcnative-boringssl-static:2.0.39.Final", new Version("2.0.39"));
+    workflow.mappings.put("io.netty:netty-tcnative-parent:2.0.39.Final", new Version("2.0.39"));
+    workflow.mappings.put("io.netty:netty-transport:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-transport-native-epoll:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-transport-native-kqueue:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-transport-native-unix-common:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.projectreactor.tools:blockhound:1.0.6.RELEASE", new Version("1.0.6"));
+    workflow.mappings.put("org.eclipse.jetty.alpn:alpn-api:1.1.2.v20150522", new Version("1.1.2+v20150522"));
+    workflow.mappings.put("org.eclipse.jetty.npn:npn-api:1.1.1.v20141010", new Version("1.1.1+v20141010"));
+    workflow.mappings.put("org.eclipse.tycho:org.eclipse.osgi:3.13.0.v20180226-1711", new Version("3.13.0+v20180226-1711"));
+    workflow.mappings.put("org.jboss.marshalling:jboss-marshalling:1.4.11.Final", new Version("1.4.11"));
+    workflow.mappings.put("org.jboss.marshalling:jboss-marshalling-parent:1.4.11.Final", new Version("1.4.11"));
+    workflow.mappings.put("org.jboss.spec.javax.jms:jboss-jms-api_1.1_spec:1.0.1.Final", new Version("1.0.1"));
+    workflow.mappings.put("org.mvel:mvel2:2.3.1.Final", new Version("2.3.1"));
+    workflow.mappings.put("org.springframework:spring-beans:3.0.5.RELEASE", new Version("3.0.5"));
+    workflow.mappings.put("org.xerial.snappy:snappy-java:1.1.7.1", new Version("1.1.7+1"));
+
+    service.buildGraph(project, dependencies, workflow);
+  }
+
+  @Test
   public void publishMissingFile() {
     Artifact artifact = new Artifact("org.savantbuild.test:publication-with-source:1.0.0");
     ArtifactMetaData amd = new ArtifactMetaData(dependencies, License.Licenses.get("BSD_2_Clause"));
@@ -375,6 +484,43 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     } catch (PublishException e) {
       assertTrue(e.getMessage().contains("The publication source file"));
     }
+  }
+
+  @Test
+  public void publishNonSemanticVersion() throws Exception {
+    PathTools.prune(projectDir.resolve("build/test/publish"));
+
+    dependencies = new Dependencies(
+        new DependencyGroup("compile", true,
+            new Artifact("org.badver:badver:1.0.0", "1.0.0.Borked", false, Collections.emptyList())
+        )
+    );
+
+    Artifact artifact = new Artifact("org.savantbuild.test:publication-with-source:1.0.0");
+    ArtifactMetaData amd = new ArtifactMetaData(dependencies, License.Licenses.get("BSD_2_Clause"));
+    Publication publication = new Publication(artifact, amd, projectDir.resolve("src/test/java/org/savantbuild/dep/TestFile.txt"), projectDir.resolve("src/test/java/org/savantbuild/dep/TestFile.txt"));
+    PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, projectDir.resolve("build/test/publish").toString()));
+    service.publish(publication, workflow);
+
+    Path amdFile = projectDir.resolve("build/test/publish/org/savantbuild/test/publication-with-source/1.0.0/publication-with-source-1.0.0.jar.amd");
+    assertTrue(Files.isRegularFile(projectDir.resolve("build/test/publish/org/savantbuild/test/publication-with-source/1.0.0/publication-with-source-1.0.0.jar.amd.md5")));
+    assertTrue(Files.isRegularFile(amdFile));
+    assertTrue(Files.isRegularFile(projectDir.resolve("build/test/publish/org/savantbuild/test/publication-with-source/1.0.0/publication-with-source-1.0.0.jar.md5")));
+    assertTrue(Files.isRegularFile(projectDir.resolve("build/test/publish/org/savantbuild/test/publication-with-source/1.0.0/publication-with-source-1.0.0.jar")));
+    assertTrue(Files.isRegularFile(projectDir.resolve("build/test/publish/org/savantbuild/test/publication-with-source/1.0.0/publication-with-source-1.0.0-src.jar.md5")));
+    assertTrue(Files.isRegularFile(projectDir.resolve("build/test/publish/org/savantbuild/test/publication-with-source/1.0.0/publication-with-source-1.0.0-src.jar")));
+
+    // Ensure the MD5 files are correct (these methods throw exceptions if they aren't
+    MD5.load(projectDir.resolve("build/test/publish/org/savantbuild/test/publication-with-source/1.0.0/publication-with-source-1.0.0.jar.amd.md5"));
+    MD5.load(projectDir.resolve("build/test/publish/org/savantbuild/test/publication-with-source/1.0.0/publication-with-source-1.0.0.jar.md5"));
+    MD5.load(projectDir.resolve("build/test/publish/org/savantbuild/test/publication-with-source/1.0.0/publication-with-source-1.0.0-src.jar.md5"));
+
+    Map<String, Version> mappings = new HashMap<>();
+    mappings.put("org.badver:badver:1.0.0.Borked", new Version("1.0.0"));
+
+    ArtifactMetaData actual = ArtifactTools.parseArtifactMetaData(amdFile, mappings);
+    ArtifactMetaData expected = new ArtifactMetaData(dependencies, License.Licenses.get("BSD_2_Clause"));
+    assertEquals(actual, expected);
   }
 
   @Test
@@ -444,8 +590,8 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
    * </pre>
    * <p>
    * Notice that the leaf1:leaf1 node gets upgrade across a major version. This is allowed because the
-   * multiple-versions-different-dependencies node gets upgrade to 1.1.0 and therefore all the dependencies below it
-   * are from the 1.1.0 version.
+   * multiple-versions-different-dependencies node gets upgrade to 1.1.0 and therefore all the dependencies below it are
+   * from the 1.1.0 version.
    */
   @Test
   public void reduceComplex() {

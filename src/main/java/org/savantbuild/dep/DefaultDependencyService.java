@@ -40,7 +40,6 @@ import org.savantbuild.dep.domain.Publication;
 import org.savantbuild.dep.domain.ReifiedArtifact;
 import org.savantbuild.dep.domain.ResolvableItem;
 import org.savantbuild.dep.domain.ResolvedArtifact;
-import org.savantbuild.domain.Version;
 import org.savantbuild.dep.graph.ArtifactGraph;
 import org.savantbuild.dep.graph.DependencyEdgeValue;
 import org.savantbuild.dep.graph.DependencyGraph;
@@ -52,6 +51,7 @@ import org.savantbuild.dep.workflow.PublishWorkflow;
 import org.savantbuild.dep.workflow.Workflow;
 import org.savantbuild.dep.workflow.process.ProcessFailureException;
 import org.savantbuild.dep.xml.ArtifactTools;
+import org.savantbuild.domain.Version;
 import org.savantbuild.output.Output;
 import org.savantbuild.security.MD5;
 import org.savantbuild.security.MD5Exception;
@@ -261,8 +261,9 @@ public class DefaultDependencyService implements DependencyService {
       throw new CompatibilityException(graph, destination, min, max);
     }
 
+    //noinspection OptionalGetWithoutIsPresent
     DependencyEdgeValue edgeValue = significantInbound.stream()
-                                                      .filter((edge) -> edge.getValue().dependencyVersion.equals(max))
+                                                      .filter(edge -> edge.getValue().dependencyVersion.equals(max))
                                                       .findFirst()
                                                       .get()
                                                       .getValue();
@@ -280,9 +281,9 @@ public class DefaultDependencyService implements DependencyService {
 
   /**
    * Recursively populates the DependencyGraph starting with the given origin and its dependencies. This fetches the
-   * ArtifactMetaData for all the dependencies and performs a breadth first traversal of the graph. If a dependency
-   * has already been encountered and traversed, this does not traverse it again. The Set is used to track the
-   * dependencies that have already been encountered.
+   * ArtifactMetaData for all the dependencies and performs a breadth first traversal of the graph. If a dependency has
+   * already been encountered and traversed, this does not traverse it again. The Set is used to track the dependencies
+   * that have already been encountered.
    *
    * @param graph             The Graph to populate.
    * @param origin            The origin artifact that is dependent on the Dependencies given.
@@ -290,7 +291,7 @@ public class DefaultDependencyService implements DependencyService {
    * @param workflow          The workflow used to fetch the AMD files.
    * @param artifactsRecursed The set of artifacts already resolved and recursed for.
    */
-  private void populateGraph(DependencyGraph graph, ReifiedArtifact origin, Dependencies dependencies, Workflow workflow,
+  private void populateGraph(DependencyGraph graph, Artifact origin, Dependencies dependencies, Workflow workflow,
                              Set<Artifact> artifactsRecursed, Deque<List<ArtifactID>> exclusions)
       throws ArtifactMetaDataMissingException, ProcessFailureException, MD5Exception {
     dependencies.groups.forEach((type, group) -> {
@@ -324,9 +325,8 @@ public class DefaultDependencyService implements DependencyService {
 
         // Recurse
         if (amd.dependencies != null) {
-          ReifiedArtifact artifact = amd.toLicensedArtifact(dependency);
           exclusions.push(dependency.exclusions);
-          populateGraph(graph, artifact, amd.dependencies, workflow, artifactsRecursed, exclusions);
+          populateGraph(graph, dependency, amd.dependencies, workflow, artifactsRecursed, exclusions);
           exclusions.pop();
         }
 

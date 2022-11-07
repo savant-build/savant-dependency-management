@@ -52,6 +52,17 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  */
 public class MavenTools {
   /**
+   * Maven version error.
+   */
+  public static final String VersionError = "Invalid Version in the dependency graph from a Maven dependency [%s]. You must " +
+      "specify a semantic version mapping for Savant to properly handle Maven dependencies. This goes at the top-level of the build file and looks like this:\n\n" +
+      "project(...) {\n" +
+      "  semanticVersions {\n" +
+      "    mapping(id: \"org.badver:badver:1.0.0.Final\", version: \"1.0.0\")\n" +
+      "  }\n" +
+      "}";
+
+  /**
    * Parses a POM XML file.
    *
    * @param file   The file.
@@ -69,38 +80,10 @@ public class MavenTools {
       Document d = b.parse(file.toFile());
       Element pomElement = d.getDocumentElement();
       pom.version = childText(pomElement, "version");
-      if (pom.version != null) {
-        pom.properties.put("project.version", pom.version);
-        // 'pom' and no prefix are deprecated in favor of 'project' but they still exist in the wild.
-        pom.properties.put("pom.version", pom.properties.get("project.version"));
-        pom.properties.put("version", pom.properties.get("project.version"));
-      }
-
       pom.group = childText(pomElement, "groupId");
-      if (pom.group != null) {
-        pom.properties.put("project.groupId", pom.group);
-        // 'pom' and no prefix are deprecated in favor of 'project' but they still exist in the wild.
-        pom.properties.put("pom.groupId", pom.group);
-        pom.properties.put("groupId", pom.group);
-      }
-
       pom.id = childText(pomElement, "artifactId");
-      if (pom.id != null) {
-        pom.properties.put("project.artifactId", pom.id);
-        // 'pom' and no prefix are deprecated in favor of 'project' but they still exist in the wild.
-        pom.properties.put("pom.artifactId", pom.id);
-        pom.properties.put("artifactId", pom.id);
-      }
-
       pom.name = childText(pomElement, "name");
-      if (pom.name != null) {
-        pom.properties.put("project.name", pom.name);
-      }
-
       pom.packaging = childText(pomElement, "packaging");
-      if (pom.packaging != null) {
-        pom.properties.put("project.packaging", pom.packaging);
-      }
 
       // Grab the parent info
       Element parentNode = firstChild(pomElement, "parent");
@@ -115,9 +98,12 @@ public class MavenTools {
       if (propertiesNode != null) {
         NodeList propertyList = propertiesNode.getChildNodes();
         for (int i = 0; i < propertyList.getLength(); i++) {
-          String name = propertyList.item(i).getNodeName();
-          String value = propertyList.item(i).getTextContent().trim();
-          pom.properties.put(name, value);
+          Node property = propertyList.item(i);
+          if (property.getNodeType() == Node.ELEMENT_NODE) {
+            String name = property.getNodeName();
+            String value = property.getTextContent().trim();
+            pom.properties.put(name, value);
+          }
         }
       }
 
@@ -172,11 +158,16 @@ public class MavenTools {
 
   public static String replaceProperties(String value, Map<String, String> properties) {
     if (value == null) {
-      return value;
+      return null;
     }
 
     for (String key : properties.keySet()) {
-      value = value.replace("${" + key + "}", properties.get(key));
+      String replacement = properties.get(key);
+      if (replacement == null) {
+        continue;
+      }
+
+      value = value.replace("${" + key + "}", replacement);
     }
 
     return value;
@@ -192,9 +183,14 @@ public class MavenTools {
     Dependencies savantDependencies = new Dependencies();
     pom.resolveAllDependencies().forEach(dep -> {
       String groupName = dep.scope;
-      if (groupName.equalsIgnoreCase("test")) {
-        groupName = "test-compile";
+
+      // Skip provided and test dependencies because there are POMs that include dependencies in these groups that don't actually exist.
+      // Plus, we don't really need to depend on these in real-world scenarios
+      if (groupName.equalsIgnoreCase("provided") || groupName.equalsIgnoreCase("test") || groupName.equalsIgnoreCase("system")) {
+        return;
       }
+
+      // Fix lame Maven deps
       if (dep.optional != null && dep.optional.equalsIgnoreCase("true")) {
         groupName += "-optional";
       }
@@ -213,8 +209,9 @@ public class MavenTools {
       }
 
       Version mapping = determineVersion(dep, mappings);
-      dep.savantArtifact = new ReifiedArtifact(new ArtifactID(dep.group, dep.id, dep.getArtifactName(), (dep.type == null ? "jar" : dep.type)), mapping, exclusions, Collections.emptyList());
-      savantDependencyGroup.dependencies.add(new Artifact(dep.savantArtifact.id, dep.savantArtifact.version, exclusions));
+      ArtifactID id = new ArtifactID(dep.group, dep.id, dep.getArtifactName(), (dep.type == null ? "jar" : dep.type));
+      dep.savantArtifact = new ReifiedArtifact(id, mapping, dep.version, exclusions, Collections.emptyList());
+      savantDependencyGroup.dependencies.add(dep.savantArtifact);
     });
 
     return savantDependencies;
@@ -230,6 +227,9 @@ public class MavenTools {
       } catch (LicenseException e) {
         // Try the URL now
         savantLicense = License.lookupByURL(license.url);
+        if (savantLicense == null) {
+          savantLicense = License.parse("Other", license.name);
+        }
       }
 
       if (savantLicense != null) {
@@ -258,7 +258,7 @@ public class MavenTools {
       String key = pom.toSpecification();
       version = mappings.get(key);
       if (version == null) {
-        throw new VersionException("Invalid Version in the dependency graph from a Maven dependency [" + pom.toSpecification() + "]. You must specify a semantic version mapping for Savant to properly handle Maven dependencies.");
+        throw new VersionException(String.format(VersionError, key));
       }
     }
 

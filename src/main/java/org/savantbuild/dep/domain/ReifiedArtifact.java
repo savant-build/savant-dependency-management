@@ -16,6 +16,7 @@
 package org.savantbuild.dep.domain;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -33,17 +34,19 @@ public class ReifiedArtifact extends Artifact {
   public final List<License> licenses;
 
   public ReifiedArtifact(ArtifactID id, Version version, License... licenses) {
-    this(id, version, Arrays.asList(licenses));
+    this(id, version, null, Collections.emptyList(), Arrays.asList(licenses));
   }
 
   public ReifiedArtifact(ArtifactID id, Version version, List<License> licenses) {
-    super(id, version);
-    Objects.requireNonNull(licenses, "Artifacts must have a license");
-    this.licenses = licenses;
+    this(id, version, null, Collections.emptyList(), licenses);
   }
 
   public ReifiedArtifact(ArtifactID id, Version version, List<ArtifactID> exclusions, List<License> licenses) {
-    super(id, version, exclusions);
+    this(id, version, null, exclusions, licenses);
+  }
+
+  public ReifiedArtifact(ArtifactID id, Version version, String nonSemanticVersion, List<ArtifactID> exclusions, List<License> licenses) {
+    super(id, version, nonSemanticVersion, exclusions);
     Objects.requireNonNull(licenses, "Artifacts must have a license");
     this.licenses = licenses;
   }
@@ -65,7 +68,20 @@ public class ReifiedArtifact extends Artifact {
    * @param licenses The licenses.
    */
   public ReifiedArtifact(String spec, List<License> licenses) {
-    super(spec);
+    this(spec, null, false, Collections.emptyList(), licenses);
+  }
+
+  /**
+   * See {@link Artifact#Artifact(String)} for what is allowed for the specification String.
+   *
+   * @param spec                   The specification String.
+   * @param nonSemanticVersion     The non-sematic version for the super constructor.
+   * @param skipCompatibilityCheck The skip compatibility check flag for the super constructor.
+   * @param exclusions             The list of exclusions for the super constructor.
+   * @param licenses               The licenses.
+   */
+  public ReifiedArtifact(String spec, String nonSemanticVersion, boolean skipCompatibilityCheck, List<ArtifactID> exclusions, List<License> licenses) {
+    super(spec, nonSemanticVersion, skipCompatibilityCheck, exclusions);
     Objects.requireNonNull(licenses, "Artifacts must have a license");
     this.licenses = licenses;
   }

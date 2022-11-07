@@ -19,6 +19,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.Collections;
 
 import org.savantbuild.dep.BaseUnitTest;
 import org.savantbuild.dep.domain.Artifact;
@@ -42,7 +43,7 @@ import static org.testng.Assert.assertTrue;
 public class ArtifactToolsTest extends BaseUnitTest {
   @Test
   public void parse() throws Exception {
-    ArtifactMetaData amd = ArtifactTools.parseArtifactMetaData(projectDir.resolve("src/test/resources/amd.xml"));
+    ArtifactMetaData amd = ArtifactTools.parseArtifactMetaData(projectDir.resolve("src/test/resources/amd.xml"), Collections.emptyMap());
     assertEquals(amd.licenses, Arrays.asList(License.Licenses.get("ApacheV2_0"), new License("BSD_2_Clause", "Override the BSD license.")));
     assertEquals(amd.dependencies.groups.size(), 2);
     assertEquals(amd.dependencies.groups.get("runtime").dependencies.size(), 2);
@@ -131,7 +132,7 @@ public class ArtifactToolsTest extends BaseUnitTest {
     deps.groups.remove("test");
 
     // Then load and compare
-    ArtifactMetaData amdOut = ArtifactTools.parseArtifactMetaData(tmp);
+    ArtifactMetaData amdOut = ArtifactTools.parseArtifactMetaData(tmp, Collections.emptyMap());
     assertEquals(amd, amdOut);
 
     Files.delete(tmp);

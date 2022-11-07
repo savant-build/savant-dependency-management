@@ -112,7 +112,7 @@ public class Workflow {
     }
 
     try {
-      return ArtifactTools.parseArtifactMetaData(file);
+      return ArtifactTools.parseArtifactMetaData(file, mappings);
     } catch (IllegalArgumentException | NullPointerException | SAXException | ParserConfigurationException |
              IOException | VersionException e) {
       throw new ProcessFailureException(item, e);
@@ -158,13 +158,13 @@ public class Workflow {
   }
 
   private POM loadPOM(Artifact artifact, PublishWorkflow publishWorkflow) {
-    // We can directly load a POM or translate an AMD to a POM
-    ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactPOMFile());
+    // Maven doesn't use artifact names (via classifiers) when resolving POMs. Therefore, we need to use the project id twice for the item
+    ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.project, artifact.version.toString(), artifact.getArtifactPOMFile());
     Path file = fetchWorkflow.fetchItem(item, publishWorkflow);
 
-    // Try the POM with the bad version
-    if (artifact.nonSemanticVersion != null) {
-      item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.nonSemanticVersion, artifact.getArtifactNonSemanticPOMFile());
+    // Try the POM with the non-semantic (bad) version
+    if (file == null && artifact.nonSemanticVersion != null) {
+      item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.project, artifact.nonSemanticVersion, artifact.getArtifactNonSemanticPOMFile());
       file = fetchWorkflow.fetchItem(item, publishWorkflow);
     }
 

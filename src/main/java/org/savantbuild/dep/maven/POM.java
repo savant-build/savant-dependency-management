@@ -127,12 +127,42 @@ public class POM {
   }
 
   public Map<String, String> resolveAllProperties() {
-    Map<String, String> allProperties = new HashMap<>(properties);
-    POM current = parent;
+    Map<String, String> allProperties = new HashMap<>();
+    POM current = this;
     while (current != null) {
       current.properties.forEach(allProperties::putIfAbsent);
       current.properties.forEach((key, value) -> allProperties.putIfAbsent("parent." + key, value));
       current.properties.forEach((key, value) -> allProperties.putIfAbsent("project.parent." + key, value));
+
+      if (current.version != null) {
+        allProperties.putIfAbsent("project.version", current.version);
+        // 'pom' and no prefix are deprecated in favor of 'project' but they still exist in the wild.
+        allProperties.putIfAbsent("pom.version", current.properties.get("project.version"));
+        allProperties.putIfAbsent("version", current.properties.get("project.version"));
+      }
+
+      if (current.group != null) {
+        allProperties.putIfAbsent("project.groupId", current.group);
+        // 'pom' and no prefix are deprecated in favor of 'project' but they still exist in the wild.
+        allProperties.putIfAbsent("pom.groupId", current.group);
+        allProperties.putIfAbsent("groupId", current.group);
+      }
+
+      if (current.id != null) {
+        allProperties.putIfAbsent("project.artifactId", current.id);
+        // 'pom' and no prefix are deprecated in favor of 'project' but they still exist in the wild.
+        allProperties.putIfAbsent("pom.artifactId", current.id);
+        allProperties.putIfAbsent("artifactId", current.id);
+      }
+
+      if (current.name != null) {
+        allProperties.putIfAbsent("project.name", current.name);
+      }
+
+      if (current.packaging != null) {
+        allProperties.putIfAbsent("project.packaging", current.packaging);
+      }
+
       current = current.parent;
     }
 
@@ -148,12 +178,12 @@ public class POM {
   }
 
   private void fillInDependency(MavenDependency dep, Map<String, String> allProperties) {
-    dep.group = MavenTools.replaceProperties(dep.group, properties);
-    dep.id = MavenTools.replaceProperties(dep.id, properties);
-    dep.type = MavenTools.replaceProperties(dep.type, properties);
-    dep.scope = MavenTools.replaceProperties(dep.scope, properties);
-    dep.version = MavenTools.replaceProperties(dep.version, properties);
-    dep.classifier = MavenTools.replaceProperties(dep.classifier, properties);
+    dep.group = MavenTools.replaceProperties(dep.group, allProperties);
+    dep.id = MavenTools.replaceProperties(dep.id, allProperties);
+    dep.type = MavenTools.replaceProperties(dep.type, allProperties);
+    dep.scope = MavenTools.replaceProperties(dep.scope, allProperties);
+    dep.version = MavenTools.replaceProperties(dep.version, allProperties);
+    dep.classifier = MavenTools.replaceProperties(dep.classifier, allProperties);
 
     List<MavenDependency> allDefinitions = resolveAllDependencyDefinitions();
     if (dep.optional == null) {
