@@ -23,6 +23,7 @@ import org.savantbuild.dep.PathTools;
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.License;
 import org.savantbuild.dep.domain.ReifiedArtifact;
+import org.savantbuild.dep.domain.ResolvableItem;
 import org.savantbuild.dep.workflow.PublishWorkflow;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -48,7 +49,8 @@ public class URLProcessTest extends BaseUnitTest {
 
     Artifact artifact = new ReifiedArtifact("org.savantbuild.test:" + name + ":" + name + ":" + version + ":jar", License.Licenses.get("ApacheV2_0"));
     URLProcess ufp = new URLProcess(output, url, null, null);
-    Path file = ufp.fetch(artifact, artifact.getArtifactFile(), new PublishWorkflow(new CacheProcess(output, cache.toString())));
+    ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile());
+    Path file = ufp.fetch(item, new PublishWorkflow(new CacheProcess(output, cache.toString())));
     assertNotNull(file);
 
     assertEquals((Object) file.toAbsolutePath(), Paths.get(result).toAbsolutePath());
@@ -77,7 +79,8 @@ public class URLProcessTest extends BaseUnitTest {
     pw.getProcesses().add(process);
 
     URLProcess ufp = new URLProcess(output, url, null, null);
-    Path file = ufp.fetch(artifact, artifact.getArtifactFile(), pw);
+    ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile());
+    Path file = ufp.fetch(item, pw);
     assertNotNull(file);
   }
 
@@ -92,7 +95,8 @@ public class URLProcessTest extends BaseUnitTest {
     pw.getProcesses().add(process);
 
     URLProcess ufp = new URLProcess(output, url, null, null);
-    Path amd = ufp.fetch(artifact, artifact.getArtifactMetaDataFile(), pw);
+    ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactMetaDataFile());
+    Path amd = ufp.fetch(item, pw);
     assertNotNull(amd);
   }
 
@@ -107,7 +111,8 @@ public class URLProcessTest extends BaseUnitTest {
     pw.getProcesses().add(process);
 
     URLProcess ufp = new URLProcess(output, url, null, null);
-    Path file = ufp.fetch(artifact, artifact.getArtifactMetaDataFile(), pw);
+    ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactMetaDataFile());
+    Path file = ufp.fetch(item, pw);
     assertNull(file);
   }
 
@@ -122,7 +127,8 @@ public class URLProcessTest extends BaseUnitTest {
     pw.getProcesses().add(process);
 
     URLProcess ufp = new URLProcess(output, url, null, null);
-    Path file = ufp.fetch(artifact, artifact.getArtifactFile(), pw);
+    ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile());
+    Path file = ufp.fetch(item, pw);
     assertNull(file);
   }
 
@@ -137,7 +143,8 @@ public class URLProcessTest extends BaseUnitTest {
     pw.getProcesses().add(process);
 
     URLProcess ufp = new URLProcess(output, makeLocalURL(), null, null);
-    Path file = ufp.fetch(artifact, artifact.getArtifactFile(), pw);
+    ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile());
+    Path file = ufp.fetch(item, pw);
     assertNull(file);
   }
 

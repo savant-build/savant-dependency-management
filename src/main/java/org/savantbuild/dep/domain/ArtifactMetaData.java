@@ -56,8 +56,4 @@ public class ArtifactMetaData {
     result = 31 * result + licenses.hashCode();
     return result;
   }
-
-  public ReifiedArtifact toLicensedArtifact(Artifact dependency) {
-    return new ReifiedArtifact(dependency.id, dependency.version, licenses);
-  }
 }

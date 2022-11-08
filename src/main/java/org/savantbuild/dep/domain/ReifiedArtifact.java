@@ -16,13 +16,14 @@
 package org.savantbuild.dep.domain;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
 import org.savantbuild.domain.Version;
 
 /**
- * This class defines a artifact that has been completely built by the dependency process. Usually, a Dependency (which
+ * This class defines an artifact that has been completely built by the dependency process. Usually, a Dependency (which
  * is an abstract artifact specialization) has the AMD file downloaded. That file contains additional information that
  * the dependent project doesn't know about the artifact. The information in the AMD file combined with the information
  * from the Dependency results in this class.
@@ -33,17 +34,25 @@ public class ReifiedArtifact extends Artifact {
   public final List<License> licenses;
 
   public ReifiedArtifact(ArtifactID id, Version version, License... licenses) {
-    this(id, version, Arrays.asList(licenses));
+    this(id, version, null, Collections.emptyList(), Arrays.asList(licenses));
   }
 
   public ReifiedArtifact(ArtifactID id, Version version, List<License> licenses) {
-    super(id, version, false);
+    this(id, version, null, Collections.emptyList(), licenses);
+  }
+
+  public ReifiedArtifact(ArtifactID id, Version version, List<ArtifactID> exclusions, List<License> licenses) {
+    this(id, version, null, exclusions, licenses);
+  }
+
+  public ReifiedArtifact(ArtifactID id, Version version, String nonSemanticVersion, List<ArtifactID> exclusions, List<License> licenses) {
+    super(id, version, nonSemanticVersion, exclusions);
     Objects.requireNonNull(licenses, "Artifacts must have a license");
     this.licenses = licenses;
   }
 
   /**
-   * See {@link Artifact#Artifact(String, boolean)} for what is allowed for the specification String.
+   * See {@link Artifact#Artifact(String)} for what is allowed for the specification String.
    *
    * @param spec     The specification String.
    * @param licenses The licenses.
@@ -53,13 +62,26 @@ public class ReifiedArtifact extends Artifact {
   }
 
   /**
-   * See {@link Artifact#Artifact(String, boolean)} for what is allowed for the specification String.
+   * See {@link Artifact#Artifact(String)} for what is allowed for the specification String.
    *
    * @param spec     The specification String.
    * @param licenses The licenses.
    */
   public ReifiedArtifact(String spec, List<License> licenses) {
-    super(spec, false);
+    this(spec, null, false, Collections.emptyList(), licenses);
+  }
+
+  /**
+   * See {@link Artifact#Artifact(String)} for what is allowed for the specification String.
+   *
+   * @param spec                   The specification String.
+   * @param nonSemanticVersion     The non-sematic version for the super constructor.
+   * @param skipCompatibilityCheck The skip compatibility check flag for the super constructor.
+   * @param exclusions             The list of exclusions for the super constructor.
+   * @param licenses               The licenses.
+   */
+  public ReifiedArtifact(String spec, String nonSemanticVersion, boolean skipCompatibilityCheck, List<ArtifactID> exclusions, List<License> licenses) {
+    super(spec, nonSemanticVersion, skipCompatibilityCheck, exclusions);
     Objects.requireNonNull(licenses, "Artifacts must have a license");
     this.licenses = licenses;
   }

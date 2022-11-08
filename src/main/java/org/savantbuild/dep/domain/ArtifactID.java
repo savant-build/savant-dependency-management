@@ -17,6 +17,8 @@ package org.savantbuild.dep.domain;
 
 import java.util.Objects;
 
+import static java.util.Arrays.stream;
+
 /**
  * This class is contains the properties that define an artifacts identity. Any two artifacts whose identity match are
  * considered the same artifact. All other properties associated with the artifact usually determine the artifacts
@@ -48,9 +50,47 @@ public class ArtifactID implements Comparable<ArtifactID> {
     Objects.requireNonNull(name, "Artifacts must have a name");
     Objects.requireNonNull(type, "Artifacts must have a type");
     this.group = group;
-    this.project = project == null ? name : project;
-    this.name = name == null ? project : name;
-    this.type = type == null ? "jar" : type;
+    this.project = project;
+    this.name = name;
+    this.type = type;
+  }
+
+  /**
+   * Constructs an artifact id using the shorthand.
+   *
+   * @param spec The spec.
+   * @throws NullPointerException If any of the arguments are null.
+   */
+  public ArtifactID(String spec) throws NullPointerException {
+    Objects.requireNonNull(spec, "Artifacts must have a full specification");
+
+    String[] parts = spec.split(":");
+    if (parts.length < 2) {
+      throw new IllegalArgumentException("Invalid artifact ID specification [" + spec + "]. It must have 2, 3, or 4 parts");
+    }
+
+    if (stream(parts).anyMatch(String::isEmpty)) {
+      throw new IllegalArgumentException("Invalid artifact ID specification [" + spec + "]. One of the parts is empty (i.e. foo::bar");
+    }
+
+    if (parts.length == 2) {
+      group = parts[0];
+      project = parts[1];
+      name = parts[1];
+      type = "jar";
+    } else if (parts.length == 3) {
+      group = parts[0];
+      project = parts[1];
+      name = parts[1];
+      type = parts[2];
+    } else if (parts.length == 4) {
+      group = parts[0];
+      project = parts[1];
+      name = parts[2];
+      type = parts[3];
+    } else {
+      throw new IllegalArgumentException("Invalid artifact ID specification [" + spec + "]. It must have 2, 3, or 4 parts");
+    }
   }
 
   @Override

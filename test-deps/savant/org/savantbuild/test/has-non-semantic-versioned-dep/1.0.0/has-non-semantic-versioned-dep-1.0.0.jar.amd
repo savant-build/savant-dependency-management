@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright (c) 2014, Inversoft Inc., All Rights Reserved
+  ~ Copyright (c) 2001-2013, Inversoft, All Rights Reserved
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -14,18 +14,10 @@
   ~ language governing permissions and limitations under the License.
   -->
 <artifact-meta-data>
-  <license type="ApacheV2_0"/>
-  <license type="BSD_2_Clause">
-<![CDATA[Override the BSD license.]]>
-  </license>
+  <license type="GPLV2_0"/>
   <dependencies>
-    <dependency-group name="runtime">
-      <dependency group="org.example.test" project="test-project" name="test-project" version="1.0" type="jar"/>
-      <dependency group="org.example.test" project="test-project2" name="test-project2" version="2.0" type="jar"/>
-    </dependency-group>
     <dependency-group name="compile">
-      <dependency group="org.example.test" project="test-project3" name="test-project3" version="3.0" type="jar"/>
-      <dependency group="org.example.test" project="test-project4" name="test-project4" version="4.0" type="jar"/>
+      <dependency group="org.savantbuild.test" project="badver" name="badver" version="1.0.0.Final" type="jar"/>
     </dependency-group>
   </dependencies>
 </artifact-meta-data>

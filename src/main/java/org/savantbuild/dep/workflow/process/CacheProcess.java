@@ -20,8 +20,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import org.savantbuild.dep.PathTools;
-import org.savantbuild.dep.domain.Artifact;
+import org.savantbuild.dep.domain.ResolvableItem;
 import org.savantbuild.dep.workflow.PublishWorkflow;
 import org.savantbuild.output.Output;
 
@@ -45,45 +44,22 @@ public class CacheProcess implements Process {
   }
 
   /**
-   * Deletes the integration builds from the cache.
-   *
-   * @param artifact The artifact. This artifacts version is the next integration build version.
-   * @throws ProcessFailureException If the integration builds could not be deleted.
-   */
-  @Override
-  public void deleteIntegrationBuilds(Artifact artifact) throws ProcessFailureException {
-    String path = String.join("/", dir, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version + "-{integration}");
-    Path dir = Paths.get(path);
-    if (!Files.isDirectory(dir)) {
-      return;
-    }
-
-    try {
-      PathTools.prune(dir);
-    } catch (IOException e) {
-      throw new ProcessFailureException(artifact, "Unable to delete integration builds from the local cache at [" + dir.toAbsolutePath() + "]", e);
-    }
-  }
-
-  /**
    * Checks the cache directory for the item. If it exists it is returned. If not, null is returned.
    *
-   * @param artifact        The artifact that the item is associated with.
-   * @param item            The name of the item being fetched.
+   * @param item            The item being fetched.
    * @param publishWorkflow The PublishWorkflow that is used to store the item if it can be found.
    * @return The File from the cache or null if it doesn't exist.
-   * @throws NegativeCacheException If there is a negative cache record of the file, meaning it doesn't exist anywhere
-   * in the world.
+   * @throws NegativeCacheException If there is a negative cache record of the file, meaning it doesn't exist
+   *     anywhere in the world.
    */
   @Override
-  public Path fetch(Artifact artifact, String item, PublishWorkflow publishWorkflow)
-      throws NegativeCacheException {
-    String path = String.join("/", dir, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString(), item);
+  public Path fetch(ResolvableItem item, PublishWorkflow publishWorkflow) throws NegativeCacheException {
+    String path = String.join("/", dir, item.group.replace('.', '/'), item.project, item.version, item.item);
     Path file = Paths.get(path);
     if (!Files.isRegularFile(file)) {
       file = Paths.get(path + ".neg");
       if (Files.isRegularFile(file)) {
-        throw new NegativeCacheException(artifact);
+        throw new NegativeCacheException(item);
       } else {
         file = null;
       }
@@ -95,36 +71,35 @@ public class CacheProcess implements Process {
   /**
    * Publishes the given artifact item into the cache.
    *
-   * @param artifact     The artifact that the item might be associated with.
-   * @param item         The name of the item to publish.
-   * @param artifactFile The path to the artifact.
+   * @param item     The item to publish.
+   * @param itemFile The path to the item.
    * @return Always null.
    * @throws ProcessFailureException If the publish fails.
    */
   @Override
-  public Path publish(Artifact artifact, String item, Path artifactFile) throws ProcessFailureException {
-    String cachePath = String.join("/", dir, artifact.id.group.replace('.', '/'), artifact.id.project, artifact.version.toString(), item);
+  public Path publish(ResolvableItem item, Path itemFile) throws ProcessFailureException {
+    String cachePath = String.join("/", dir, item.group.replace('.', '/'), item.project, item.version, item.item);
     Path cacheFile = Paths.get(cachePath);
     if (Files.isDirectory(cacheFile)) {
-      throw new ProcessFailureException(artifact, "Your local artifact cache location is a directory [" + cacheFile.toAbsolutePath() + "]");
+      throw new ProcessFailureException("Your local artifact cache location is a directory [" + cacheFile.toAbsolutePath() + "]");
     }
 
     if (Files.isRegularFile(cacheFile)) {
       try {
         Files.delete(cacheFile);
       } catch (IOException e) {
-        throw new ProcessFailureException(artifact, "Unable to delete old file in the local cache to replace [" + cacheFile.toAbsolutePath() + "]", e);
+        throw new ProcessFailureException("Unable to delete old file in the local cache to replace [" + cacheFile.toAbsolutePath() + "]", e);
       }
     } else if (!Files.exists(cacheFile)) {
       try {
         Files.createDirectories(cacheFile.getParent());
       } catch (IOException e) {
-        throw new ProcessFailureException(artifact, "Unable to create cache directory [" + cacheFile.getParent().toAbsolutePath() + "]");
+        throw new ProcessFailureException("Unable to create cache directory [" + cacheFile.getParent().toAbsolutePath() + "]");
       }
     }
 
     try {
-      Files.copy(artifactFile, cacheFile);
+      Files.copy(itemFile, cacheFile);
     } catch (IOException e) {
       // Clean up the artifact if it was a partial copy
       if (Files.exists(cacheFile)) {
@@ -135,7 +110,7 @@ public class CacheProcess implements Process {
         }
       }
 
-      throw new ProcessFailureException(artifact, e);
+      throw new ProcessFailureException(item, e);
     }
 
     output.debugln("Cached at [%s]", cacheFile);

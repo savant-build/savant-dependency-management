@@ -19,8 +19,11 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collection;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -35,8 +38,8 @@ import org.savantbuild.dep.domain.CompatibilityException;
 import org.savantbuild.dep.domain.Dependencies;
 import org.savantbuild.dep.domain.Publication;
 import org.savantbuild.dep.domain.ReifiedArtifact;
+import org.savantbuild.dep.domain.ResolvableItem;
 import org.savantbuild.dep.domain.ResolvedArtifact;
-import org.savantbuild.domain.Version;
 import org.savantbuild.dep.graph.ArtifactGraph;
 import org.savantbuild.dep.graph.DependencyEdgeValue;
 import org.savantbuild.dep.graph.DependencyGraph;
@@ -48,6 +51,7 @@ import org.savantbuild.dep.workflow.PublishWorkflow;
 import org.savantbuild.dep.workflow.Workflow;
 import org.savantbuild.dep.workflow.process.ProcessFailureException;
 import org.savantbuild.dep.xml.ArtifactTools;
+import org.savantbuild.domain.Version;
 import org.savantbuild.output.Output;
 import org.savantbuild.security.MD5;
 import org.savantbuild.security.MD5Exception;
@@ -76,7 +80,7 @@ public class DefaultDependencyService implements DependencyService {
       throws ArtifactMetaDataMissingException, ProcessFailureException, MD5Exception {
     output.debugln("Building DependencyGraph with a root of [%s]", project);
     DependencyGraph graph = new DependencyGraph(project);
-    populateGraph(graph, project, dependencies, workflow, new HashSet<>());
+    populateGraph(graph, project, dependencies, workflow, new HashSet<>(), new LinkedList<>());
     return graph;
   }
 
@@ -95,15 +99,20 @@ public class DefaultDependencyService implements DependencyService {
 
     output.infoln("Publishing [%s]", publication);
 
+    ResolvableItem item = new ResolvableItem(publication.artifact.id.group, publication.artifact.id.project, publication.artifact.id.name,
+        publication.artifact.version.toString(), publication.artifact.getArtifactMetaDataFile());
     try {
       Path amdFile = ArtifactTools.generateXML(publication.metaData);
-      publishItem(publication.artifact, publication.artifact.getArtifactMetaDataFile(), amdFile, workflow);
-      publishItem(publication.artifact, publication.artifact.getArtifactFile(), publication.file, workflow);
+      publishItem(item, amdFile, workflow);
+
+      item = new ResolvableItem(item, publication.artifact.getArtifactFile());
+      publishItem(item, publication.file, workflow);
 
       if (publication.sourceFile != null) {
-        publishItem(publication.artifact, publication.artifact.getArtifactSourceFile(), publication.sourceFile, workflow);
+        item = new ResolvableItem(item, publication.artifact.getArtifactSourceFile());
+        publishItem(item, publication.sourceFile, workflow);
       } else {
-        workflow.publishNegative(publication.artifact, publication.artifact.getArtifactSourceFile());
+        workflow.publishNegative(item);
       }
     } catch (IOException e) {
       throw new PublishException(publication, e);
@@ -230,18 +239,18 @@ public class DefaultDependencyService implements DependencyService {
     // on the versions we have already kept). Then for each of those, map to the dependency version (the version of
     // the destination node). Then get the min and max.
     Version min = significantInbound.stream()
-                                    .map((edge) -> edge.getValue().dependencyVersion)
+                                    .map(edge -> edge.getValue().dependencyVersion)
                                     .min(Version::compareTo)
                                     .orElse(null);
     Version max = significantInbound.stream()
-                                    .map((edge) -> edge.getValue().dependencyVersion)
+                                    .map(edge -> edge.getValue().dependencyVersion)
                                     .max(Version::compareTo)
                                     .orElse(null);
 
     output.debugln("Min [%s] and max [%s]", min, max);
 
     // This dependency is no longer used
-    if (min == null || max == null) {
+    if (min == null) {
       output.debugln("NO LONGER USED");
       return false;
     }
@@ -252,8 +261,9 @@ public class DefaultDependencyService implements DependencyService {
       throw new CompatibilityException(graph, destination, min, max);
     }
 
+    //noinspection OptionalGetWithoutIsPresent
     DependencyEdgeValue edgeValue = significantInbound.stream()
-                                                      .filter((edge) -> edge.getValue().dependencyVersion.equals(max))
+                                                      .filter(edge -> edge.getValue().dependencyVersion.equals(max))
                                                       .findFirst()
                                                       .get()
                                                       .getValue();
@@ -271,9 +281,9 @@ public class DefaultDependencyService implements DependencyService {
 
   /**
    * Recursively populates the DependencyGraph starting with the given origin and its dependencies. This fetches the
-   * ArtifactMetaData for all of the dependencies and performs a breadth first traversal of the graph. If an dependency
-   * has already been encountered and traversed, this does not traverse it again. The Set is used to track the
-   * dependencies that have already been encountered.
+   * ArtifactMetaData for all the dependencies and performs a breadth first traversal of the graph. If a dependency has
+   * already been encountered and traversed, this does not traverse it again. The Set is used to track the dependencies
+   * that have already been encountered.
    *
    * @param graph             The Graph to populate.
    * @param origin            The origin artifact that is dependent on the Dependencies given.
@@ -281,13 +291,21 @@ public class DefaultDependencyService implements DependencyService {
    * @param workflow          The workflow used to fetch the AMD files.
    * @param artifactsRecursed The set of artifacts already resolved and recursed for.
    */
-  private void populateGraph(DependencyGraph graph, ReifiedArtifact origin, Dependencies dependencies, Workflow workflow,
-                             Set<Artifact> artifactsRecursed)
+  private void populateGraph(DependencyGraph graph, Artifact origin, Dependencies dependencies, Workflow workflow,
+                             Set<Artifact> artifactsRecursed, Deque<List<ArtifactID>> exclusions)
       throws ArtifactMetaDataMissingException, ProcessFailureException, MD5Exception {
     dependencies.groups.forEach((type, group) -> {
       output.debugln("Loading dependency group [%s]", type);
 
       for (Artifact dependency : group.dependencies) {
+        boolean excluded = exclusions.stream()
+                                     .flatMap(Collection::stream)
+                                     .anyMatch(exclusion -> DependencyTools.matchesExclusion(dependency.id, exclusion));
+        if (excluded) {
+          output.debugln("Ignoring dependency [%s] because one of it's dependents excluded it", dependency);
+          continue;
+        }
+
         output.debugln("Loading dependency [%s] skipCompatibilityCheck=[%b]", dependency, dependency.skipCompatibilityCheck);
 
         ArtifactMetaData amd = workflow.fetchMetaData(dependency);
@@ -307,8 +325,9 @@ public class DefaultDependencyService implements DependencyService {
 
         // Recurse
         if (amd.dependencies != null) {
-          ReifiedArtifact artifact = amd.toLicensedArtifact(dependency);
-          populateGraph(graph, artifact, amd.dependencies, workflow, artifactsRecursed);
+          exclusions.push(dependency.exclusions);
+          populateGraph(graph, dependency, amd.dependencies, workflow, artifactsRecursed, exclusions);
+          exclusions.pop();
         }
 
         // Add the artifact to the list
@@ -320,19 +339,22 @@ public class DefaultDependencyService implements DependencyService {
   /**
    * Publishes a single item for the given artifact.
    *
-   * @param artifact The artifact.
    * @param item     The item to publish.
    * @param file     The file to publish.
    * @param workflow The publish workflow.
    * @throws IOException If the publication fails.
    */
-  private void publishItem(Artifact artifact, String item, Path file, PublishWorkflow workflow) throws IOException {
+  private void publishItem(ResolvableItem item, Path file, PublishWorkflow workflow) throws IOException {
+    // Publish the MD5
     MD5 md5 = MD5.forPath(file);
     File tempFile = File.createTempFile("artifact-item", "md5");
     tempFile.deleteOnExit();
     Path md5File = tempFile.toPath();
     MD5.writeMD5(md5, md5File);
-    workflow.publish(artifact, item + ".md5", md5File);
-    workflow.publish(artifact, item, file);
+    ResolvableItem md5Item = new ResolvableItem(item, item.item + ".md5");
+    workflow.publish(md5Item, md5File);
+
+    // Now publish the item itself
+    workflow.publish(item, file);
   }
 }

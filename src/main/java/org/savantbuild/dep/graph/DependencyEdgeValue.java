@@ -15,7 +15,9 @@
  */
 package org.savantbuild.dep.graph;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -48,7 +50,7 @@ public class DependencyEdgeValue {
     this.dependentVersion = dependentVersion;
     this.dependencyVersion = dependencyVersion;
     this.type = type;
-    this.licenses = licenses;
+    this.licenses = Collections.unmodifiableList(new ArrayList<>(licenses));
   }
 
   @Override

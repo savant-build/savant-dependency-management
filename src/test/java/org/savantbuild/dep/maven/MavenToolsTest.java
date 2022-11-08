@@ -16,9 +16,11 @@
 package org.savantbuild.dep.maven;
 
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Collections;
 
 import org.savantbuild.dep.BaseUnitTest;
+import org.savantbuild.dep.domain.Dependencies;
 import org.savantbuild.output.SystemOutOutput;
 import org.testng.annotations.Test;
 
@@ -33,15 +35,27 @@ import static org.testng.Assert.assertNull;
 public class MavenToolsTest extends BaseUnitTest {
   @Test
   public void parse() {
-    POM pom = MavenTools.parsePOM(Paths.get("../savant-dependency-management/src/test/resources/groovy-json-4.0.6.pom"), new SystemOutOutput(true));
+    POM pom = MavenTools.parsePOM(Paths.get("../savant-dependency-management/src/test/resources/groovy-4.0.5.pom"), new SystemOutOutput(true));
     assertEquals(pom.group, "org.apache.groovy");
-    assertEquals(pom.id, "groovy-json");
+    assertEquals(pom.id, "groovy");
     assertEquals(pom.name, "Apache Groovy");
-    assertEquals(pom.version, "4.0.6");
+    assertEquals(pom.version, "4.0.5");
     assertNull(pom.parentGroup);
     assertNull(pom.parentId);
     assertNull(pom.parentVersion);
-    assertEquals(pom.dependencies, Collections.singletonList(new MavenDependency("org.apache.groovy", "groovy", "4.0.6", "compile")));
+    assertEquals(pom.dependencies, Arrays.asList(
+            new MavenDependency("org.codehaus.gpars", "gpars", "1.2.1", "compile", true, Collections.singletonList(new MavenExclusion("org.codehaus.groovy", "groovy-all"))),
+            new MavenDependency("org.apache.ivy", "ivy", "2.5.0", "compile", true, Collections.singletonList(new MavenExclusion("*", "*"))),
+            new MavenDependency("com.thoughtworks.xstream", "xstream", "1.4.19", "compile", true,
+                Arrays.asList(new MavenExclusion("junit", "junit"), new MavenExclusion("xpp3", "xpp3_min"), new MavenExclusion("xmlpull", "xmlpull"), new MavenExclusion("jmock", "jmock"))
+            ),
+            new MavenDependency("org.fusesource.jansi", "jansi", "2.4.0", "compile", true, Collections.emptyList())
+        )
+    );
     assertEquals(pom.licenses, Collections.singletonList(new MavenLicense("repo", "The Apache Software License, Version 2.0", "http://www.apache.org/licenses/LICENSE-2.0.txt")));
+
+    // Everything is optional
+    Dependencies dependencies = MavenTools.toSavantDependencies(pom, Collections.emptyMap());
+    assertEquals(dependencies, new Dependencies());
   }
 }

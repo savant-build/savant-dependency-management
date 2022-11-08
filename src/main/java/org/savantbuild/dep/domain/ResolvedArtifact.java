@@ -17,6 +17,7 @@ package org.savantbuild.dep.domain;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Objects;
 
 import org.savantbuild.domain.Version;
 
@@ -56,7 +57,7 @@ public class ResolvedArtifact extends ReifiedArtifact {
     }
 
     final ResolvedArtifact that = (ResolvedArtifact) o;
-    return (file != null ? file.equals(that.file) : that.file == null);
+    return Objects.equals(file, that.file);
   }
 
   @Override
@@ -67,10 +68,10 @@ public class ResolvedArtifact extends ReifiedArtifact {
   }
 
   /**
-   * @return This ResolvedArtifact as a Dependency. This is useful for comparing ResolvedArtifacts to {@link
-   * ReifiedArtifact}s.
+   * @return This ResolvedArtifact as a Dependency. This is useful for comparing ResolvedArtifacts to
+   *     {@link ReifiedArtifact}s.
    */
   public Artifact toArtifact() {
-    return new Artifact(id, version, false);
+    return new Artifact(id, version);
   }
 }

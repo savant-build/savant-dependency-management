@@ -15,7 +15,7 @@
  */
 package org.savantbuild.dep.workflow.process;
 
-import org.savantbuild.dep.domain.Artifact;
+import org.savantbuild.dep.domain.ResolvableItem;
 
 /**
  * This class denotes that a negative cache was stored for an artifact item of some sort and that it should not be
@@ -24,7 +24,7 @@ import org.savantbuild.dep.domain.Artifact;
  * @author Brian Pontarelli
  */
 public class NegativeCacheException extends ProcessFailureException {
-  public NegativeCacheException(Artifact artifact) {
-    super(artifact);
+  public NegativeCacheException(ResolvableItem item) {
+    super(item);
   }
 }

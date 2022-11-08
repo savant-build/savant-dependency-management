@@ -25,6 +25,7 @@ import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.ArtifactID;
@@ -32,6 +33,7 @@ import org.savantbuild.dep.domain.ArtifactMetaData;
 import org.savantbuild.dep.domain.Dependencies;
 import org.savantbuild.dep.domain.DependencyGroup;
 import org.savantbuild.dep.domain.License;
+import org.savantbuild.dep.maven.MavenTools;
 import org.savantbuild.domain.Version;
 import org.savantbuild.domain.VersionException;
 import org.xml.sax.Attributes;
@@ -45,8 +47,8 @@ import org.xml.sax.helpers.DefaultHandler;
  */
 public class ArtifactTools {
   /**
-   * Generates a temporary file that contains ArtifactMetaData XML which includes all of the artifacts in the
-   * artifactMetaData given.
+   * Generates a temporary file that contains ArtifactMetaData XML which includes all the artifacts in the
+   * ArtifactMetaData given.
    *
    * @param artifactMetaData The MetaData object to serialize to XML.
    * @return The temp file and never null.
@@ -61,10 +63,10 @@ public class ArtifactTools {
       pw.printf("<artifact-meta-data>\n");
 
       artifactMetaData.licenses.forEach(license -> {
-        if (license.text != null) {
-          pw.printf("  <license type=\"%s\"><![CDATA[%s]]></license>\n", license.identifier.replace("\"", "&quot;"), license.text);
+        if (license.text != null && license.customText) {
+          print(pw, "  <license type=\"%s\"><![CDATA[%s]]></license>\n", license.identifier, license.text);
         } else {
-          pw.printf("  <license type=\"%s\"/>\n", license.identifier.replace("\"", "&quot;"));
+          print(pw, "  <license type=\"%s\"/>\n", license.identifier);
         }
       });
 
@@ -77,14 +79,22 @@ public class ArtifactTools {
             return;
           }
 
-          pw.printf("    <dependency-group name=\"%s\">\n", group.name.replace("\"", "&quot;"));
+          print(pw, "    <dependency-group name=\"%s\">\n", group.name);
 
           for (Artifact dependency : group.dependencies) {
-            pw.printf("      <dependency group=\"%s\" project=\"%s\" name=\"%s\" version=\"%s\" type=\"%s\"/>\n",
-                dependency.id.group.replace("\"", "&quot;"), dependency.id.project.replace("\"", "&quot;"),
-                dependency.id.name.replace("\"", "&quot;"), dependency.version.toString().replace("\"", "&quot;"),
-                dependency.id.type.replace("\"", "&quot;"));
+            ArtifactID id = dependency.id;
+            String version = dependency.nonSemanticVersion != null ? dependency.nonSemanticVersion : dependency.version.toString();
+            print(pw, "      <dependency group=\"%s\" project=\"%s\" name=\"%s\" version=\"%s\" type=\"%s\">\n", id.group, id.project, id.name, version, id.type);
+
+            if (dependency.exclusions.size() > 0) {
+              for (ArtifactID exclusion : dependency.exclusions) {
+                print(pw, "        <exclusion group=\"%s\" project=\"%s\" name=\"%s\" type=\"%s\"/>\n", exclusion.group, exclusion.project, exclusion.name, exclusion.type);
+              }
+            }
+
+            pw.printf("      </dependency>\n");
           }
+
           pw.println("    </dependency-group>");
         });
 
@@ -99,31 +109,54 @@ public class ArtifactTools {
   /**
    * Parses the MetaData from the given Savant .amd file.
    *
-   * @param file The File to read the XML MetaData information from.
+   * @param file     The File to read the XML MetaData information from.
+   * @param mappings The semantic version mappings that are used when the AMD is parsed and uses non-semantic versions
+   *                 for transitive dependencies.
    * @return The MetaData parsed.
    * @throws SAXException If the SAX parsing failed.
    * @throws VersionException If any of the version strings could not be parsed.
    * @throws ParserConfigurationException If the parser configuration in the JDK is invalid.
    * @throws IOException If the parse operation failed because of an IO error.
    */
-  public static ArtifactMetaData parseArtifactMetaData(Path file)
-      throws SAXException, VersionException, ParserConfigurationException, IOException {
+  public static ArtifactMetaData parseArtifactMetaData(Path file, Map<String, Version> mappings) throws SAXException, VersionException, ParserConfigurationException, IOException {
     SAXParser parser = SAXParserFactory.newInstance().newSAXParser();
-    ArtifactMetaDataHandler handler = new ArtifactMetaDataHandler();
+    ArtifactMetaDataHandler handler = new ArtifactMetaDataHandler(mappings);
     parser.parse(file.toFile(), handler);
     return new ArtifactMetaData(handler.dependencies, handler.licenses);
   }
 
+  private static void print(PrintWriter writer, String message, Object... args) {
+    for (int i = 0; i < args.length; i++) {
+      args[i] = args[i].toString().replace("\"", "&quot;");
+    }
+
+    writer.printf(message, args);
+  }
+
   public static class ArtifactMetaDataHandler extends DefaultHandler {
+    public final List<ArtifactID> exclusions = new ArrayList<>();
+
     public final List<License> licenses = new ArrayList<>();
+
+    private final Map<String, Version> mappings;
 
     public Dependencies dependencies;
 
+    public ArtifactID dependencyId;
+
+    public String dependencyNonSemanticVersion;
+
+    public Version dependencyVersion;
+
     public DependencyGroup group;
+
+    public String licenseId;
 
     public StringBuilder licenseText;
 
-    private String licenseId;
+    public ArtifactMetaDataHandler(Map<String, Version> mappings) {
+      this.mappings = mappings;
+    }
 
     @Override
     public void characters(char[] ch, int start, int length) throws SAXException {
@@ -144,12 +177,16 @@ public class ArtifactTools {
           License license = License.parse(licenseId, text);
           licenses.add(license);
         } catch (IllegalArgumentException e) {
-          throw new SAXException("Invalid AMD file. The license [" + licenseId + "] is not an allowed license type. Allowable values are " +
-              License.Licenses.keySet() + " plus the custom license types of [Commercial, Other, OtherDistributableOpenSource, OtherNonDistributableOpenSource]", e);
+          throw new SAXException("Invalid AMD file. The license [" + licenseId + "] is not an allowed license type. Allowable values are " + License.Licenses.keySet() + " plus the custom license types of [Commercial, Other, OtherDistributableOpenSource, OtherNonDistributableOpenSource]", e);
         }
 
         licenseId = null;
         licenseText = null;
+      } else if (qName.equals("dependency")) {
+        group.dependencies.add(new Artifact(dependencyId, dependencyVersion, dependencyNonSemanticVersion, exclusions));
+        dependencyId = null;
+        dependencyVersion = null;
+        exclusions.clear();
       }
     }
 
@@ -170,34 +207,76 @@ public class ArtifactTools {
 
           break;
         case "dependency":
-          String dependencyGroup = attributes.getValue("group");
-          if (dependencyGroup == null) {
+          String group = attributes.getValue("group");
+          if (group == null) {
             throw new SAXException("Invalid AMD file. The dependency elements must specify a [group] attribute");
           }
-          String dependencyProject = attributes.getValue("project");
-          if (dependencyProject == null) {
+
+          String project = attributes.getValue("project");
+          if (project == null) {
             throw new SAXException("Invalid AMD file. The dependency elements must specify a [project] attribute");
           }
-          String dependencyName = attributes.getValue("name");
-          if (dependencyName == null) {
+
+          name = attributes.getValue("name");
+          if (name == null) {
             throw new SAXException("Invalid AMD file. The dependency elements must specify a [name] attribute");
           }
-          String dependencyType = attributes.getValue("type");
-          if (dependencyType == null) {
+
+          String type = attributes.getValue("type");
+          if (type == null) {
             throw new SAXException("Invalid AMD file. The dependency elements must specify a [type] attribute");
           }
-          String dependencyVersion = attributes.getValue("version");
-          if (dependencyVersion == null) {
+
+          String version = attributes.getValue("version");
+          if (version == null) {
             throw new SAXException("Invalid AMD file. The dependency elements must specify a [version] attribute");
           }
 
-          if (group == null) {
+          if (this.group == null) {
             throw new SAXException("Invalid AMD file. A dependency doesn't appear to be inside a dependency-group element");
           }
 
-          Artifact dependency = new Artifact(new ArtifactID(dependencyGroup, dependencyProject, dependencyName, dependencyType), new Version(dependencyVersion), false);
-          group.dependencies.add(dependency);
+          dependencyId = new ArtifactID(group, project, name, type);
+          try {
+            dependencyVersion = new Version(version);
+          } catch (VersionException e) {
+            dependencyNonSemanticVersion = version;
 
+            String spec = group + ":" + project + ":" + name + ":" + version;
+            dependencyVersion = mappings.get(spec);
+            if (dependencyVersion == null) {
+              spec = group + ":" + project + ":" + version;
+              dependencyVersion = mappings.get(spec);
+            }
+            if (dependencyVersion == null) {
+              throw new VersionException(String.format(MavenTools.VersionError, spec));
+            }
+          }
+
+          break;
+        case "exclusion":
+          group = attributes.getValue("group");
+          if (group == null) {
+            throw new SAXException("Invalid AMD file. The exclusion elements must specify a [group] attribute");
+          }
+          project = attributes.getValue("project");
+          if (project == null) {
+            throw new SAXException("Invalid AMD file. The exclusion elements must specify a [project] attribute");
+          }
+          name = attributes.getValue("name");
+          if (name == null) {
+            throw new SAXException("Invalid AMD file. The exclusion elements must specify a [name] attribute");
+          }
+          type = attributes.getValue("type");
+          if (type == null) {
+            throw new SAXException("Invalid AMD file. The exclusion elements must specify a [type] attribute");
+          }
+
+          if (dependencyId == null || dependencyVersion == null) {
+            throw new SAXException("Invalid AMD file. An exclusion doesn't appear to be inside a dependency element");
+          }
+
+          exclusions.add(new ArtifactID(group, project, name, type));
           break;
         case "license":
           licenseId = attributes.getValue("type");
@@ -206,7 +285,6 @@ public class ArtifactTools {
           }
 
           licenseText = new StringBuilder();
-
           break;
         case "artifact-meta-data":
           if (attributes.getValue("license") != null) {

@@ -24,6 +24,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -35,6 +36,7 @@ import org.savantbuild.dep.domain.DependencyGroup;
 import org.savantbuild.dep.domain.License;
 import org.savantbuild.dep.domain.ReifiedArtifact;
 import org.savantbuild.domain.Version;
+import org.savantbuild.domain.VersionException;
 import org.savantbuild.output.Output;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -49,6 +51,19 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  * @author Brian Pontarelli
  */
 public class MavenTools {
+  /**
+   * Maven version error.
+   */
+  public static final String VersionError = "Invalid Version in the dependency graph from a Maven dependency [%s]. You must " +
+      "specify a semantic version mapping for Savant to properly handle Maven dependencies. This goes at the top-level of the build file and looks like this:\n\n" +
+      "project(...) {\n" +
+      "  workflow {\n" +
+      "    semanticVersions {\n" +
+      "      mapping(id: \"org.badver:badver:1.0.0.Final\", version: \"1.0.0\")\n" +
+      "    }\n" +
+      "  }\n" +
+      "}";
+
   /**
    * Parses a POM XML file.
    *
@@ -67,38 +82,10 @@ public class MavenTools {
       Document d = b.parse(file.toFile());
       Element pomElement = d.getDocumentElement();
       pom.version = childText(pomElement, "version");
-      if (pom.version != null) {
-        pom.properties.put("project.version", pom.version);
-        // 'pom' and no prefix are deprecated in favor of 'project' but they still exist in the wild.
-        pom.properties.put("pom.version", pom.properties.get("project.version"));
-        pom.properties.put("version", pom.properties.get("project.version"));
-      }
-
       pom.group = childText(pomElement, "groupId");
-      if (pom.group != null) {
-        pom.properties.put("project.groupId", pom.group);
-        // 'pom' and no prefix are deprecated in favor of 'project' but they still exist in the wild.
-        pom.properties.put("pom.groupId", pom.group);
-        pom.properties.put("groupId", pom.group);
-      }
-
       pom.id = childText(pomElement, "artifactId");
-      if (pom.id != null) {
-        pom.properties.put("project.artifactId", pom.id);
-        // 'pom' and no prefix are deprecated in favor of 'project' but they still exist in the wild.
-        pom.properties.put("pom.artifactId", pom.id);
-        pom.properties.put("artifactId", pom.id);
-      }
-
       pom.name = childText(pomElement, "name");
-      if (pom.name != null) {
-        pom.properties.put("project.name", pom.name);
-      }
-
       pom.packaging = childText(pomElement, "packaging");
-      if (pom.packaging != null) {
-        pom.properties.put("project.packaging", pom.packaging);
-      }
 
       // Grab the parent info
       Element parentNode = firstChild(pomElement, "parent");
@@ -113,9 +100,12 @@ public class MavenTools {
       if (propertiesNode != null) {
         NodeList propertyList = propertiesNode.getChildNodes();
         for (int i = 0; i < propertyList.getLength(); i++) {
-          String name = propertyList.item(i).getAttributes().getNamedItem("name").getNodeValue();
-          String value = propertyList.item(i).getTextContent().trim();
-          pom.properties.put(name, value);
+          Node property = propertyList.item(i);
+          if (property.getNodeType() == Node.ELEMENT_NODE) {
+            String name = property.getNodeName();
+            String value = property.getTextContent().trim();
+            pom.properties.put(name, value);
+          }
         }
       }
 
@@ -174,25 +164,53 @@ public class MavenTools {
     }
 
     for (String key : properties.keySet()) {
-      value = value.replace("${" + key + "}", properties.get(key));
+      String replacement = properties.get(key);
+      if (replacement == null) {
+        continue;
+      }
+
+      value = value.replace("${" + key + "}", replacement);
     }
 
     return value;
   }
 
-  public static Dependencies toSavantDependencies(POM pom) {
+  public static Artifact toArtifact(POM pom, String type, Map<String, Version> mappings) {
+    Version version = determineVersion(pom, mappings);
+    ArtifactID id = new ArtifactID(pom.group, pom.id, pom.id, type);
+    return new Artifact(id, version, pom.version, null);
+  }
+
+  public static Dependencies toSavantDependencies(POM pom, Map<String, Version> mappings) {
     Dependencies savantDependencies = new Dependencies();
     pom.resolveAllDependencies().forEach(dep -> {
       String groupName = dep.scope;
+
+      // Skip provided, test, system, and optional dependencies because Maven specifies that none of these dependencies
+      // are transitive and none should exist in classpaths. In reality, Maven sucks so hard that there are actual POMs
+      // in the wild that have circular dependencies and others that reference POMs that don't actually exist.
+      if (groupName.equalsIgnoreCase("provided") || groupName.equalsIgnoreCase("test") || groupName.equalsIgnoreCase("system") ||
+          (dep.optional != null && dep.optional.equalsIgnoreCase("true"))) {
+        return;
+      }
+
       DependencyGroup savantDependencyGroup = savantDependencies.groups.get(groupName);
       if (savantDependencyGroup == null) {
         savantDependencyGroup = new DependencyGroup(groupName, true);
         savantDependencies.groups.put(groupName, savantDependencyGroup);
       }
 
-      List<License> licenses = toSavantLicenses(pom);
-      dep.savantArtifact = new ReifiedArtifact(new ArtifactID(dep.group, dep.id, dep.getArtifactName(), (dep.type == null ? "jar" : dep.type)), new Version(dep.version), licenses);
-      savantDependencyGroup.dependencies.add(new Artifact(dep.savantArtifact.id, dep.savantArtifact.version, false));
+      List<ArtifactID> exclusions = new ArrayList<>();
+      if (dep.exclusions.size() > 0) {
+        for (MavenExclusion exclusion : dep.exclusions) {
+          exclusions.add(new ArtifactID(exclusion.group, exclusion.id, exclusion.id, "*"));
+        }
+      }
+
+      Version mapping = determineVersion(dep, mappings);
+      ArtifactID id = new ArtifactID(dep.group, dep.id, dep.getArtifactName(), (dep.type == null ? "jar" : dep.type));
+      dep.savantArtifact = new ReifiedArtifact(id, mapping, dep.version, exclusions, Collections.emptyList());
+      savantDependencyGroup.dependencies.add(dep.savantArtifact);
     });
 
     return savantDependencies;
@@ -208,6 +226,9 @@ public class MavenTools {
       } catch (LicenseException e) {
         // Try the URL now
         savantLicense = License.lookupByURL(license.url);
+        if (savantLicense == null) {
+          savantLicense = License.parse("Other", license.name);
+        }
       }
 
       if (savantLicense != null) {
@@ -225,6 +246,22 @@ public class MavenTools {
     }
 
     return null;
+  }
+
+  private static Version determineVersion(POM pom, Map<String, Version> mappings) {
+    Version version;
+    try {
+      version = new Version(pom.version);
+    } catch (VersionException e) {
+      // Look up the mapping
+      String key = pom.toSpecification();
+      version = mappings.get(key);
+      if (version == null) {
+        throw new VersionException(String.format(VersionError, key));
+      }
+    }
+
+    return version;
   }
 
   private static Element firstChild(Element root, String childName) {
@@ -249,12 +286,19 @@ public class MavenTools {
     artifact.optional = childText(dependencyNode, "optional");
     artifact.scope = childText(dependencyNode, "scope");
 
-    NodeList exclusions = dependencyNode.getElementsByTagName("exclusions");
-    if (exclusions.getLength() > 0) {
-      throw new POMException("Savant is currently not able to support Maven POMs with exclusions. These really should " +
-          "never exist and it is an indicator that a project somewhere in the dependency graph incorrectly specified a dependency. " +
-          "For example, they might have marked a `test` dependency as `compile`. This forces exclusions downstream to avoid shipping " +
-          "bad dependencies. We'll eventually figure this out, but for now, you'll need to use the Savant Maven Bridge to fix this.");
+    Element exclusions = firstChild(dependencyNode, "exclusions");
+    if (exclusions != null) {
+      NodeList exclusionList = exclusions.getElementsByTagName("exclusion");
+      for (int i = 0; i < exclusionList.getLength(); i++) {
+        if (exclusionList.item(i).getNodeType() != Node.ELEMENT_NODE) {
+          continue;
+        }
+
+        Element exclusion = (Element) exclusionList.item(i);
+        String group = childText(exclusion, "groupId");
+        String id = childText(exclusion, "artifactId");
+        artifact.exclusions.add(new MavenExclusion(group, id));
+      }
     }
 
     return artifact;

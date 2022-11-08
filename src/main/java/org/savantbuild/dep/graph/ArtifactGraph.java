@@ -18,6 +18,7 @@ package org.savantbuild.dep.graph;
 import java.util.Formatter;
 
 import org.savantbuild.dep.domain.ReifiedArtifact;
+import org.savantbuild.util.Graph.EdgeFilter.SingleTraversalEdgeFilter;
 import org.savantbuild.util.HashGraph;
 
 /**
@@ -67,7 +68,7 @@ public class ArtifactGraph extends HashGraph<ReifiedArtifact, String> {
     build.append("digraph ArtifactGraph {\n");
 
     Formatter formatter = new Formatter(build);
-    traverse(root, false, null, (origin, destination, edge, depth, isLast) -> {
+    traverse(root, false, new SingleTraversalEdgeFilter<>(), (origin, destination, edge, depth, isLast) -> {
       formatter.format("  \"%s\" -> \"%s\" [label=\"%s\"];\n", origin, destination, edge);
       return true;
     });

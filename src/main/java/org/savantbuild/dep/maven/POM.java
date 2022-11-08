@@ -20,7 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * The necessary information from the POM.
@@ -76,67 +76,144 @@ public class POM {
     return Objects.hash(id, group, version);
   }
 
+  public List<MavenDependency> imports() {
+    return dependenciesDefinitions.stream()
+                                  .filter(def -> def.scope.equalsIgnoreCase("import"))
+                                  .collect(Collectors.toList());
+  }
+
+  public void removeDependencyDefinition(MavenDependency def) {
+    dependenciesDefinitions.remove(def);
+  }
+
+  public void replaceKnownVariablesAndFillInDependencies() {
+    Map<String, String> allProperties = resolveAllProperties();
+    group = MavenTools.replaceProperties(group, allProperties);
+    id = MavenTools.replaceProperties(id, allProperties);
+    version = MavenTools.replaceProperties(version, allProperties);
+    parentGroup = MavenTools.replaceProperties(parentGroup, allProperties);
+    parentId = MavenTools.replaceProperties(parentId, allProperties);
+    parentVersion = MavenTools.replaceProperties(parentVersion, allProperties);
+
+    for (MavenDependency def : dependenciesDefinitions) {
+      fillInDependency(def, allProperties);
+    }
+
+    for (MavenDependency dep : dependencies) {
+      fillInDependency(dep, allProperties);
+    }
+  }
+
   public List<MavenDependency> resolveAllDependencies() {
-    Map<String, String> allProperties = new HashMap<>(properties);
     List<MavenDependency> allDeps = new ArrayList<>(dependencies);
     POM current = parent;
     while (current != null) {
       allDeps.addAll(current.dependencies);
-      current.properties.forEach(allProperties::putIfAbsent);
-      current.properties.forEach((key, value) -> allProperties.putIfAbsent("parent." + key, value));
-      current.properties.forEach((key, value) -> allProperties.putIfAbsent("project.parent." + key, value));
       current = current.parent;
-    }
-
-    // Now resolve everything
-    for (MavenDependency dep : allDeps) {
-      if (dep.optional == null) {
-        dep.optional = resolveDependencyOptional(dep);
-      }
-      dep.optional = MavenTools.replaceProperties(dep.optional, allProperties);
-
-      if (dep.scope == null) {
-        dep.scope = resolveDependencyScope(dep);
-      }
-      dep.scope = MavenTools.replaceProperties(dep.scope, allProperties);
-
-      if (dep.version == null) {
-        dep.version = resolveDependencyVersion(dep);
-      }
-      dep.version = MavenTools.replaceProperties(dep.version, allProperties);
     }
 
     return allDeps;
   }
 
-  public String resolveDependencyOptional(MavenDependency dependency) {
-    Optional<MavenDependency> optional = dependenciesDefinitions.stream().filter((def) -> def.group.equals(dependency.group) && def.id.equals(dependency.id)).findFirst();
-    if (!optional.isPresent() && parent != null) {
-      return parent.resolveDependencyOptional(dependency);
+  public List<MavenDependency> resolveAllDependencyDefinitions() {
+    List<MavenDependency> allDefinitions = new ArrayList<>(dependenciesDefinitions);
+    POM current = parent;
+    while (current != null) {
+      allDefinitions.addAll(current.dependenciesDefinitions);
+      current = current.parent;
     }
 
-    return optional.map(mavenArtifact -> mavenArtifact.optional).orElse(null);
+    return allDefinitions;
   }
 
-  public String resolveDependencyScope(MavenDependency dependency) {
-    Optional<MavenDependency> optional = dependenciesDefinitions.stream().filter((def) -> def.group.equals(dependency.group) && def.id.equals(dependency.id)).findFirst();
-    if (!optional.isPresent() && parent != null) {
-      return parent.resolveDependencyScope(dependency);
+  public Map<String, String> resolveAllProperties() {
+    Map<String, String> allProperties = new HashMap<>();
+    POM current = this;
+    while (current != null) {
+      current.properties.forEach(allProperties::putIfAbsent);
+      current.properties.forEach((key, value) -> allProperties.putIfAbsent("parent." + key, value));
+      current.properties.forEach((key, value) -> allProperties.putIfAbsent("project.parent." + key, value));
+
+      if (current.version != null) {
+        allProperties.putIfAbsent("project.version", current.version);
+        // 'pom' and no prefix are deprecated in favor of 'project' but they still exist in the wild.
+        allProperties.putIfAbsent("pom.version", current.properties.get("project.version"));
+        allProperties.putIfAbsent("version", current.properties.get("project.version"));
+      }
+
+      if (current.group != null) {
+        allProperties.putIfAbsent("project.groupId", current.group);
+        // 'pom' and no prefix are deprecated in favor of 'project' but they still exist in the wild.
+        allProperties.putIfAbsent("pom.groupId", current.group);
+        allProperties.putIfAbsent("groupId", current.group);
+      }
+
+      if (current.id != null) {
+        allProperties.putIfAbsent("project.artifactId", current.id);
+        // 'pom' and no prefix are deprecated in favor of 'project' but they still exist in the wild.
+        allProperties.putIfAbsent("pom.artifactId", current.id);
+        allProperties.putIfAbsent("artifactId", current.id);
+      }
+
+      if (current.name != null) {
+        allProperties.putIfAbsent("project.name", current.name);
+      }
+
+      if (current.packaging != null) {
+        allProperties.putIfAbsent("project.packaging", current.packaging);
+      }
+
+      current = current.parent;
     }
 
-    return optional.map(mavenArtifact -> mavenArtifact.scope).orElse(null);
+    return allProperties;
   }
 
-  public String resolveDependencyVersion(MavenDependency dependency) {
-    Optional<MavenDependency> optional = dependenciesDefinitions.stream().filter((def) -> def.group.equals(dependency.group) && def.id.equals(dependency.id)).findFirst();
-    if (!optional.isPresent() && parent != null) {
-      return parent.resolveDependencyVersion(dependency);
-    }
-
-    return optional.map(mavenArtifact -> mavenArtifact.version).orElse(null);
+  public String toSpecification() {
+    return group + ":" + id + ":" + version;
   }
 
   public String toString() {
     return group + ":" + id + ":" + version;
+  }
+
+  private void fillInDependency(MavenDependency dep, Map<String, String> allProperties) {
+    dep.group = MavenTools.replaceProperties(dep.group, allProperties);
+    dep.id = MavenTools.replaceProperties(dep.id, allProperties);
+    dep.type = MavenTools.replaceProperties(dep.type, allProperties);
+    dep.scope = MavenTools.replaceProperties(dep.scope, allProperties);
+    dep.version = MavenTools.replaceProperties(dep.version, allProperties);
+    dep.classifier = MavenTools.replaceProperties(dep.classifier, allProperties);
+
+    List<MavenDependency> allDefinitions = resolveAllDependencyDefinitions();
+    if (dep.optional == null) {
+      dep.optional = allDefinitions.stream()
+                                   .filter(def -> def.group.equals(dep.group) && def.id.equals(dep.id))
+                                   .findFirst()
+                                   .map(def -> def.optional)
+                                   .orElse(null);
+    }
+    dep.optional = MavenTools.replaceProperties(dep.optional, allProperties);
+
+    if (dep.scope == null) {
+      dep.scope = allDefinitions.stream()
+                                .filter(def -> def.group.equals(dep.group) && def.id.equals(dep.id))
+                                .findFirst()
+                                .map(def -> def.scope)
+                                .orElse(null);
+    }
+    dep.scope = MavenTools.replaceProperties(dep.scope, allProperties);
+    if (dep.scope == null) {
+      dep.scope = "compile";
+    }
+
+    if (dep.version == null) {
+      dep.version = allDefinitions.stream()
+                                  .filter(def -> def.group.equals(dep.group) && def.id.equals(dep.id))
+                                  .findFirst()
+                                  .map(def -> def.version)
+                                  .orElse(null);
+    }
+    dep.version = MavenTools.replaceProperties(dep.version, allProperties);
   }
 }
