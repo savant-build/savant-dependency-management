@@ -175,7 +175,7 @@ public class Workflow {
     POM pom = MavenTools.parsePOM(file, output);
     pom.replaceKnownVariablesAndFillInDependencies();
 
-    // Recusrively load the parent POM and any dependencies that are `import`
+    // Recursively load the parent POM and any dependencies that are `import`
     if (pom.parentGroup != null && pom.parentId != null && pom.parentVersion != null) {
       POM parent = new POM(pom.parentGroup, pom.parentId, pom.parentVersion);
       Artifact parentPOM = MavenTools.toArtifact(parent, "pom", mappings);
