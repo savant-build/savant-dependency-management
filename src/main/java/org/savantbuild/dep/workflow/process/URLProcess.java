@@ -88,9 +88,10 @@ public class URLProcess implements Process {
         throw new ProcessFailureException(item, e);
       }
 
-      URI itemURI = NetTools.build(url, item.group.replace('.', '/'), item.project, item.version.toString(), item.item);
+      URI itemURI = NetTools.build(url, item.group.replace('.', '/'), item.project, item.version, item.item);
       Path itemFile;
       try {
+        output.debugln("Checking URL [%s]", itemURI);
         itemFile = NetTools.downloadToPath(itemURI, username, password, md5);
       } catch (MD5Exception e) {
         throw new MD5Exception("MD5 mismatch when fetching item from [" + itemURI + "]");

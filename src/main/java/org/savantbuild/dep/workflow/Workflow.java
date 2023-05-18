@@ -99,9 +99,17 @@ public class Workflow {
    */
   public ArtifactMetaData fetchMetaData(Artifact artifact) throws ArtifactMetaDataMissingException, ProcessFailureException, MD5Exception {
     ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactMetaDataFile());
-    Path file = fetchWorkflow.fetchItem(item, publishWorkflow);
+    boolean writeNegatives = true;
+    Path file = null;
+    try {
+      file = fetchWorkflow.fetchItem(item, publishWorkflow);
+    } catch (NegativeCacheException ignore) {
+      writeNegatives = false;
+      System.out.println("Found neg for " + item);
+    }
+
     if (file == null) {
-      POM pom = loadPOM(artifact, publishWorkflow);
+      POM pom = loadPOM(artifact, writeNegatives);
       if (pom != null) {
         return translatePOM(pom);
       }
@@ -157,7 +165,7 @@ public class Workflow {
     }
   }
 
-  private POM loadPOM(Artifact artifact, PublishWorkflow publishWorkflow) {
+  private POM loadPOM(Artifact artifact, boolean writeNegatives) {
     // Maven doesn't use artifact names (via classifiers) when resolving POMs. Therefore, we need to use the project id twice for the item
     ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.project, artifact.version.toString(), artifact.getArtifactPOMFile());
     Path file = fetchWorkflow.fetchItem(item, publishWorkflow);
@@ -172,6 +180,13 @@ public class Workflow {
       return null;
     }
 
+    // Publish a negative AMD to tell Savant that it shouldn't look for AMDs since this is a Maven artifact
+    if (writeNegatives) {
+      ResolvableItem amd = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactMetaDataFile());
+      System.out.println("Writing neg for " + amd);
+      publishWorkflow.publishNegative(amd);
+    }
+
     POM pom = MavenTools.parsePOM(file, output);
     pom.replaceKnownVariablesAndFillInDependencies();
 
@@ -179,7 +194,7 @@ public class Workflow {
     if (pom.parentGroup != null && pom.parentId != null && pom.parentVersion != null) {
       POM parent = new POM(pom.parentGroup, pom.parentId, pom.parentVersion);
       Artifact parentPOM = MavenTools.toArtifact(parent, "pom", mappings);
-      pom.parent = loadPOM(parentPOM, publishWorkflow);
+      pom.parent = loadPOM(parentPOM, writeNegatives);
     }
 
     // Now that we have the parents (recursively), load all the variables and fix top-level POM definitions
@@ -196,7 +211,7 @@ public class Workflow {
     while (imports.size() > 0) {
       for (MavenDependency anImport : imports) {
         Artifact dep = MavenTools.toArtifact(anImport, "pom", mappings);
-        POM importPOM = loadPOM(dep, publishWorkflow);
+        POM importPOM = loadPOM(dep, writeNegatives);
         if (importPOM == null) {
           throw new ProcessFailureException("Unable to import Maven dependency definitions into a POM because the referenced import could not be found. [" + dep + "]");
         }

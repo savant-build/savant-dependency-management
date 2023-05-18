@@ -60,9 +60,11 @@ public class CacheProcess implements Process {
       file = Paths.get(path + ".neg");
       if (Files.isRegularFile(file)) {
         throw new NegativeCacheException(item);
-      } else {
-        file = null;
       }
+
+      file = null;
+    } else {
+      output.debug("Found cache file [%s]", file);
     }
 
     return file;

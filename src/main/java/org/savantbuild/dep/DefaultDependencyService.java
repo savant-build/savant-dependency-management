@@ -183,7 +183,7 @@ public class DefaultDependencyService implements DependencyService {
 
     graph.traverse(graph.root, false, null, (origin, destination, group, depth, isLast) -> {
       // If we are at the root, check if the group is to be resolved. If we are below the root, then we need to ensure
-      // that the root was setup to fetch the group transitively
+      // that the root was set up to fetch the group transitively
       GroupTraversalRule groupTraversalRule;
       if (origin.equals(graph.root)) {
         groupTraversalRule = configuration.rules.get(group);
