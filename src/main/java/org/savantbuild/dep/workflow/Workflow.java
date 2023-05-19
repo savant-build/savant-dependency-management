@@ -17,6 +17,7 @@ package org.savantbuild.dep.workflow;
 
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
@@ -34,6 +35,7 @@ import org.savantbuild.dep.xml.ArtifactTools;
 import org.savantbuild.domain.Version;
 import org.savantbuild.domain.VersionException;
 import org.savantbuild.output.Output;
+import org.savantbuild.security.MD5;
 import org.savantbuild.security.MD5Exception;
 import org.xml.sax.SAXException;
 
@@ -99,27 +101,29 @@ public class Workflow {
    */
   public ArtifactMetaData fetchMetaData(Artifact artifact) throws ArtifactMetaDataMissingException, ProcessFailureException, MD5Exception {
     ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactMetaDataFile());
-    boolean writeNegatives = true;
-    Path file = null;
     try {
-      file = fetchWorkflow.fetchItem(item, publishWorkflow);
-    } catch (NegativeCacheException ignore) {
-      writeNegatives = false;
-      System.out.println("Found neg for " + item);
-    }
+      Path file = fetchWorkflow.fetchItem(item, publishWorkflow);
+      if (file == null) {
+        POM pom = loadPOM(artifact);
+        if (pom != null) {
+          ArtifactMetaData amd = translatePOM(pom);
+          Path amdFile = ArtifactTools.generateXML(amd);
+          file = publishWorkflow.publish(item, amdFile);
 
-    if (file == null) {
-      POM pom = loadPOM(artifact, writeNegatives);
-      if (pom != null) {
-        return translatePOM(pom);
+          // Write the MD5
+          MD5 amdMD5 = MD5.forPath(amdFile);
+          Path amdMD5File = Files.createTempFile("savant", "amd-md5");
+          MD5.writeMD5(amdMD5, amdMD5File);
+          ResolvableItem md5Item = new ResolvableItem(item, item.item + ".md5");
+          publishWorkflow.publish(md5Item, amdMD5File);
+          Files.delete(amdMD5File);
+        }
       }
-    }
 
-    if (file == null) {
-      throw new ArtifactMetaDataMissingException(artifact);
-    }
+      if (file == null) {
+        throw new ArtifactMetaDataMissingException(artifact);
+      }
 
-    try {
       return ArtifactTools.parseArtifactMetaData(file, mappings);
     } catch (IllegalArgumentException | NullPointerException | SAXException | ParserConfigurationException |
              IOException | VersionException e) {
@@ -165,13 +169,26 @@ public class Workflow {
     }
   }
 
-  private POM loadPOM(Artifact artifact, boolean writeNegatives) {
+  private POM loadPOM(Artifact artifact) {
     // Maven doesn't use artifact names (via classifiers) when resolving POMs. Therefore, we need to use the project id twice for the item
     ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.project, artifact.version.toString(), artifact.getArtifactPOMFile());
     Path file = fetchWorkflow.fetchItem(item, publishWorkflow);
+//    try {
+//      System.out.println("[Looking for POM using semantic version]");
+//
+//      // Publish a negative AMD to tell Savant that it shouldn't look for AMDs since this is a Maven artifact
+//      if (file == null) {
+//        System.out.println(" * {Writing negative for [" + item + "]}");
+//        publishWorkflow.publishNegative(item);
+//      }
+//    } catch (NegativeCacheException ignore) {
+//      // Ignore
+//      System.out.println(" * {Found negative for [" + item + "]}");
+//    }
 
     // Try the POM with the non-semantic (bad) version
     if (file == null && artifact.nonSemanticVersion != null) {
+      System.out.println("[Looking for POM using non-semantic version]");
       item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.project, artifact.nonSemanticVersion, artifact.getArtifactNonSemanticPOMFile());
       file = fetchWorkflow.fetchItem(item, publishWorkflow);
     }
@@ -181,20 +198,19 @@ public class Workflow {
     }
 
     // Publish a negative AMD to tell Savant that it shouldn't look for AMDs since this is a Maven artifact
-    if (writeNegatives) {
-      ResolvableItem amd = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactMetaDataFile());
-      System.out.println("Writing neg for " + amd);
-      publishWorkflow.publishNegative(amd);
-    }
+//    if (writeNegatives) {
+//      ResolvableItem amd = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactMetaDataFile());
+//      publishWorkflow.publishNegative(amd);
+//    }
 
     POM pom = MavenTools.parsePOM(file, output);
     pom.replaceKnownVariablesAndFillInDependencies();
 
-    // Recusrively load the parent POM and any dependencies that are `import`
+    // Recursively load the parent POM and any dependencies that are `import`
     if (pom.parentGroup != null && pom.parentId != null && pom.parentVersion != null) {
       POM parent = new POM(pom.parentGroup, pom.parentId, pom.parentVersion);
       Artifact parentPOM = MavenTools.toArtifact(parent, "pom", mappings);
-      pom.parent = loadPOM(parentPOM, writeNegatives);
+      pom.parent = loadPOM(parentPOM);
     }
 
     // Now that we have the parents (recursively), load all the variables and fix top-level POM definitions
@@ -211,7 +227,7 @@ public class Workflow {
     while (imports.size() > 0) {
       for (MavenDependency anImport : imports) {
         Artifact dep = MavenTools.toArtifact(anImport, "pom", mappings);
-        POM importPOM = loadPOM(dep, writeNegatives);
+        POM importPOM = loadPOM(dep);
         if (importPOM == null) {
           throw new ProcessFailureException("Unable to import Maven dependency definitions into a POM because the referenced import could not be found. [" + dep + "]");
         }

@@ -87,8 +87,10 @@ public class SVNProcess implements Process {
       }
 
       Path itemFile = PathTools.createTempPath("savant-svn-process", "export", true);
-      URI itemURI = NetTools.build(repository, item.group.replace('.', '/'), item.project, item.version.toString(), item.item);
+      URI itemURI = NetTools.build(repository, item.group.replace('.', '/'), item.project, item.version, item.item);
+      System.out.println("      - Download [" + itemURI + "]");
       if (!export(itemURI, itemFile)) {
+        System.out.println("      - Not found [" + itemURI + "]");
         return null;
       }
 
