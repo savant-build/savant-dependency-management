@@ -15,6 +15,9 @@
  */
 package org.savantbuild.dep.workflow.process;
 
+import java.nio.file.Path;
+
+import org.savantbuild.dep.domain.ResolvableItem;
 import org.savantbuild.output.Output;
 
 /**
@@ -26,6 +29,11 @@ public class MavenCacheProcess extends CacheProcess {
   public MavenCacheProcess(Output output, String dir) {
     super(output, dir != null ? dir : System.getProperty("user.home") + "/.m2/repository");
   }
+
+//  @Override
+//  public Path publish(ResolvableItem item, Path itemFile) throws ProcessFailureException {
+//    throw new ProcessFailureException("The Maven cache process doesn't support publishing items currently.");
+//  }
 
   @Override
   public String toString() {

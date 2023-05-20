@@ -57,8 +57,12 @@ public class FetchWorkflow {
   public Path fetchItem(ResolvableItem item, PublishWorkflow publishWorkflow)
       throws ProcessFailureException, MD5Exception {
     output.debugln("Running processes %s to fetch [%s]", processes, item);
+    System.out.println("\n[" + item + "]");
     return processes.stream()
-                    .map((process) -> process.fetch(item, publishWorkflow))
+                    .map((process) -> {
+                      System.out.println(" * [" + process.getClass().getSimpleName() + ".fetch]");
+                      return process.fetch(item, publishWorkflow);
+                    })
                     .filter(Objects::nonNull)
                     .findFirst()
                     .orElse(null);

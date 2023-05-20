@@ -71,12 +71,14 @@ public class URLProcess implements Process {
    * @return The File of the artifact after it has been published.
    */
   @Override
-  public Path fetch(ResolvableItem item, PublishWorkflow publishWorkflow)
-      throws ProcessFailureException {
+  public Path fetch(ResolvableItem item, PublishWorkflow publishWorkflow) throws ProcessFailureException {
+    long start = System.currentTimeMillis();
     try {
       URI md5URI = NetTools.build(url, item.group.replace('.', '/'), item.project, item.version, item.item + ".md5");
+      System.out.println("      - Download [" + md5URI + "]");
       Path md5File = NetTools.downloadToPath(md5URI, username, password, null);
       if (md5File == null) {
+        System.out.println("      - Not found [" + (System.currentTimeMillis() - start) +"] ms");
         return null;
       }
 
@@ -88,7 +90,8 @@ public class URLProcess implements Process {
         throw new ProcessFailureException(item, e);
       }
 
-      URI itemURI = NetTools.build(url, item.group.replace('.', '/'), item.project, item.version.toString(), item.item);
+      URI itemURI = NetTools.build(url, item.group.replace('.', '/'), item.project, item.version, item.item);
+      System.out.println("      - Download [" + itemURI + "]");
       Path itemFile;
       try {
         itemFile = NetTools.downloadToPath(itemURI, username, password, md5);
@@ -106,6 +109,8 @@ public class URLProcess implements Process {
           Files.delete(md5File);
           throw new ProcessFailureException(item, e);
         }
+      } else {
+        System.out.println("      - Not found [" + (System.currentTimeMillis() - start) +"] ms");
       }
 
       return itemFile;

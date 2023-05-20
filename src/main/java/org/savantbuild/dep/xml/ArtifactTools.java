@@ -239,6 +239,7 @@ public class ArtifactTools {
           dependencyId = new ArtifactID(group, project, name, type);
           try {
             dependencyVersion = new Version(version);
+            dependencyNonSemanticVersion = version; // This is a fallback just for Maven
           } catch (VersionException e) {
             dependencyNonSemanticVersion = version;
 
