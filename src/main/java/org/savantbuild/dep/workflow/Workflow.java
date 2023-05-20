@@ -188,7 +188,7 @@ public class Workflow {
 
     // Try the POM with the non-semantic (bad) version
     if (file == null && artifact.nonSemanticVersion != null) {
-      System.out.println("[Looking for POM using non-semantic version]");
+      output.debugln("[Looking for POM using non-semantic version]");
       item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.project, artifact.nonSemanticVersion, artifact.getArtifactNonSemanticPOMFile());
       file = fetchWorkflow.fetchItem(item, publishWorkflow);
     }

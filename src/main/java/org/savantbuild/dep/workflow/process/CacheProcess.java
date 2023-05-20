@@ -55,21 +55,21 @@ public class CacheProcess implements Process {
   @Override
   public Path fetch(ResolvableItem item, PublishWorkflow publishWorkflow) throws NegativeCacheException {
     String path = String.join("/", dir, item.group.replace('.', '/'), item.project, item.version, item.item);
-    System.out.println("      - File [" + path + "]");
+    output.debugln("      - File [" + path + "]");
     Path file = Paths.get(path);
     if (!Files.isRegularFile(file)) {
       file = Paths.get(path + ".neg");
       if (Files.isRegularFile(file)) {
-        System.out.println("      - Found negative marker");
+        output.debugln("      - Found negative marker");
         throw new NegativeCacheException(item);
       } else {
-        System.out.println("      - Not found");
+        output.debugln("      - Not found");
         file = null;
       }
     }
 
     if (file != null) {
-      System.out.println("      - Found");
+      output.debugln("      - Found");
     }
 
     return file;

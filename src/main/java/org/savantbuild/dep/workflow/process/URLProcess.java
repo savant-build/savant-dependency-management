@@ -72,13 +72,12 @@ public class URLProcess implements Process {
    */
   @Override
   public Path fetch(ResolvableItem item, PublishWorkflow publishWorkflow) throws ProcessFailureException {
-    long start = System.currentTimeMillis();
     try {
       URI md5URI = NetTools.build(url, item.group.replace('.', '/'), item.project, item.version, item.item + ".md5");
-      System.out.println("      - Download [" + md5URI + "]");
+      output.debugln("      - Download [" + md5URI + "]");
       Path md5File = NetTools.downloadToPath(md5URI, username, password, null);
       if (md5File == null) {
-        System.out.println("      - Not found [" + (System.currentTimeMillis() - start) +"] ms");
+        output.debugln("      - Not found");
         return null;
       }
 
@@ -91,7 +90,7 @@ public class URLProcess implements Process {
       }
 
       URI itemURI = NetTools.build(url, item.group.replace('.', '/'), item.project, item.version, item.item);
-      System.out.println("      - Download [" + itemURI + "]");
+      output.debugln("      - Download [" + itemURI + "]");
       Path itemFile;
       try {
         itemFile = NetTools.downloadToPath(itemURI, username, password, md5);
@@ -100,7 +99,7 @@ public class URLProcess implements Process {
       }
 
       if (itemFile != null) {
-        output.infoln("Downloaded from [%s]", itemURI);
+        output.infoln("Downloaded [%s]", itemURI);
         ResolvableItem md5Item = new ResolvableItem(item, item.item + ".md5");
         md5File = publishWorkflow.publish(md5Item, md5File);
         try {
@@ -110,7 +109,7 @@ public class URLProcess implements Process {
           throw new ProcessFailureException(item, e);
         }
       } else {
-        System.out.println("      - Not found [" + (System.currentTimeMillis() - start) +"] ms");
+        output.debugln("      - Not found");
       }
 
       return itemFile;
