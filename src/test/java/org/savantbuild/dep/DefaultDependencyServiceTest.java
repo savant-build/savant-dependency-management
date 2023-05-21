@@ -196,7 +196,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     resolvedLeaf1_1 = new ResolvedArtifact("org.savantbuild.test:leaf1:1.0.0", Collections.singletonList(new License("Commercial", "Commercial license")), cache.resolve("org/savantbuild/test/leaf1/1.0.0/leaf1-1.0.0.jar").toAbsolutePath(), null);
     resolvedLeaf2_2 = new ResolvedArtifact("org.savantbuild.test:leaf2:1.0.0", Collections.singletonList(new License("OtherNonDistributableOpenSource", "Open source")), cache.resolve("org/savantbuild/test/leaf2/1.0.0/leaf2-1.0.0.jar").toAbsolutePath(), null);
     resolvedLeaf3_3 = new ResolvedArtifact("org.savantbuild.test:leaf3:1.0.0", Collections.singletonList(License.Licenses.get("ApacheV2_0")), cache.resolve("org/savantbuild/test/leaf3/1.0.0/leaf3-1.0.0.jar").toAbsolutePath(), null);
-    resolvedIntegrationBuild = new ResolvedArtifact("org.savantbuild.test:integration-build:2.1.1-{integration}", Collections.singletonList(License.Licenses.get("ApacheV2_0")), cache.resolve("org/savantbuild/test/integration-build/2.1.1-{integration}/integration-build-2.1.1-{integration}.jar").toAbsolutePath(), null);
+    resolvedIntegrationBuild = new ResolvedArtifact("org.savantbuild.test:integration-build:2.1.1-{integration}", Collections.singletonList(License.Licenses.get("ApacheV2_0")), integration.resolve("org/savantbuild/test/integration-build/2.1.1-{integration}/integration-build-2.1.1-{integration}.jar").toAbsolutePath(), null);
   }
 
   @BeforeMethod
@@ -340,14 +340,14 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     workflow = new Workflow(
         new FetchWorkflow(
             output,
-            new CacheProcess(output, cache.toString()),
-            new MavenCacheProcess(output, mavenCache.toString()),
+            new CacheProcess(output, cache.toString(), integration.toString()),
+            new MavenCacheProcess(output, mavenCache.toString(), null),
             new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null),
             new MavenProcess(output, "http://localhost:7042/test-deps/maven", null, null)
         ),
         new PublishWorkflow(
-            new CacheProcess(output, cache.toString()),
-            new MavenCacheProcess(output, mavenCache.toString())
+            new CacheProcess(output, cache.toString(), integration.toString()),
+            new MavenCacheProcess(output, mavenCache.toString(), null)
         ),
         output
     );
@@ -412,14 +412,14 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     workflow = new Workflow(
         new FetchWorkflow(
             output,
-            new CacheProcess(output, cache.toString()),
-            new MavenCacheProcess(output, mavenCache.toString()),
+            new CacheProcess(output, cache.toString(), integration.toString()),
+            new MavenCacheProcess(output, mavenCache.toString(), null),
             new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null),
             new MavenProcess(output, "https://repo1.maven.org/maven2", null, null)
         ),
         new PublishWorkflow(
-            new CacheProcess(output, cache.toString()),
-            new MavenCacheProcess(output, mavenCache.toString())
+            new CacheProcess(output, cache.toString(), integration.toString()),
+            new MavenCacheProcess(output, mavenCache.toString(), null)
         ),
         output
     );
@@ -472,11 +472,11 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     workflow = new Workflow(
         new FetchWorkflow(
             output,
-            new MavenCacheProcess(output, mavenCache.toString()),
+            new MavenCacheProcess(output, mavenCache.toString(), mavenCache.toString()),
             new MavenProcess(output, "https://repo1.maven.org/maven2", null, null)
         ),
         new PublishWorkflow(
-            new MavenCacheProcess(output, mavenCache.toString())
+            new MavenCacheProcess(output, mavenCache.toString(), mavenCache.toString())
         ),
         output
     );
@@ -489,7 +489,8 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     Artifact artifact = new Artifact("org.savantbuild.test:publication-with-source:1.0.0");
     ArtifactMetaData amd = new ArtifactMetaData(dependencies, License.Licenses.get("BSD_2_Clause"));
     Publication publication = new Publication(artifact, amd, projectDir.resolve("MissingFile.txt"), null);
-    PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, projectDir.resolve("build/test/publish").toString()));
+    Path cache = projectDir.resolve("build/test/publish");
+    PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, cache.toString(), cache.toString()));
     try {
       service.publish(publication, workflow);
     } catch (PublishException e) {
@@ -502,7 +503,8 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     Artifact artifact = new Artifact("org.savantbuild.test:publication-with-source:1.0.0");
     ArtifactMetaData amd = new ArtifactMetaData(dependencies, License.Licenses.get("BSD_2_Clause"));
     Publication publication = new Publication(artifact, amd, projectDir.resolve("src/test/java/org/savantbuild/dep/TestFile.txt"), Paths.get("MissingFile.txt"));
-    PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, projectDir.resolve("build/test/publish").toString()));
+    Path cache = projectDir.resolve("build/test/publish");
+    PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, cache.toString(), cache.toString()));
     try {
       service.publish(publication, workflow);
     } catch (PublishException e) {
@@ -512,7 +514,8 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
 
   @Test
   public void publishNonSemanticVersion() throws Exception {
-    PathTools.prune(projectDir.resolve("build/test/publish"));
+    Path cache = projectDir.resolve("build/test/publish");
+    PathTools.prune(cache);
 
     dependencies = new Dependencies(
         new DependencyGroup("compile", true,
@@ -523,7 +526,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     Artifact artifact = new Artifact("org.savantbuild.test:publication-with-source:1.0.0");
     ArtifactMetaData amd = new ArtifactMetaData(dependencies, License.Licenses.get("BSD_2_Clause"));
     Publication publication = new Publication(artifact, amd, projectDir.resolve("src/test/java/org/savantbuild/dep/TestFile.txt"), projectDir.resolve("src/test/java/org/savantbuild/dep/TestFile.txt"));
-    PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, projectDir.resolve("build/test/publish").toString()));
+    PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, cache.toString(), cache.toString()));
     service.publish(publication, workflow);
 
     Path amdFile = projectDir.resolve("build/test/publish/org/savantbuild/test/publication-with-source/1.0.0/publication-with-source-1.0.0.jar.amd");
@@ -549,12 +552,13 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
 
   @Test
   public void publishWithSource() throws IOException {
-    PathTools.prune(projectDir.resolve("build/test/publish"));
+    Path cache = projectDir.resolve("build/test/publish");
+    PathTools.prune(cache);
 
     Artifact artifact = new Artifact("org.savantbuild.test:publication-with-source:1.0.0");
     ArtifactMetaData amd = new ArtifactMetaData(dependencies, License.Licenses.get("BSD_2_Clause"));
     Publication publication = new Publication(artifact, amd, projectDir.resolve("src/test/java/org/savantbuild/dep/TestFile.txt"), projectDir.resolve("src/test/java/org/savantbuild/dep/TestFile.txt"));
-    PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, projectDir.resolve("build/test/publish").toString()));
+    PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, cache.toString(), cache.toString()));
     service.publish(publication, workflow);
 
     assertTrue(Files.isRegularFile(projectDir.resolve("build/test/publish/org/savantbuild/test/publication-with-source/1.0.0/publication-with-source-1.0.0.jar.amd.md5")));
@@ -572,12 +576,13 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
 
   @Test
   public void publishWithoutSource() throws IOException {
-    PathTools.prune(projectDir.resolve("build/test/publish"));
+    Path cache = projectDir.resolve("build/test/publish");
+    PathTools.prune(cache);
 
     Artifact artifact = new Artifact("org.savantbuild.test:publication-without-source:1.0.0");
     ArtifactMetaData amd = new ArtifactMetaData(dependencies, License.Licenses.get("BSD_2_Clause"));
     Publication publication = new Publication(artifact, amd, projectDir.resolve("src/test/java/org/savantbuild/dep/TestFile.txt"), null);
-    PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, projectDir.resolve("build/test/publish").toString()));
+    PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, cache.toString(), cache.toString()));
     service.publish(publication, workflow);
 
     assertTrue(Files.isRegularFile(projectDir.resolve("build/test/publish/org/savantbuild/test/publication-without-source/1.0.0/publication-without-source-1.0.0.jar.amd.md5")));

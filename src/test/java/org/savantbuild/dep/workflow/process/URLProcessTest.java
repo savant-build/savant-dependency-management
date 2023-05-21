@@ -50,7 +50,7 @@ public class URLProcessTest extends BaseUnitTest {
     Artifact artifact = new ReifiedArtifact("org.savantbuild.test:" + name + ":" + name + ":" + version + ":jar", License.Licenses.get("ApacheV2_0"));
     URLProcess ufp = new URLProcess(output, url, null, null);
     ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile());
-    Path file = ufp.fetch(item, new PublishWorkflow(new CacheProcess(output, cache.toString())));
+    Path file = ufp.fetch(item, new PublishWorkflow(new CacheProcess(output, cache.toString(), integration.toString())));
     assertNotNull(file);
 
     assertEquals((Object) file.toAbsolutePath(), Paths.get(result).toAbsolutePath());
@@ -61,27 +61,9 @@ public class URLProcessTest extends BaseUnitTest {
     return new Object[][]{
         {makeLocalURL(), "multiple-versions", "1.0.0", projectDir.resolve("build/test/cache/org/savantbuild/test/multiple-versions/1.0.0/multiple-versions-1.0.0.jar").toString()},
         {makeLocalURL(), "leaf1", "1.0.0", projectDir.resolve("build/test/cache/org/savantbuild/test/leaf1/1.0.0/leaf1-1.0.0.jar").toString()},
-        {makeLocalURL(), "integration-build", "2.1.1-{integration}", projectDir.resolve("build/test/cache/org/savantbuild/test/integration-build/2.1.1-{integration}/integration-build-2.1.1-{integration}.jar").toString()},
         {"http://localhost:7042/test-deps/savant", "multiple-versions", "1.0.0", projectDir.resolve("build/test/cache/org/savantbuild/test/multiple-versions/1.0.0/multiple-versions-1.0.0.jar").toString()},
-        {"http://localhost:7042/test-deps/savant", "leaf1", "1.0.0", projectDir.resolve("build/test/cache/org/savantbuild/test/leaf1/1.0.0/leaf1-1.0.0.jar").toString()},
-        {"http://localhost:7042/test-deps/savant", "integration-build", "2.1.1-{integration}", projectDir.resolve("build/test/cache/org/savantbuild/test/integration-build/2.1.1-{integration}/integration-build-2.1.1-{integration}.jar").toString()}
+        {"http://localhost:7042/test-deps/savant", "leaf1", "1.0.0", projectDir.resolve("build/test/cache/org/savantbuild/test/leaf1/1.0.0/leaf1-1.0.0.jar").toString()}
     };
-  }
-
-  @Test(dataProvider = "urls")
-  public void integration(String url) throws Exception {
-    PathTools.prune(projectDir.resolve("build/test/cache"));
-
-    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:integration-build:integration-build:2.1.1-{integration}:jar", License.Licenses.get("ApacheV2_0"));
-
-    CacheProcess process = new CacheProcess(output, cache.toString());
-    PublishWorkflow pw = new PublishWorkflow();
-    pw.getProcesses().add(process);
-
-    URLProcess ufp = new URLProcess(output, url, null, null);
-    ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile());
-    Path file = ufp.fetch(item, pw);
-    assertNotNull(file);
   }
 
   @Test(dataProvider = "urls")
@@ -90,7 +72,7 @@ public class URLProcessTest extends BaseUnitTest {
 
     Artifact artifact = new ReifiedArtifact("org.savantbuild.test:multiple-versions:multiple-versions:1.0:jar", License.Licenses.get("ApacheV2_0"));
 
-    CacheProcess process = new CacheProcess(output, cache.toString());
+    CacheProcess process = new CacheProcess(output, cache.toString(), integration.toString());
     PublishWorkflow pw = new PublishWorkflow();
     pw.getProcesses().add(process);
 
@@ -106,7 +88,7 @@ public class URLProcessTest extends BaseUnitTest {
 
     Artifact artifact = new ReifiedArtifact("org.savantbuild.test:missing-item:missing-item:1.0:jar", License.Licenses.get("ApacheV2_0"));
 
-    CacheProcess process = new CacheProcess(output, cache.toString());
+    CacheProcess process = new CacheProcess(output, cache.toString(), integration.toString());
     PublishWorkflow pw = new PublishWorkflow();
     pw.getProcesses().add(process);
 
@@ -122,7 +104,7 @@ public class URLProcessTest extends BaseUnitTest {
 
     Artifact artifact = new ReifiedArtifact("org.savantbuild.test:missing-item:missing-item:1.0:jar", License.Licenses.get("ApacheV2_0"));
 
-    CacheProcess process = new CacheProcess(output, cache.toString());
+    CacheProcess process = new CacheProcess(output, cache.toString(), integration.toString());
     PublishWorkflow pw = new PublishWorkflow();
     pw.getProcesses().add(process);
 
@@ -138,7 +120,7 @@ public class URLProcessTest extends BaseUnitTest {
 
     Artifact artifact = new ReifiedArtifact("org.savantbuild.test:missing-md5:missing-md5:1.0:jar", License.Licenses.get("ApacheV2_0"));
 
-    CacheProcess process = new CacheProcess(output, cache.toString());
+    CacheProcess process = new CacheProcess(output, cache.toString(), integration.toString());
     PublishWorkflow pw = new PublishWorkflow();
     pw.getProcesses().add(process);
 

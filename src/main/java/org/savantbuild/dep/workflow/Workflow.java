@@ -149,11 +149,23 @@ public class Workflow {
       if (file == null) {
         item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactAlternativeSourceFile());
         file = fetchWorkflow.fetchItem(item, publishWorkflow);
+
+        // Publish the Savant named source JAR to prevent going back out to remote repositories next time we want to load source JARs
+        if (file != null) {
+          item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactSourceFile());
+          publishWorkflow.publish(item, file);
+        }
       }
 
       if (file == null && artifact.nonSemanticVersion != null) {
         item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.nonSemanticVersion, artifact.getArtifactNonSemanticAlternativeSourceFile());
         file = fetchWorkflow.fetchItem(item, publishWorkflow);
+
+        // Publish the Savant named source JAR to prevent going back out to remote repositories next time we want to load source JARs
+        if (file != null) {
+          item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactSourceFile());
+          publishWorkflow.publish(item, file);
+        }
       }
 
       if (file == null) {
@@ -173,18 +185,6 @@ public class Workflow {
     // Maven doesn't use artifact names (via classifiers) when resolving POMs. Therefore, we need to use the project id twice for the item
     ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.project, artifact.version.toString(), artifact.getArtifactPOMFile());
     Path file = fetchWorkflow.fetchItem(item, publishWorkflow);
-//    try {
-//      System.out.println("[Looking for POM using semantic version]");
-//
-//      // Publish a negative AMD to tell Savant that it shouldn't look for AMDs since this is a Maven artifact
-//      if (file == null) {
-//        System.out.println(" * {Writing negative for [" + item + "]}");
-//        publishWorkflow.publishNegative(item);
-//      }
-//    } catch (NegativeCacheException ignore) {
-//      // Ignore
-//      System.out.println(" * {Found negative for [" + item + "]}");
-//    }
 
     // Try the POM with the non-semantic (bad) version
     if (file == null && artifact.nonSemanticVersion != null) {
@@ -196,12 +196,6 @@ public class Workflow {
     if (file == null) {
       return null;
     }
-
-    // Publish a negative AMD to tell Savant that it shouldn't look for AMDs since this is a Maven artifact
-//    if (writeNegatives) {
-//      ResolvableItem amd = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactMetaDataFile());
-//      publishWorkflow.publishNegative(amd);
-//    }
 
     POM pom = MavenTools.parsePOM(file, output);
     pom.replaceKnownVariablesAndFillInDependencies();

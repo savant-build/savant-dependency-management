@@ -69,7 +69,7 @@ public class SVNProcessTest extends BaseUnitTest {
     item = new ResolvableItem(item, artifact.getArtifactFile());
     process.publish(item, file);
 
-    process.fetch(item, new PublishWorkflow(new CacheProcess(output, cache.toString())));
+    process.fetch(item, new PublishWorkflow(new CacheProcess(output, cache.toString(), cache.toString())));
     assertTrue(Files.isRegularFile(projectDir.resolve("build/test/cache/org/savantbuild/test/svn-process-test/1.0.0/svn-process-test-1.0.0.jar")));
     assertTrue(Files.isRegularFile(projectDir.resolve("build/test/cache/org/savantbuild/test/svn-process-test/1.0.0/svn-process-test-1.0.0.jar.md5")));
   }

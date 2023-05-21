@@ -37,7 +37,7 @@ import static org.testng.Assert.assertTrue;
 public class CacheProcessTest extends BaseUnitTest {
   @Test
   public void fetch() {
-    CacheProcess process = new CacheProcess(output, projectDir.resolve("test-deps/savant").toString());
+    CacheProcess process = new CacheProcess(output, projectDir.resolve("test-deps/savant").toString(), projectDir.resolve("test-deps/integration").toString());
     Artifact artifact = new ReifiedArtifact("org.savantbuild.test:multiple-versions:multiple-versions:1.0.0:jar", License.Licenses.get("ApacheV2_0"));
 
     ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile());
@@ -48,11 +48,23 @@ public class CacheProcessTest extends BaseUnitTest {
   }
 
   @Test
+  public void fetchIntegration() {
+    CacheProcess process = new CacheProcess(output, projectDir.resolve("test-deps/savant").toString(), projectDir.resolve("test-deps/integration").toString());
+    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:integration-build:integration-build:2.1.1-{integration}:jar", License.Licenses.get("ApacheV2_0"));
+
+    ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile());
+    Path file = process.fetch(item, null);
+    assertNotNull(file);
+    assertTrue(file.toAbsolutePath().toString().replace('\\', '/').endsWith("test-deps/integration/org/savantbuild/test/integration-build/2.1.1-{integration}/integration-build-2.1.1-{integration}.jar"));
+    assertTrue(Files.isRegularFile(file));
+  }
+
+  @Test
   public void store() throws Exception {
     Path cache = projectDir.resolve("build/test/deps");
     PathTools.prune(cache);
 
-    CacheProcess process = new CacheProcess(output, cache.toString());
+    CacheProcess process = new CacheProcess(output, cache.toString(), cache.toString());
     Artifact artifact = new ReifiedArtifact("org.savantbuild.test:multiple-versions:multiple-versions:1.0.0:jar", License.Licenses.get("ApacheV2_0"));
 
     Path artFile = projectDir.resolve("test-deps/savant/org/savantbuild/test/multiple-versions/1.0.0/multiple-versions-1.0.0.jar");
@@ -60,6 +72,24 @@ public class CacheProcessTest extends BaseUnitTest {
     Path file = process.publish(item, artFile);
     assertNotNull(file);
     assertTrue(file.toAbsolutePath().toString().replace('\\', '/').endsWith("build/test/deps/org/savantbuild/test/multiple-versions/1.0.0/multiple-versions-1.0.0.jar"));
+    assertTrue(Files.isRegularFile(file));
+  }
+
+  @Test
+  public void storeIntegration() throws Exception {
+    Path cache = projectDir.resolve("build/test/deps");
+    Path integration = projectDir.resolve("build/test/integration");
+    PathTools.prune(cache);
+    PathTools.prune(integration);
+
+    CacheProcess process = new CacheProcess(output, cache.toString(), integration.toString());
+    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:integration-build:integration-build:2.1.1-{integration}:jar", License.Licenses.get("ApacheV2_0"));
+
+    Path artFile = projectDir.resolve("test-deps/integration/org/savantbuild/test/integration-build/2.1.1-{integration}/integration-build-2.1.1-{integration}.jar");
+    ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile());
+    Path file = process.publish(item, artFile);
+    assertNotNull(file);
+    assertTrue(file.toAbsolutePath().toString().replace('\\', '/').endsWith("build/test/integration/org/savantbuild/test/integration-build/2.1.1-{integration}/integration-build-2.1.1-{integration}.jar"));
     assertTrue(Files.isRegularFile(file));
   }
 }

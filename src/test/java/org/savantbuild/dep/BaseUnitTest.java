@@ -47,6 +47,8 @@ public abstract class BaseUnitTest {
 
   public static Path cache;
 
+  public static Path integration;
+
   public static Path mavenCache;
 
   public static Path projectDir;
@@ -57,16 +59,17 @@ public abstract class BaseUnitTest {
   public static void setup() {
     projectDir = Paths.get("../savant-dependency-management");
     cache = projectDir.resolve("build/test/cache");
+    integration = projectDir.resolve("test-deps/integration");
     mavenCache = projectDir.resolve("build/test/maven-cache");
 
     workflow = new Workflow(
         new FetchWorkflow(
             output,
-            new CacheProcess(output, cache.toString()),
+            new CacheProcess(output, cache.toString(), integration.toString()),
             new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null)
         ),
         new PublishWorkflow(
-            new CacheProcess(output, cache.toString())
+            new CacheProcess(output, cache.toString(), integration.toString())
         ),
         output
     );

@@ -22,6 +22,7 @@ import java.nio.file.Paths;
 
 import org.savantbuild.dep.domain.ResolvableItem;
 import org.savantbuild.dep.workflow.PublishWorkflow;
+import org.savantbuild.domain.Version;
 import org.savantbuild.output.Output;
 
 /**
@@ -32,15 +33,14 @@ import org.savantbuild.output.Output;
 public class CacheProcess implements Process {
   public final String dir;
 
+  public final String integrationDir;
+
   public final Output output;
 
-  public CacheProcess(Output output, String dir) {
+  public CacheProcess(Output output, String dir, String integrationDir) {
     this.output = output;
-    if (dir == null) {
-      this.dir = ".savant/cache";
-    } else {
-      this.dir = dir;
-    }
+    this.dir = dir != null ? dir : ".savant/cache";
+    this.integrationDir = integrationDir != null ? integrationDir : System.getProperty("user.home") + "/.savant/cache";
   }
 
   /**
@@ -54,25 +54,7 @@ public class CacheProcess implements Process {
    */
   @Override
   public Path fetch(ResolvableItem item, PublishWorkflow publishWorkflow) throws NegativeCacheException {
-    String path = String.join("/", dir, item.group.replace('.', '/'), item.project, item.version, item.item);
-    output.debugln("      - File [" + path + "]");
-    Path file = Paths.get(path);
-    if (!Files.isRegularFile(file)) {
-      file = Paths.get(path + ".neg");
-      if (Files.isRegularFile(file)) {
-        output.debugln("      - Found negative marker");
-        throw new NegativeCacheException(item);
-      } else {
-        output.debugln("      - Not found");
-        file = null;
-      }
-    }
-
-    if (file != null) {
-      output.debugln("      - Found");
-    }
-
-    return file;
+    return (item.version.endsWith(Version.INTEGRATION)) ? _fetch(item, integrationDir) : _fetch(item, dir);
   }
 
   /**
@@ -85,7 +67,12 @@ public class CacheProcess implements Process {
    */
   @Override
   public Path publish(ResolvableItem item, Path itemFile) throws ProcessFailureException {
-    String cachePath = String.join("/", dir, item.group.replace('.', '/'), item.project, item.version, item.item);
+    String cacheDir = dir;
+    if (item.version.endsWith(Version.INTEGRATION)) {
+      cacheDir = integrationDir;
+    }
+
+    String cachePath = String.join("/", cacheDir, item.group.replace('.', '/'), item.project, item.version, item.item);
     Path cacheFile = Paths.get(cachePath);
     if (Files.isDirectory(cacheFile)) {
       throw new ProcessFailureException("Your local artifact cache location is a directory [" + cacheFile.toAbsolutePath() + "]");
@@ -128,5 +115,27 @@ public class CacheProcess implements Process {
   @Override
   public String toString() {
     return "Cache(" + dir + ")";
+  }
+
+  private Path _fetch(ResolvableItem item, String cacheDir) {
+    String path = String.join("/", cacheDir, item.group.replace('.', '/'), item.project, item.version, item.item);
+    output.debugln("      - File [" + path + "]");
+    Path file = Paths.get(path);
+    if (!Files.isRegularFile(file)) {
+      file = Paths.get(path + ".neg");
+      if (Files.isRegularFile(file)) {
+        output.debugln("      - Found negative marker");
+        throw new NegativeCacheException(item);
+      } else {
+        output.debugln("      - Not found");
+        file = null;
+      }
+    }
+
+    if (file != null) {
+      output.debugln("      - Found");
+    }
+
+    return file;
   }
 }

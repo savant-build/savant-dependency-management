@@ -97,7 +97,7 @@ public class DefaultDependencyService implements DependencyService {
       throw new PublishException("The publication source file [" + publication.sourceFile + "] for the publication [" + publication.artifact + "] doesn't exist.");
     }
 
-    output.infoln("Publishing [%s]", publication);
+    output.infoln("Publishing [%s]", publication.artifact);
 
     ResolvableItem item = new ResolvableItem(publication.artifact.id.group, publication.artifact.id.project, publication.artifact.id.name,
         publication.artifact.version.toString(), publication.artifact.getArtifactMetaDataFile());
