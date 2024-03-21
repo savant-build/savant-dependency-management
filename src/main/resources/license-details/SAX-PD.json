@@ -6,11 +6,11 @@
   "licenseId": "SAX-PD",
   "crossRef": [
     {
-      "match": "true",
+      "match": "false",
       "url": "http://www.saxproject.org/copying.html",
       "isValid": true,
       "isLive": true,
-      "timestamp": "2022-08-12T00:24:48Z",
+      "timestamp": "2024-03-15T19:37:54Z",
       "isWayBackLink": false,
       "order": 0
     }
