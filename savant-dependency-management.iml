@@ -15,33 +15,33 @@
     <orderEntry type="module-library">
       <library>
         <CLASSES>
-          <root url="jar://$USER_HOME$/dev/os/savant/savant-dependency-management/.savant/cache/com/fasterxml/jackson/core/jackson-databind/2.13.4/jackson-databind-2.13.4.jar!/" />
+          <root url="jar://$USER_HOME$/dev/inversoft/savant/savant-dependency-management/.savant/cache/com/fasterxml/jackson/core/jackson-databind/2.13.4/jackson-databind-2.13.4.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES>
-          <root url="jar://$USER_HOME$/dev/os/savant/savant-dependency-management/.savant/cache/com/fasterxml/jackson/core/jackson-databind/2.13.4/jackson-databind-2.13.4-src.jar!/" />
+          <root url="jar://$USER_HOME$/dev/inversoft/savant/savant-dependency-management/.savant/cache/com/fasterxml/jackson/core/jackson-databind/2.13.4/jackson-databind-2.13.4-src.jar!/" />
         </SOURCES>
       </library>
     </orderEntry>
     <orderEntry type="module-library">
       <library>
         <CLASSES>
-          <root url="jar://$USER_HOME$/dev/os/savant/savant-dependency-management/.savant/cache/com/fasterxml/jackson/core/jackson-annotations/2.13.4/jackson-annotations-2.13.4.jar!/" />
+          <root url="jar://$USER_HOME$/dev/inversoft/savant/savant-dependency-management/.savant/cache/com/fasterxml/jackson/core/jackson-annotations/2.13.4/jackson-annotations-2.13.4.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES>
-          <root url="jar://$USER_HOME$/dev/os/savant/savant-dependency-management/.savant/cache/com/fasterxml/jackson/core/jackson-annotations/2.13.4/jackson-annotations-2.13.4-src.jar!/" />
+          <root url="jar://$USER_HOME$/dev/inversoft/savant/savant-dependency-management/.savant/cache/com/fasterxml/jackson/core/jackson-annotations/2.13.4/jackson-annotations-2.13.4-src.jar!/" />
         </SOURCES>
       </library>
     </orderEntry>
     <orderEntry type="module-library">
       <library>
         <CLASSES>
-          <root url="jar://$USER_HOME$/dev/os/savant/savant-dependency-management/.savant/cache/com/fasterxml/jackson/core/jackson-core/2.13.4/jackson-core-2.13.4.jar!/" />
+          <root url="jar://$USER_HOME$/dev/inversoft/savant/savant-dependency-management/.savant/cache/com/fasterxml/jackson/core/jackson-core/2.13.4/jackson-core-2.13.4.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES>
-          <root url="jar://$USER_HOME$/dev/os/savant/savant-dependency-management/.savant/cache/com/fasterxml/jackson/core/jackson-core/2.13.4/jackson-core-2.13.4-src.jar!/" />
+          <root url="jar://$USER_HOME$/dev/inversoft/savant/savant-dependency-management/.savant/cache/com/fasterxml/jackson/core/jackson-core/2.13.4/jackson-core-2.13.4-src.jar!/" />
         </SOURCES>
       </library>
     </orderEntry>
@@ -50,22 +50,22 @@
     <orderEntry type="module-library" scope="TEST">
       <library>
         <CLASSES>
-          <root url="jar://$USER_HOME$/dev/os/savant/savant-dependency-management/.savant/cache/org/testng/testng/6.8.7/testng-6.8.7.jar!/" />
+          <root url="jar://$USER_HOME$/dev/inversoft/savant/savant-dependency-management/.savant/cache/org/testng/testng/6.8.7/testng-6.8.7.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES>
-          <root url="jar://$USER_HOME$/dev/os/savant/savant-dependency-management/.savant/cache/org/testng/testng/6.8.7/testng-6.8.7-src.jar!/" />
+          <root url="jar://$USER_HOME$/dev/inversoft/savant/savant-dependency-management/.savant/cache/org/testng/testng/6.8.7/testng-6.8.7-src.jar!/" />
         </SOURCES>
       </library>
     </orderEntry>
     <orderEntry type="module-library" scope="TEST">
       <library>
         <CLASSES>
-          <root url="jar://$USER_HOME$/dev/os/savant/savant-dependency-management/.savant/cache/com/beust/jcommander/1.27.0/jcommander-1.27.0.jar!/" />
+          <root url="jar://$USER_HOME$/dev/inversoft/savant/savant-dependency-management/.savant/cache/com/beust/jcommander/1.27.0/jcommander-1.27.0.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES>
-          <root url="jar://$USER_HOME$/dev/os/savant/savant-dependency-management/.savant/cache/com/beust/jcommander/1.27.0/jcommander-1.27.0-src.jar!/" />
+          <root url="jar://$USER_HOME$/dev/inversoft/savant/savant-dependency-management/.savant/cache/com/beust/jcommander/1.27.0/jcommander-1.27.0-src.jar!/" />
         </SOURCES>
       </library>
     </orderEntry>
