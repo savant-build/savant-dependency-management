@@ -1,5 +1,5 @@
 
-mkdir -p build/spdx
+mkdir -p build/license-list-data
 git clone --depth=1 git@github.com:spdx/license-list-data.git build/license-list-data
 rm -rf src/main/resources/license-details
 rm -rf src/main/resources/license-exceptions
