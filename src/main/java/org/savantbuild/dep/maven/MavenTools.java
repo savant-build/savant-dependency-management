@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Inversoft Inc., All Rights Reserved
+ * Copyright (c) 2024, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -249,19 +249,16 @@ public class MavenTools {
   }
 
   private static Version determineVersion(POM pom, Map<String, Version> mappings) {
-    Version version;
-    try {
-      version = new Version(pom.version);
-    } catch (VersionException e) {
-      // Look up the mapping
-      String key = pom.toSpecification();
-      version = mappings.get(key);
-      if (version == null) {
-        throw new VersionException(String.format(VersionError, key));
-      }
+    String key = pom.toSpecification();
+    Version version = mappings.get(key);
+    if (version != null) {
+      return version;
     }
-
-    return version;
+    try {
+      return new Version(pom.version);
+    } catch (VersionException e) {
+      throw new VersionException(String.format(VersionError, key));
+    }
   }
 
   private static Element firstChild(Element root, String childName) {
