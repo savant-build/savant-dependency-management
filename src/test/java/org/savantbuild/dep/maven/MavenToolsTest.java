@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Inversoft Inc., All Rights Reserved
+ * Copyright (c) 2024, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,18 +18,18 @@ package org.savantbuild.dep.maven;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Map;
 
 import org.savantbuild.dep.BaseUnitTest;
 import org.savantbuild.dep.domain.Artifact;
-import org.savantbuild.dep.domain.ArtifactID;
 import org.savantbuild.dep.domain.Dependencies;
 import org.savantbuild.dep.domain.DependencyGroup;
+import org.savantbuild.domain.Version;
 import org.savantbuild.output.SystemOutOutput;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNull;
-import static org.testng.Assert.fail;
 
 /**
  * Tests the Maven malarky.
@@ -37,6 +37,23 @@ import static org.testng.Assert.fail;
  * @author Brian Pontarelli
  */
 public class MavenToolsTest extends BaseUnitTest {
+  private static POM parseGroovyJsonPOM() {
+    POM pom = MavenTools.parsePOM(Paths.get("../savant-dependency-management/src/test/resources/groovy-json-4.0.6.pom"), new SystemOutOutput(true));
+    assertEquals(pom.group, "org.apache.groovy");
+    assertEquals(pom.id, "groovy-json");
+    assertEquals(pom.name, "Apache Groovy");
+    assertEquals(pom.version, "4.0.6");
+    assertNull(pom.parentGroup);
+    assertNull(pom.parentId);
+    assertNull(pom.parentVersion);
+    assertEquals(pom.dependencies, Arrays.asList(
+            new MavenDependency("org.apache.groovy", "groovy", "4.0.6", "compile")
+        )
+    );
+    assertEquals(pom.licenses, Collections.singletonList(new MavenLicense("repo", "The Apache Software License, Version 2.0", "http://www.apache.org/licenses/LICENSE-2.0.txt")));
+    return pom;
+  }
+
   @Test
   public void parse() {
     POM pom = MavenTools.parsePOM(Paths.get("../savant-dependency-management/src/test/resources/groovy-4.0.5.pom"), new SystemOutOutput(true));
@@ -65,21 +82,47 @@ public class MavenToolsTest extends BaseUnitTest {
 
   @Test
   public void parse_required() {
-    POM pom = MavenTools.parsePOM(Paths.get("../savant-dependency-management/src/test/resources/groovy-json-4.0.6.pom"), new SystemOutOutput(true));
-    assertEquals(pom.group, "org.apache.groovy");
-    assertEquals(pom.id, "groovy-json");
-    assertEquals(pom.name, "Apache Groovy");
-    assertEquals(pom.version, "4.0.6");
-    assertNull(pom.parentGroup);
-    assertNull(pom.parentId);
-    assertNull(pom.parentVersion);
-    assertEquals(pom.dependencies, Arrays.asList(
-            new MavenDependency("org.apache.groovy", "groovy", "4.0.6", "compile")
-        )
-    );
-    assertEquals(pom.licenses, Collections.singletonList(new MavenLicense("repo", "The Apache Software License, Version 2.0", "http://www.apache.org/licenses/LICENSE-2.0.txt")));
+    // arrange
+    POM pom = parseGroovyJsonPOM();
 
+    // act
     Dependencies dependencies = MavenTools.toSavantDependencies(pom, Collections.emptyMap());
+
+    // assert
+    var expectedArtifact = new Artifact("org.apache.groovy:groovy:4.0.6");
+    var expectedDependencyGroup = new DependencyGroup("compile", true, expectedArtifact);
+    assertEquals(dependencies,
+        new Dependencies(expectedDependencyGroup));
+  }
+
+  @Test
+  public void parse_version_remapped_maven_causes_exception() {
+    // arrange
+    POM pom = parseGroovyJsonPOM();
+    pom.dependencies.get(0).version = "4.0.heydude";
+    var mappings = Map.of("org.apache.groovy:groovy:4.0.heydude", new Version("4.0.6"));
+
+    // act
+    Dependencies dependencies = MavenTools.toSavantDependencies(pom, mappings);
+
+    // assert
+    var expectedArtifact = new Artifact("org.apache.groovy:groovy:4.0.6");
+    var expectedDependencyGroup = new DependencyGroup("compile", true, expectedArtifact);
+    assertEquals(dependencies,
+        new Dependencies(expectedDependencyGroup));
+  }
+
+  @Test
+  public void parse_version_remapped_maven_not_causes_exception() {
+    // arrange
+    POM pom = parseGroovyJsonPOM();
+    pom.dependencies.get(0).version = "4.0";
+    var mappings = Map.of("org.apache.groovy:groovy:4.0", new Version("4.0.6"));
+
+    // act
+    Dependencies dependencies = MavenTools.toSavantDependencies(pom, mappings);
+
+    // assert
     var expectedArtifact = new Artifact("org.apache.groovy:groovy:4.0.6");
     var expectedDependencyGroup = new DependencyGroup("compile", true, expectedArtifact);
     assertEquals(dependencies,
