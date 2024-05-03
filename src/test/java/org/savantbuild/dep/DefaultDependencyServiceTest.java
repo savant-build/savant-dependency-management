@@ -327,12 +327,12 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
 
     DependencyGraph actual = service.buildGraph(project, dependencies, workflow);
     assertEquals(actual, expected);
-    var artifactGraph = service.reduce(actual);
-    var badVer = artifactGraph.values()
-                              .stream()
-                              .filter(r -> r.id.name.equals("badver"))
-                              .findFirst()
-                              .get();
+    ArtifactGraph artifactGraph = service.reduce(actual);
+    ReifiedArtifact badVer = artifactGraph.values()
+                                          .stream()
+                                          .filter(r -> r.id.name.equals("badver"))
+                                          .findFirst()
+                                          .get();
     assertEquals(badVer.nonSemanticVersion, "1.0.0.Final");
   }
 
@@ -371,12 +371,12 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
 
     DependencyGraph actual = service.buildGraph(project, dependencies, workflow);
     assertEquals(actual, expected);
-    var artifactGraph = service.reduce(actual);
-    var badVer = artifactGraph.values()
-                              .stream()
-                              .filter(r -> r.id.name.equals("badver"))
-                              .findFirst()
-                              .get();
+    ArtifactGraph artifactGraph = service.reduce(actual);
+    ReifiedArtifact badVer = artifactGraph.values()
+                                          .stream()
+                                          .filter(r -> r.id.name.equals("badver"))
+                                          .findFirst()
+                                          .get();
     assertEquals(badVer.nonSemanticVersion, "1.0");
     // TODO: Resolve too?
   }
