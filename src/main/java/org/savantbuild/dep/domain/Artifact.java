@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Inversoft Inc., All Rights Reserved
+ * Copyright (c) 2024, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,8 +21,6 @@ import java.util.List;
 import java.util.Objects;
 
 import org.savantbuild.domain.Version;
-
-import static java.util.Arrays.stream;
 
 /**
  * <p>
@@ -123,28 +121,9 @@ public class Artifact {
 
     this.nonSemanticVersion = nonSemanticVersion;
     this.skipCompatibilityCheck = skipCompatibilityCheck;
-
-    String[] parts = spec.split(":");
-    if (parts.length < 3) {
-      throw new IllegalArgumentException("Invalid artifact specification [" + spec + "]. It must have 3, 4, or 5 parts");
-    }
-
-    if (stream(parts).anyMatch(String::isEmpty)) {
-      throw new IllegalArgumentException("Invalid artifact specification [" + spec + "]. One of the parts is empty (i.e. foo::3.0");
-    }
-
-    if (parts.length == 3) {
-      id = new ArtifactID(parts[0], parts[1], parts[1], "jar");
-      version = new Version(parts[2]);
-    } else if (parts.length == 4) {
-      id = new ArtifactID(parts[0], parts[1], parts[1], parts[3]);
-      version = new Version(parts[2]);
-    } else if (parts.length == 5) {
-      id = new ArtifactID(parts[0], parts[1], parts[2], parts[4]);
-      version = new Version(parts[3]);
-    } else {
-      throw new IllegalArgumentException("Invalid artifact specification [" + spec + "]. It must have 3, 4, or 5 parts");
-    }
+    var artifactSpec = new ArtifactSpec(spec);
+    id = artifactSpec.id;
+    version = artifactSpec.version;
 
     if (exclusions != null) {
       this.exclusions = Collections.unmodifiableList(new ArrayList<>(exclusions));
