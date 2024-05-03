@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Inversoft Inc., All Rights Reserved
+ * Copyright (c) 2024, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -70,7 +70,7 @@ public class ArtifactToolsTest extends BaseUnitTest {
         new ArtifactID("org.example", "exclude-3", "exclude-4", "zip")
     ));
 
-    assertEquals(amd.dependencies.groups.get("compile").dependencies.size(), 3);
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.size(), 4);
     assertEquals(amd.dependencies.groups.get("compile").name, "compile");
     assertEquals(amd.dependencies.groups.get("compile").dependencies.get(0).id.group, "org.example.test");
     assertEquals(amd.dependencies.groups.get("compile").dependencies.get(0).id.project, "test-project3");
@@ -90,6 +90,14 @@ public class ArtifactToolsTest extends BaseUnitTest {
     assertEquals(amd.dependencies.groups.get("compile").dependencies.get(2).version, new Version("1.0.0"));
     assertEquals(amd.dependencies.groups.get("compile").dependencies.get(2).nonSemanticVersion, "1.0.0.Final");
     assertEquals(amd.dependencies.groups.get("compile").dependencies.get(2).id.type, "jar");
+
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(3).id.group, "org.example.test");
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(3).id.project, "badver");
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(3).id.name, "badverproactive");
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(3).version, new Version("1.0.0"));
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(3).nonSemanticVersion, "1.0");
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(3).id.type, "jar");
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(3).getArtifactFile(), "foo");
   }
 
   /**
