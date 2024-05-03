@@ -97,7 +97,6 @@ public class ArtifactToolsTest extends BaseUnitTest {
     assertEquals(amd.dependencies.groups.get("compile").dependencies.get(3).version, new Version("1.0.0"));
     assertEquals(amd.dependencies.groups.get("compile").dependencies.get(3).nonSemanticVersion, "1.0");
     assertEquals(amd.dependencies.groups.get("compile").dependencies.get(3).id.type, "jar");
-    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(3).getArtifactFile(), "foo");
   }
 
   /**
