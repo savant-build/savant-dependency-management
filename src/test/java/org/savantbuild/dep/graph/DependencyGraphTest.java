@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Inversoft Inc., All Rights Reserved
+ * Copyright (c) 2024, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,16 +38,16 @@ public class DependencyGraphTest extends BaseUnitTest {
     ReifiedArtifact four = new ReifiedArtifact("group:project:artifact4:1.0:jar", new License());
 
     DependencyGraph graph = new DependencyGraph(one);
-    graph.addEdge(new Dependency(one.id), new Dependency(two.id), new DependencyEdgeValue(one.version, two.version, "compile", new License()));
-    graph.addEdge(new Dependency(one.id), new Dependency(three.id), new DependencyEdgeValue(one.version, three.version, "compile", new License()));
-    graph.addEdge(new Dependency(two.id), new Dependency(four.id), new DependencyEdgeValue(two.version, four.version, "compile", new License()));
-    graph.addEdge(new Dependency(three.id), new Dependency(four.id), new DependencyEdgeValue(three.version, four.version, "compile", new License()));
+    graph.addEdge(new Dependency(one.id, one.nonSemanticVersion), new Dependency(two.id, two.nonSemanticVersion), new DependencyEdgeValue(one.version, two.version, "compile", new License()));
+    graph.addEdge(new Dependency(one.id, one.nonSemanticVersion), new Dependency(three.id, three.nonSemanticVersion), new DependencyEdgeValue(one.version, three.version, "compile", new License()));
+    graph.addEdge(new Dependency(two.id, two.nonSemanticVersion), new Dependency(four.id, four.nonSemanticVersion), new DependencyEdgeValue(two.version, four.version, "compile", new License()));
+    graph.addEdge(new Dependency(three.id, three.nonSemanticVersion), new Dependency(four.id, four.nonSemanticVersion), new DependencyEdgeValue(three.version, four.version, "compile", new License()));
 
     DependencyGraph graph2 = new DependencyGraph(one);
-    graph2.addEdge(new Dependency(three.id), new Dependency(four.id), new DependencyEdgeValue(three.version, four.version, "compile", new License()));
-    graph2.addEdge(new Dependency(two.id), new Dependency(four.id), new DependencyEdgeValue(two.version, four.version, "compile", new License()));
-    graph2.addEdge(new Dependency(one.id), new Dependency(three.id), new DependencyEdgeValue(one.version, three.version, "compile", new License()));
-    graph2.addEdge(new Dependency(one.id), new Dependency(two.id), new DependencyEdgeValue(one.version, two.version, "compile", new License()));
+    graph2.addEdge(new Dependency(three.id, three.nonSemanticVersion), new Dependency(four.id, four.nonSemanticVersion), new DependencyEdgeValue(three.version, four.version, "compile", new License()));
+    graph2.addEdge(new Dependency(two.id, two.nonSemanticVersion), new Dependency(four.id, four.nonSemanticVersion), new DependencyEdgeValue(two.version, four.version, "compile", new License()));
+    graph2.addEdge(new Dependency(one.id, one.nonSemanticVersion), new Dependency(three.id, three.nonSemanticVersion), new DependencyEdgeValue(one.version, three.version, "compile", new License()));
+    graph2.addEdge(new Dependency(one.id, one.nonSemanticVersion), new Dependency(two.id, two.nonSemanticVersion), new DependencyEdgeValue(one.version, two.version, "compile", new License()));
 
     assertEquals(graph, graph2);
   }
@@ -61,10 +61,10 @@ public class DependencyGraphTest extends BaseUnitTest {
     ReifiedArtifact four = new ReifiedArtifact("group:project:artifact4:1.0:jar", new License());
 
     DependencyGraph graph = new DependencyGraph(root);
-    graph.addEdge(new Dependency(root.id), new Dependency(one.id), new DependencyEdgeValue(root.version, one.version, "compile", new License()));
-    graph.addEdge(new Dependency(root.id), new Dependency(two.id), new DependencyEdgeValue(root.version, two.version, "compile", new License()));
-    graph.addEdge(new Dependency(one.id), new Dependency(three.id), new DependencyEdgeValue(one.version, three.version, "compile", new License()));
-    graph.addEdge(new Dependency(two.id), new Dependency(four.id), new DependencyEdgeValue(two.version, four.version, "compile", new License()));
+    graph.addEdge(new Dependency(root.id, root.nonSemanticVersion), new Dependency(one.id, one.nonSemanticVersion), new DependencyEdgeValue(root.version, one.version, "compile", new License()));
+    graph.addEdge(new Dependency(root.id, root.nonSemanticVersion), new Dependency(two.id, two.nonSemanticVersion), new DependencyEdgeValue(root.version, two.version, "compile", new License()));
+    graph.addEdge(new Dependency(one.id, one.nonSemanticVersion), new Dependency(three.id, three.nonSemanticVersion), new DependencyEdgeValue(one.version, three.version, "compile", new License()));
+    graph.addEdge(new Dependency(two.id, two.nonSemanticVersion), new Dependency(four.id, four.nonSemanticVersion), new DependencyEdgeValue(two.version, four.version, "compile", new License()));
 
     ArtifactID[] path1 = new ArtifactID[2];
     ArtifactID[] path2 = new ArtifactID[2];

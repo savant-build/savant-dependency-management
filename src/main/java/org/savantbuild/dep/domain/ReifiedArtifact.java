@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Inversoft Inc., All Rights Reserved
+ * Copyright (c) 2024, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,6 +39,10 @@ public class ReifiedArtifact extends Artifact {
 
   public ReifiedArtifact(ArtifactID id, Version version, List<License> licenses) {
     this(id, version, null, Collections.emptyList(), licenses);
+  }
+
+  public ReifiedArtifact(ArtifactID id, Version version, List<License> licenses, String nonSemanticVersion) {
+    this(id, version, nonSemanticVersion, Collections.emptyList(), licenses);
   }
 
   public ReifiedArtifact(ArtifactID id, Version version, List<ArtifactID> exclusions, List<License> licenses) {
