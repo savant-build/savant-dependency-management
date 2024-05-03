@@ -81,7 +81,7 @@ public class MavenToolsTest extends BaseUnitTest {
   }
 
   @Test
-  public void parse_required() {
+  public void parseRequired() {
     // arrange
     POM pom = parseGroovyJsonPOM();
 
@@ -96,7 +96,7 @@ public class MavenToolsTest extends BaseUnitTest {
   }
 
   @Test
-  public void parse_version_remapped_maven_causes_version_exception() {
+  public void parseVersionRemappedMavenCausesVersionException() {
     // arrange
     POM pom = parseGroovyJsonPOM();
     pom.dependencies.get(0).version = "4.0.heydude";
@@ -113,7 +113,7 @@ public class MavenToolsTest extends BaseUnitTest {
   }
 
   @Test
-  public void parse_version_remapped_maven_not_causes_exception() {
+  public void parseVersionRemappedMavenNotCausesException() {
     // arrange
     POM pom = parseGroovyJsonPOM();
     pom.dependencies.get(0).version = "4.0";

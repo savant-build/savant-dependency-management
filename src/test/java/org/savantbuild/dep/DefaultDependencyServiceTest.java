@@ -337,7 +337,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
   }
 
   @Test
-  public void buildGraphWithNonSemanticVersions_proactive() {
+  public void buildGraphWithNonSemanticVersionsProactive() {
 //    output.enableDebug();
 
     dependencies = new Dependencies(
@@ -378,7 +378,6 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
                                           .findFirst()
                                           .get();
     assertEquals(badVer.nonSemanticVersion, "1.0");
-    // TODO: Resolve too?
   }
 
 
