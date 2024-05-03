@@ -20,12 +20,16 @@ import java.util.Arrays;
 import java.util.Collections;
 
 import org.savantbuild.dep.BaseUnitTest;
+import org.savantbuild.dep.domain.Artifact;
+import org.savantbuild.dep.domain.ArtifactID;
 import org.savantbuild.dep.domain.Dependencies;
+import org.savantbuild.dep.domain.DependencyGroup;
 import org.savantbuild.output.SystemOutOutput;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNull;
+import static org.testng.Assert.fail;
 
 /**
  * Tests the Maven malarky.
@@ -57,5 +61,28 @@ public class MavenToolsTest extends BaseUnitTest {
     // Everything is optional
     Dependencies dependencies = MavenTools.toSavantDependencies(pom, Collections.emptyMap());
     assertEquals(dependencies, new Dependencies());
+  }
+
+  @Test
+  public void parse_required() {
+    POM pom = MavenTools.parsePOM(Paths.get("../savant-dependency-management/src/test/resources/groovy-json-4.0.6.pom"), new SystemOutOutput(true));
+    assertEquals(pom.group, "org.apache.groovy");
+    assertEquals(pom.id, "groovy-json");
+    assertEquals(pom.name, "Apache Groovy");
+    assertEquals(pom.version, "4.0.6");
+    assertNull(pom.parentGroup);
+    assertNull(pom.parentId);
+    assertNull(pom.parentVersion);
+    assertEquals(pom.dependencies, Arrays.asList(
+            new MavenDependency("org.apache.groovy", "groovy", "4.0.6", "compile")
+        )
+    );
+    assertEquals(pom.licenses, Collections.singletonList(new MavenLicense("repo", "The Apache Software License, Version 2.0", "http://www.apache.org/licenses/LICENSE-2.0.txt")));
+
+    Dependencies dependencies = MavenTools.toSavantDependencies(pom, Collections.emptyMap());
+    var expectedArtifact = new Artifact("org.apache.groovy:groovy:4.0.6");
+    var expectedDependencyGroup = new DependencyGroup("compile", true, expectedArtifact);
+    assertEquals(dependencies,
+        new Dependencies(expectedDependencyGroup));
   }
 }
