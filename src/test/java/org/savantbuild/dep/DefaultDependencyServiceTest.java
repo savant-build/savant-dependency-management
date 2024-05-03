@@ -875,7 +875,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
 
     // Add the skip node
     incompatible.addEdge(new Dependency(project.id), new Dependency(leaf), new DependencyEdgeValue(new Version("1.0.0"), new Version("2.0.0"), "runtime", new License()));
-    incompatible.skipCompatibilityCheck(leaf, null);
+    incompatible.skipCompatibilityCheck(leaf);
 
     ReifiedArtifact intermediateArtifact = new ReifiedArtifact(intermediate, new Version("1.0.0"), new License());
     ReifiedArtifact multipleVersionsArtifact = new ReifiedArtifact(multipleVersions, new Version("1.1.0"), new License());
