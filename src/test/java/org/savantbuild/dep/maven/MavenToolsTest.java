@@ -91,8 +91,7 @@ public class MavenToolsTest extends BaseUnitTest {
     // assert
     var expectedArtifact = new Artifact("org.apache.groovy:groovy:4.0.6");
     var expectedDependencyGroup = new DependencyGroup("compile", true, expectedArtifact);
-    assertEquals(dependencies,
-        new Dependencies(expectedDependencyGroup));
+    assertEquals(dependencies, new Dependencies(expectedDependencyGroup));
   }
 
   @Test
@@ -108,8 +107,7 @@ public class MavenToolsTest extends BaseUnitTest {
     // assert
     var expectedArtifact = new Artifact("org.apache.groovy:groovy:4.0.6");
     var expectedDependencyGroup = new DependencyGroup("compile", true, expectedArtifact);
-    assertEquals(dependencies,
-        new Dependencies(expectedDependencyGroup));
+    assertEquals(dependencies, new Dependencies(expectedDependencyGroup));
   }
 
   @Test
@@ -125,7 +123,6 @@ public class MavenToolsTest extends BaseUnitTest {
     // assert
     var expectedArtifact = new Artifact("org.apache.groovy:groovy:4.0.6");
     var expectedDependencyGroup = new DependencyGroup("compile", true, expectedArtifact);
-    assertEquals(dependencies,
-        new Dependencies(expectedDependencyGroup));
+    assertEquals(dependencies, new Dependencies(expectedDependencyGroup));
   }
 }
