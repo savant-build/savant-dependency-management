@@ -269,7 +269,7 @@ public class DefaultDependencyService implements DependencyService {
                                                       .getValue();
 
     // Build the artifact for this node, save it in the Map and put it in the ArtifactGraph
-    ReifiedArtifact destinationArtifact = new ReifiedArtifact(destination.id, max, edgeValue.licenses, destination.nonSemanticVersion);
+    ReifiedArtifact destinationArtifact = new ReifiedArtifact(destination.id, max, destination.nonSemanticVersion, edgeValue.licenses);
     artifacts.put(destination.id, destinationArtifact);
 
     significantInbound.forEach((edge) -> {

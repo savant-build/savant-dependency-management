@@ -41,12 +41,12 @@ public class ReifiedArtifact extends Artifact {
     this(id, version, null, Collections.emptyList(), licenses);
   }
 
-  public ReifiedArtifact(ArtifactID id, Version version, List<License> licenses, String nonSemanticVersion) {
-    this(id, version, nonSemanticVersion, Collections.emptyList(), licenses);
-  }
-
   public ReifiedArtifact(ArtifactID id, Version version, List<ArtifactID> exclusions, List<License> licenses) {
     this(id, version, null, exclusions, licenses);
+  }
+
+  public ReifiedArtifact(ArtifactID id, Version version, String nonSemanticVersion, List<License> licenses) {
+    this(id, version, nonSemanticVersion, Collections.emptyList(), licenses);
   }
 
   public ReifiedArtifact(ArtifactID id, Version version, String nonSemanticVersion, List<ArtifactID> exclusions, List<License> licenses) {
