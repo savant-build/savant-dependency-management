@@ -137,7 +137,7 @@ public class DefaultDependencyService implements DependencyService {
 
     Set<Dependency> seenAtLeastOnce = new HashSet<>();
 
-    graph.traverse(new Dependency(graph.root.id, graph.root.nonSemanticVersion), false, null, (origin, destination, edgeValue, depth, isLast) -> {
+    graph.traverse(new Dependency(graph.root.id), false, null, (origin, destination, edgeValue, depth, isLast) -> {
       List<Edge<Dependency, DependencyEdgeValue>> inboundEdges = graph.getInboundEdges(destination);
       boolean alreadyCheckedAllParents = inboundEdges.size() > 0 && inboundEdges.stream().allMatch((edge) -> artifacts.containsKey(edge.getOrigin().id));
       if (alreadyCheckedAllParents) {
@@ -269,7 +269,7 @@ public class DefaultDependencyService implements DependencyService {
                                                       .getValue();
 
     // Build the artifact for this node, save it in the Map and put it in the ArtifactGraph
-    ReifiedArtifact destinationArtifact = new ReifiedArtifact(destination.id, max, destination.nonSemanticVersion, edgeValue.licenses);
+    ReifiedArtifact destinationArtifact = new ReifiedArtifact(destination.id, max, edgeValue.licenses);
     artifacts.put(destination.id, destinationArtifact);
 
     significantInbound.forEach((edge) -> {
@@ -312,10 +312,10 @@ public class DefaultDependencyService implements DependencyService {
 
         // Create an edge using nodes so that we can be explicit
         DependencyEdgeValue edge = new DependencyEdgeValue(origin.version, dependency.version, type, amd.licenses);
-        graph.addEdge(new Dependency(origin.id, origin.nonSemanticVersion), new Dependency(dependency.id, dependency.nonSemanticVersion), edge);
+        graph.addEdge(new Dependency(origin.id), new Dependency(dependency.id), edge);
         if (dependency.skipCompatibilityCheck) {
           output.debugln("SKIPPING COMPATIBILITY CHECK for [%s]", dependency.id);
-          graph.skipCompatibilityCheck(dependency.id, dependency.nonSemanticVersion);
+          graph.skipCompatibilityCheck(dependency.id);
         }
 
         // If we have already recursed this artifact, skip it.

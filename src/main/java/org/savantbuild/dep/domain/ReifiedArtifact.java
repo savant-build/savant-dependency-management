@@ -45,10 +45,6 @@ public class ReifiedArtifact extends Artifact {
     this(id, version, null, exclusions, licenses);
   }
 
-  public ReifiedArtifact(ArtifactID id, Version version, String nonSemanticVersion, List<License> licenses) {
-    this(id, version, nonSemanticVersion, Collections.emptyList(), licenses);
-  }
-
   public ReifiedArtifact(ArtifactID id, Version version, String nonSemanticVersion, List<ArtifactID> exclusions, List<License> licenses) {
     super(id, version, nonSemanticVersion, exclusions);
     Objects.requireNonNull(licenses, "Artifacts must have a license");
