@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Inversoft Inc., All Rights Reserved
+ * Copyright (c) 2022-2024, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -106,6 +106,8 @@ public class WorkflowTest extends BaseUnitTest {
     workflow.mappings.put("io.netty:netty-transport:4.1.65.Final", new Version("4.1.65"));
     workflow.mappings.put("io.netty:netty-transport-native-epoll:4.1.65.Final", new Version("4.1.65"));
     workflow.mappings.put("io.netty:netty-transport-native-kqueue:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.vertx:vertx-parent:19", new Version("19.0.0"));
+    workflow.mappings.put("org.sonatype.oss:oss-parent:7", new Version("7.0.0"));
 
     Artifact artifact = new ReifiedArtifact("io.vertx:vertx-core:3.9.8", License.Licenses.get("Apache-2.0"));
     ArtifactMetaData amd = workflow.fetchMetaData(artifact);
