@@ -528,6 +528,17 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     workflow.mappings.put("org.mvel:mvel2:2.3.1.Final", new Version("2.3.1"));
     workflow.mappings.put("org.springframework:spring-beans:3.0.5.RELEASE", new Version("3.0.5"));
     workflow.mappings.put("org.xerial.snappy:snappy-java:1.1.7.1", new Version("1.1.7+1"));
+    workflow.mappings.put("io.vertx:vertx-parent:19", new Version("19.0.0"));
+    workflow.mappings.put("org.sonatype.oss:oss-parent:7", new Version("7.0.0"));
+    workflow.mappings.put("org.sonatype.oss:oss-parent:9", new Version("9.0.0"));
+    workflow.mappings.put("org.objenesis:objenesis:2.6", new Version("2.6.0"));
+    workflow.mappings.put("org.objenesis:objenesis-parent:2.6", new Version("2.6.0"));
+    workflow.mappings.put("org.apache.commons:commons-parent:52", new Version("52.0.0"));
+    workflow.mappings.put("org.apache:apache:23", new Version("23.0.0"));
+    workflow.mappings.put("com.google.code.gson:gson:2.7", new Version("2.7.0"));
+    workflow.mappings.put("com.google.code.gson:gson-parent:2.7", new Version("2.7.0"));
+    workflow.mappings.put("com.fasterxml.jackson:jackson-parent:2.11", new Version("2.11.0"));
+    workflow.mappings.put("com.fasterxml:oss-parent:38", new Version("38.0.0"));
 
     service.buildGraph(project, dependencies, workflow);
   }
