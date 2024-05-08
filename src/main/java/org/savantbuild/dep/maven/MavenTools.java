@@ -249,16 +249,19 @@ public class MavenTools {
   }
 
   private static Version determineVersion(POM pom, Map<String, Version> mappings) {
-    String key = pom.toSpecification();
-    Version version = mappings.get(key);
-    if (version != null) {
-      return version;
-    }
+    Version version;
     try {
-      return new Version(pom.version);
+      version = new Version(pom.version);
     } catch (VersionException e) {
-      throw new VersionException(String.format(VersionError, key));
+      // Look up the mapping
+      String key = pom.toSpecification();
+      version = mappings.get(key);
+      if (version == null) {
+        throw new VersionException(String.format(VersionError, key));
+      }
     }
+
+    return version;
   }
 
   private static Element firstChild(Element root, String childName) {
