@@ -328,12 +328,10 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     DependencyGraph actual = service.buildGraph(project, dependencies, workflow);
     assertEquals(actual, expected);
     ArtifactGraph artifactGraph = service.reduce(actual);
-    ReifiedArtifact badVer = artifactGraph.values()
-                                          .stream()
-                                          .filter(r -> r.id.name.equals("badver"))
-                                          .findFirst()
-                                          .get();
-    assertEquals(badVer.nonSemanticVersion, "1.0.0.Final");
+    var rules = new TraversalRules().with("compile", new GroupTraversalRule(true, true));
+    var resolved = service.resolve(artifactGraph, workflow, rules);
+    assertEquals(resolved.getPath(badVerId).normalize().toFile(),
+        new File("build/test/cache/org/savantbuild/test/badver/1.0.0.Final/badver-1.0.0.Final.jar").getAbsoluteFile());
   }
 
   @Test
@@ -372,12 +370,10 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     DependencyGraph actual = service.buildGraph(project, dependencies, workflow);
     assertEquals(actual, expected);
     ArtifactGraph artifactGraph = service.reduce(actual);
-    ReifiedArtifact badVer = artifactGraph.values()
-                                          .stream()
-                                          .filter(r -> r.id.name.equals("badver"))
-                                          .findFirst()
-                                          .get();
-    assertEquals(badVer.nonSemanticVersion, "1.0");
+    var rules = new TraversalRules().with("compile", new GroupTraversalRule(true, true));
+    var resolved = service.resolve(artifactGraph, workflow, rules);
+    assertEquals(resolved.getPath(badVerId).normalize().toFile(),
+        new File("build/test/cache/org/savantbuild/test/badver/1.0/badver-1.0.jar").getAbsoluteFile());
   }
 
 
