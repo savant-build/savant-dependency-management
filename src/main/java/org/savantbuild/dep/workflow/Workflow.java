@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Inversoft Inc., All Rights Reserved
+ * Copyright (c) 2014-2024, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -75,6 +75,7 @@ public class Workflow {
     ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile());
     Path file = fetchWorkflow.fetchItem(item, publishWorkflow);
     if (file == null && artifact.nonSemanticVersion != null) {
+      // TODO: Wonder when this is actually called, if Artifact is always a re-ified artifact with a null nonSemanticVersion
       // Try the bad version
       item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.nonSemanticVersion, artifact.getArtifactNonSemanticFile());
       file = fetchWorkflow.fetchItem(item, publishWorkflow);
