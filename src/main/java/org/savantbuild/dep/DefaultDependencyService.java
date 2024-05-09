@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 import org.savantbuild.dep.DependencyService.TraversalRules.GroupTraversalRule;
 import org.savantbuild.dep.domain.Artifact;
@@ -137,9 +136,9 @@ public class DefaultDependencyService implements DependencyService {
 
     Set<Dependency> seenAtLeastOnce = new HashSet<>();
 
-    graph.traverse(new Dependency(graph.root.id, graph.root.nonSemanticVersion), false, null, (origin, destination, edgeValue, depth, isLast) -> {
+    graph.traverse(new Dependency(graph.root.id), false, null, (origin, destination, edgeValue, depth, isLast) -> {
       List<Edge<Dependency, DependencyEdgeValue>> inboundEdges = graph.getInboundEdges(destination);
-      boolean alreadyCheckedAllParents = inboundEdges.size() > 0 && inboundEdges.stream().allMatch((edge) -> artifacts.containsKey(edge.getOrigin().id));
+      boolean alreadyCheckedAllParents = !inboundEdges.isEmpty() && inboundEdges.stream().allMatch((edge) -> artifacts.containsKey(edge.getOrigin().id));
       if (alreadyCheckedAllParents) {
         output.debugln("Already checked all parents so we know the versions of them at this point. Working on node [%s]", destination);
 
@@ -194,7 +193,7 @@ public class DefaultDependencyService implements DependencyService {
         rootTypeResolveConfiguration.set(groupTraversalRule);
       } else {
         groupTraversalRule = rootTypeResolveConfiguration.get();
-        if (groupTraversalRule.transitiveGroups.size() > 0 && !groupTraversalRule.transitiveGroups.contains(group)) {
+        if (!groupTraversalRule.transitiveGroups.isEmpty() && !groupTraversalRule.transitiveGroups.contains(group)) {
           return false;
         }
       }
@@ -233,7 +232,7 @@ public class DefaultDependencyService implements DependencyService {
         inboundEdges.stream()
                     .filter((edge) -> artifacts.containsKey(edge.getOrigin().id))
                     .filter((edge) -> edge.getValue().dependentVersion.equals(artifacts.get(edge.getOrigin().id).version))
-                    .collect(Collectors.toList());
+                    .toList();
 
     // This is the complex part, for each inbound edge, grab the one where the origin is the correct version (based
     // on the versions we have already kept). Then for each of those, map to the dependency version (the version of
@@ -269,7 +268,7 @@ public class DefaultDependencyService implements DependencyService {
                                                       .getValue();
 
     // Build the artifact for this node, save it in the Map and put it in the ArtifactGraph
-    ReifiedArtifact destinationArtifact = new ReifiedArtifact(destination.id, max, destination.nonSemanticVersion, edgeValue.licenses);
+    ReifiedArtifact destinationArtifact = new ReifiedArtifact(destination.id, max, edgeValue.licenses);
     artifacts.put(destination.id, destinationArtifact);
 
     significantInbound.forEach((edge) -> {
@@ -312,10 +311,10 @@ public class DefaultDependencyService implements DependencyService {
 
         // Create an edge using nodes so that we can be explicit
         DependencyEdgeValue edge = new DependencyEdgeValue(origin.version, dependency.version, type, amd.licenses);
-        graph.addEdge(new Dependency(origin.id, origin.nonSemanticVersion), new Dependency(dependency.id, dependency.nonSemanticVersion), edge);
+        graph.addEdge(new Dependency(origin.id), new Dependency(dependency.id), edge);
         if (dependency.skipCompatibilityCheck) {
           output.debugln("SKIPPING COMPATIBILITY CHECK for [%s]", dependency.id);
-          graph.skipCompatibilityCheck(dependency.id, dependency.nonSemanticVersion);
+          graph.skipCompatibilityCheck(dependency.id);
         }
 
         // If we have already recursed this artifact, skip it.

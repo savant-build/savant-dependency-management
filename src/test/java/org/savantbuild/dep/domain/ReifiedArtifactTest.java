@@ -30,16 +30,16 @@ import static org.testng.Assert.assertNotEquals;
 public class ReifiedArtifactTest extends BaseUnitTest {
   @Test
   public void construct() {
-    assertEquals(new ReifiedArtifact("group:name:2.0", License.Licenses.get("Apache-1.0")), new ReifiedArtifact(new ArtifactID("group", "name", "name", "jar"), new Version("2.0"), License.Licenses.get("Apache-1.0")));
-    assertEquals(new ReifiedArtifact("group:name:2.0:zip", License.Licenses.get("Apache-2.0")), new ReifiedArtifact(new ArtifactID("group", "name", "name", "zip"), new Version("2.0"), License.Licenses.get("Apache-2.0")));
-    assertEquals(new ReifiedArtifact("group:project:name:2.0:zip", new License("Commercial", "License")), new ReifiedArtifact(new ArtifactID("group", "project", "name", "zip"), new Version("2.0"), new License("Commercial", "License")));
-    assertNotEquals(new ReifiedArtifact("group:project:name:1.0:zip", License.Licenses.get("Apache-1.0")), new ReifiedArtifact(new ArtifactID("group", "project", "name", "zip"), new Version("1.0"), new License("Commercial", "License")));
+    assertEquals(new ReifiedArtifact("group:name:2.0.0", License.Licenses.get("Apache-1.0")), new ReifiedArtifact(new ArtifactID("group", "name", "name", "jar"), new Version("2.0.0"), License.Licenses.get("Apache-1.0")));
+    assertEquals(new ReifiedArtifact("group:name:2.0.0:zip", License.Licenses.get("Apache-2.0")), new ReifiedArtifact(new ArtifactID("group", "name", "name", "zip"), new Version("2.0.0"), License.Licenses.get("Apache-2.0")));
+    assertEquals(new ReifiedArtifact("group:project:name:2.0.0:zip", new License("Commercial", "License")), new ReifiedArtifact(new ArtifactID("group", "project", "name", "zip"), new Version("2.0.0"), new License("Commercial", "License")));
+    assertNotEquals(new ReifiedArtifact("group:project:name:1.0.0:zip", License.Licenses.get("Apache-1.0")), new ReifiedArtifact(new ArtifactID("group", "project", "name", "zip"), new Version("1.0.0"), new License("Commercial", "License")));
   }
 
   @Test
   public void syntheticMethods() {
-    assertEquals(new ReifiedArtifact("group:name:2.0", License.Licenses.get("Apache-2.0")).getArtifactFile(), "name-2.0.0.jar");
-    assertEquals(new ReifiedArtifact("group:name:2.0", License.Licenses.get("Apache-2.0")).getArtifactMetaDataFile(), "name-2.0.0.jar.amd");
-    assertEquals(new ReifiedArtifact("group:name:2.0", License.Licenses.get("Apache-2.0")).getArtifactSourceFile(), "name-2.0.0-src.jar");
+    assertEquals(new ReifiedArtifact("group:name:2.0.0", License.Licenses.get("Apache-2.0")).getArtifactFile(), "name-2.0.0.jar");
+    assertEquals(new ReifiedArtifact("group:name:2.0.0", License.Licenses.get("Apache-2.0")).getArtifactMetaDataFile(), "name-2.0.0.jar.amd");
+    assertEquals(new ReifiedArtifact("group:name:2.0.0", License.Licenses.get("Apache-2.0")).getArtifactSourceFile(), "name-2.0.0-src.jar");
   }
 }

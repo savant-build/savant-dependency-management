@@ -23,6 +23,7 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -63,6 +64,7 @@ import org.testng.annotations.Test;
 import com.sun.net.httpserver.HttpServer;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
@@ -99,7 +101,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
 
   public ReifiedArtifact multipleVersionsDifferentDeps = new ReifiedArtifact(new ArtifactID("org.savantbuild.test", "multiple-versions-different-dependencies", "multiple-versions-different-dependencies", "jar"), new Version("1.1.0"), License.Licenses.get("ApacheV2_0"));
 
-  public ReifiedArtifact project = new ReifiedArtifact("org.savantbuild.test:project:1.0", Collections.singletonList(License.Licenses.get("ApacheV2_0")));
+  public ReifiedArtifact project = new ReifiedArtifact("org.savantbuild.test:project:1.0.0", Collections.singletonList(License.Licenses.get("ApacheV2_0")));
 
   public ResolvedArtifact projectResolved = new ResolvedArtifact(project.id, project.version, Collections.singletonList(License.Licenses.get("ApacheV2_0")), null, null);
 
@@ -150,20 +152,20 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
   @BeforeMethod
   public void beforeMethod() {
     goodGraph = new DependencyGraph(project);
-    goodGraph.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.Licenses.get("ApacheV1_0")));
-    goodGraph.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(intermediate.id, intermediate.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", License.Licenses.get("ApacheV2_0")));
-    goodGraph.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.Licenses.get("ApacheV2_0")));
-    goodGraph.addEdge(new Dependency(intermediate.id, intermediate.nonSemanticVersion), new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "compile", License.Licenses.get("ApacheV2_0")));
-    goodGraph.addEdge(new Dependency(intermediate.id, intermediate.nonSemanticVersion), new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "runtime", License.Licenses.get("ApacheV2_0")));
-    goodGraph.addEdge(new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new Dependency(leaf1.id, leaf1.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.Licenses.get("GPLV2_0")));
-    goodGraph.addEdge(new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new Dependency(leaf1.id, leaf1.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", License.Licenses.get("GPLV2_0")));
-    goodGraph.addEdge(new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new Dependency(integrationBuild.id, integrationBuild.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("2.1.1-{integration}"), "compile", License.Licenses.get("ApacheV2_0")));
-    goodGraph.addEdge(new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new Dependency(integrationBuild.id, integrationBuild.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("2.1.1-{integration}"), "compile", License.Licenses.get("ApacheV2_0")));
-    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new Dependency(leaf2.id, leaf2.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", License.Licenses.get("LGPLV2_1")));
-    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new Dependency(leaf1_1.id, leaf1_1.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License("Commercial", "Commercial license")));
-    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new Dependency(leaf1_1.id, leaf1_1.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", new License("Commercial", "Commercial license")));
-    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new Dependency(leaf2_2.id, leaf2_2.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", new License("OtherNonDistributableOpenSource", "Open source")));
-    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new Dependency(leaf3_3.id, leaf3_3.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "runtime", License.Licenses.get("ApacheV2_0")));
+    goodGraph.addEdge(new Dependency(project.id), new Dependency(multipleVersions.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.Licenses.get("ApacheV1_0")));
+    goodGraph.addEdge(new Dependency(project.id), new Dependency(intermediate.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", License.Licenses.get("ApacheV2_0")));
+    goodGraph.addEdge(new Dependency(project.id), new Dependency(multipleVersionsDifferentDeps.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.Licenses.get("ApacheV2_0")));
+    goodGraph.addEdge(new Dependency(intermediate.id), new Dependency(multipleVersions.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "compile", License.Licenses.get("ApacheV2_0")));
+    goodGraph.addEdge(new Dependency(intermediate.id), new Dependency(multipleVersionsDifferentDeps.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "runtime", License.Licenses.get("ApacheV2_0")));
+    goodGraph.addEdge(new Dependency(multipleVersions.id), new Dependency(leaf1.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.Licenses.get("GPLV2_0")));
+    goodGraph.addEdge(new Dependency(multipleVersions.id), new Dependency(leaf1.id), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", License.Licenses.get("GPLV2_0")));
+    goodGraph.addEdge(new Dependency(multipleVersions.id), new Dependency(integrationBuild.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("2.1.1-{integration}"), "compile", License.Licenses.get("ApacheV2_0")));
+    goodGraph.addEdge(new Dependency(multipleVersions.id), new Dependency(integrationBuild.id), new DependencyEdgeValue(new Version("1.1.0"), new Version("2.1.1-{integration}"), "compile", License.Licenses.get("ApacheV2_0")));
+    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(leaf2.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", License.Licenses.get("LGPLV2_1")));
+    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(leaf1_1.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License("Commercial", "Commercial license")));
+    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(leaf1_1.id), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", new License("Commercial", "Commercial license")));
+    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(leaf2_2.id), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", new License("OtherNonDistributableOpenSource", "Open source")));
+    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(leaf3_3.id), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "runtime", License.Licenses.get("ApacheV2_0")));
 
     goodReducedGraph = new ArtifactGraph(project);
     goodReducedGraph.addEdge(project, multipleVersions, "compile");
@@ -262,21 +264,21 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
   public void buildGraphWithExclusions() {
     // Override to add exclusions. Because the project AND the exclusions artifact both exclude leaf1 and leaf1_1, this prevents them from being included in the graph
     goodGraph = new DependencyGraph(project);
-    goodGraph.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.Licenses.get("ApacheV1_0")));
-    goodGraph.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(exclusions.id, exclusions.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", License.Licenses.get("ApacheV2_0")));
-    goodGraph.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.Licenses.get("ApacheV2_0")));
-    goodGraph.addEdge(new Dependency(exclusions.id, exclusions.nonSemanticVersion), new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "compile", License.Licenses.get("ApacheV2_0")));
-    goodGraph.addEdge(new Dependency(exclusions.id, exclusions.nonSemanticVersion), new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "runtime", License.Licenses.get("ApacheV2_0")));
-    goodGraph.addEdge(new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new Dependency(integrationBuild.id, integrationBuild.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("2.1.1-{integration}"), "compile", License.Licenses.get("ApacheV2_0")));
-    goodGraph.addEdge(new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new Dependency(integrationBuild.id, integrationBuild.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("2.1.1-{integration}"), "compile", License.Licenses.get("ApacheV2_0")));
-    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new Dependency(leaf2.id, leaf2.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", License.Licenses.get("LGPLV2_1")));
-    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new Dependency(leaf1_1.id, leaf1_1.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License("Commercial", "Commercial license")));
-    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new Dependency(leaf2_2.id, leaf2_2.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", new License("OtherNonDistributableOpenSource", "Open source")));
-    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new Dependency(leaf3_3.id, leaf3_3.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "runtime", License.Licenses.get("ApacheV2_0")));
+    goodGraph.addEdge(new Dependency(project.id), new Dependency(multipleVersions.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.Licenses.get("ApacheV1_0")));
+    goodGraph.addEdge(new Dependency(project.id), new Dependency(exclusions.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", License.Licenses.get("ApacheV2_0")));
+    goodGraph.addEdge(new Dependency(project.id), new Dependency(multipleVersionsDifferentDeps.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.Licenses.get("ApacheV2_0")));
+    goodGraph.addEdge(new Dependency(exclusions.id), new Dependency(multipleVersions.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "compile", License.Licenses.get("ApacheV2_0")));
+    goodGraph.addEdge(new Dependency(exclusions.id), new Dependency(multipleVersionsDifferentDeps.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "runtime", License.Licenses.get("ApacheV2_0")));
+    goodGraph.addEdge(new Dependency(multipleVersions.id), new Dependency(integrationBuild.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("2.1.1-{integration}"), "compile", License.Licenses.get("ApacheV2_0")));
+    goodGraph.addEdge(new Dependency(multipleVersions.id), new Dependency(integrationBuild.id), new DependencyEdgeValue(new Version("1.1.0"), new Version("2.1.1-{integration}"), "compile", License.Licenses.get("ApacheV2_0")));
+    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(leaf2.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", License.Licenses.get("LGPLV2_1")));
+    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(leaf1_1.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License("Commercial", "Commercial license")));
+    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(leaf2_2.id), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", new License("OtherNonDistributableOpenSource", "Open source")));
+    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(leaf3_3.id), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "runtime", License.Licenses.get("ApacheV2_0")));
     // Excluded
-//    goodGraph.addEdge(new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new Dependency(leaf1.id, leaf1.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.Licenses.get("GPLV2_0")));
-//    goodGraph.addEdge(new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new Dependency(leaf1.id, leaf1.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", License.Licenses.get("GPLV2_0")));
-//    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new Dependency(leaf1_1.id, leaf1_1.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", new License("Commercial", "Commercial license")));
+    //   * goodGraph.addEdge(new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new Dependency(leaf1.id, leaf1.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.Licenses.get("GPLV2_0")));
+    //   * goodGraph.addEdge(new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new Dependency(leaf1.id, leaf1.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", License.Licenses.get("GPLV2_0")));
+    //   * goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new Dependency(leaf1_1.id, leaf1_1.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", new License("Commercial", "Commercial license")));
 
     dependencies = new Dependencies(
         new DependencyGroup("compile", true,
@@ -318,29 +320,31 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     );
     workflow.mappings.put("org.savantbuild.test:badver:1.0.0.Final", new Version("1.0.0"));
 
-    ArtifactID nonSemanticId = new ArtifactID("org.savantbuild.test:has-non-semantic-versioned-dep");
+    ArtifactID hasNonSemanticId = new ArtifactID("org.savantbuild.test:has-non-semantic-versioned-dep");
     ArtifactID badVerId = new ArtifactID("org.savantbuild.test:badver");
     DependencyGraph expected = new DependencyGraph(project);
-    expected.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(nonSemanticId, null), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("GPLV2_0", null)));
-    expected.addEdge(new Dependency(nonSemanticId, null), new Dependency(badVerId, "1.0.0.Final"), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("Apache-2.0", null)));
-    expected.addEdge(new Dependency(badVerId, "1.0.0.Final"), new Dependency(leaf1_1.id, leaf1_1.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("Commercial", "Commercial license")));
+    expected.addEdge(new Dependency(project.id), new Dependency(hasNonSemanticId), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("GPLV2_0", null)));
+    expected.addEdge(new Dependency(hasNonSemanticId), new Dependency(badVerId), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("Apache-2.0", null)));
+    expected.addEdge(new Dependency(badVerId), new Dependency(leaf1_1.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("Commercial", "Commercial license")));
 
     DependencyGraph actual = service.buildGraph(project, dependencies, workflow);
     assertEquals(actual, expected);
     ArtifactGraph artifactGraph = service.reduce(actual);
-    var rules = new TraversalRules().with("compile", new GroupTraversalRule(true, true));
-    var resolved = service.resolve(artifactGraph, workflow, rules);
-    assertEquals(resolved.getPath(badVerId).normalize().toFile(),
-        new File("build/test/cache/org/savantbuild/test/badver/1.0.0.Final/badver-1.0.0.Final.jar").getAbsoluteFile());
+    ReifiedArtifact badVer = artifactGraph.values()
+                                          .stream()
+                                          .filter(r -> r.id.name.equals("badver"))
+                                          .findFirst()
+                                          .orElseThrow();
+    assertNull(badVer.nonSemanticVersion);
   }
 
   @Test
-  public void buildGraphWithNonSemanticVersionsProactive() {
+  public void buildGraphWithShortNonSemanticVersions() {
 //    output.enableDebug();
 
     dependencies = new Dependencies(
         new DependencyGroup("compile", true,
-            new Artifact("org.savantbuild.test:has-non-semantic-versioned-dep-proactive:1.0.0")
+            new Artifact("org.savantbuild.test:has-short-non-semantic-versioned-dep:1.0.0")
         )
     );
 
@@ -360,39 +364,124 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     );
     workflow.mappings.put("org.savantbuild.test:badver:1.0", new Version("1.0.0"));
 
-    ArtifactID nonSemanticId = new ArtifactID("org.savantbuild.test:has-non-semantic-versioned-dep-proactive");
+    ArtifactID hasNonSemanticId = new ArtifactID("org.savantbuild.test:has-short-non-semantic-versioned-dep");
     ArtifactID badVerId = new ArtifactID("org.savantbuild.test:badver");
     DependencyGraph expected = new DependencyGraph(project);
-    expected.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(nonSemanticId, null), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("GPLV2_0", null)));
-    expected.addEdge(new Dependency(nonSemanticId, null), new Dependency(badVerId, "1.0.0.Final"), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("Apache-2.0", null)));
-    expected.addEdge(new Dependency(badVerId, "1.0.0.Final"), new Dependency(leaf1_1.id, leaf1_1.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("Commercial", "Commercial license")));
+    expected.addEdge(new Dependency(project.id), new Dependency(hasNonSemanticId), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("GPLV2_0", null)));
+    expected.addEdge(new Dependency(hasNonSemanticId), new Dependency(badVerId), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("Apache-2.0", null)));
+    expected.addEdge(new Dependency(badVerId), new Dependency(leaf1_1.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("Commercial", "Commercial license")));
 
     DependencyGraph actual = service.buildGraph(project, dependencies, workflow);
     assertEquals(actual, expected);
     ArtifactGraph artifactGraph = service.reduce(actual);
-    var rules = new TraversalRules().with("compile", new GroupTraversalRule(true, true));
-    var resolved = service.resolve(artifactGraph, workflow, rules);
-    assertEquals(resolved.getPath(badVerId).normalize().toFile(),
-        new File("build/test/cache/org/savantbuild/test/badver/1.0/badver-1.0.jar").getAbsoluteFile());
+    ReifiedArtifact badVer = artifactGraph.values()
+                                          .stream()
+                                          .filter(r -> r.id.name.equals("badver"))
+                                          .findFirst()
+                                          .orElseThrow();
+    assertNull(badVer.nonSemanticVersion);
   }
 
+  @Test
+  public void buildGraphWithTopLevelNonSemanticVersions() {
+//    output.enableDebug();
+
+    dependencies = new Dependencies(
+        new DependencyGroup("compile", true,
+            new Artifact("org.savantbuild.test:badver:1.0.0", "1.0.0.Final", false, List.of())
+        )
+    );
+
+    workflow = new Workflow(
+        new FetchWorkflow(
+            output,
+            new CacheProcess(output, cache.toString(), integration.toString()),
+            new MavenCacheProcess(output, mavenCache.toString(), null),
+            new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null),
+            new MavenProcess(output, "http://localhost:7042/test-deps/maven", null, null)
+        ),
+        new PublishWorkflow(
+            new CacheProcess(output, cache.toString(), integration.toString()),
+            new MavenCacheProcess(output, mavenCache.toString(), null)
+        ),
+        output
+    );
+    workflow.mappings.put("org.savantbuild.test:badver:1.0.0.Final", new Version("1.0.0"));
+
+    ArtifactID badVerId = new ArtifactID("org.savantbuild.test:badver");
+    DependencyGraph expected = new DependencyGraph(project);
+    expected.addEdge(new Dependency(project.id), new Dependency(badVerId), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("Apache-2.0", null)));
+    expected.addEdge(new Dependency(badVerId), new Dependency(leaf1_1.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("Commercial", "Commercial license")));
+
+    DependencyGraph actual = service.buildGraph(project, dependencies, workflow);
+    assertEquals(actual, expected);
+    ArtifactGraph artifactGraph = service.reduce(actual);
+    ReifiedArtifact badVer = artifactGraph.values()
+                                          .stream()
+                                          .filter(r -> r.id.name.equals("badver"))
+                                          .findFirst()
+                                          .orElseThrow();
+    assertNull(badVer.nonSemanticVersion);
+  }
+
+  @Test
+  public void buildGraphWithTopLevelShortNonSemanticVersions() {
+//    output.enableDebug();
+
+    dependencies = new Dependencies(
+        new DependencyGroup("compile", true,
+            new Artifact("org.savantbuild.test:badver:1.0.0", "1.0", false, List.of())
+        )
+    );
+
+    workflow = new Workflow(
+        new FetchWorkflow(
+            output,
+            new CacheProcess(output, cache.toString(), integration.toString()),
+            new MavenCacheProcess(output, mavenCache.toString(), null),
+            new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null),
+            new MavenProcess(output, "http://localhost:7042/test-deps/maven", null, null)
+        ),
+        new PublishWorkflow(
+            new CacheProcess(output, cache.toString(), integration.toString()),
+            new MavenCacheProcess(output, mavenCache.toString(), null)
+        ),
+        output
+    );
+    workflow.mappings.put("org.savantbuild.test:badver:1.0", new Version("1.0.0"));
+
+    ArtifactID badVerId = new ArtifactID("org.savantbuild.test:badver");
+    DependencyGraph expected = new DependencyGraph(project);
+    expected.addEdge(new Dependency(project.id), new Dependency(badVerId), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("Apache-2.0", null)));
+    expected.addEdge(new Dependency(badVerId), new Dependency(leaf1_1.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("Commercial", "Commercial license")));
+
+    DependencyGraph actual = service.buildGraph(project, dependencies, workflow);
+    assertEquals(actual, expected);
+    ArtifactGraph artifactGraph = service.reduce(actual);
+    ReifiedArtifact badVer = artifactGraph.values()
+                                          .stream()
+                                          .filter(r -> r.id.name.equals("badver"))
+                                          .findFirst()
+                                          .orElseThrow();
+    assertNull(badVer.nonSemanticVersion);
+  }
 
   @Test
   public void buildGraphWithTransitiveAndDirectExclusions() {
     // Override to add exclusions but notice that the exclusions are brought back in because the intermediate pulls leaf1 transitively back in through multipleVersions.
     // The only exclusion that survives is through intermediate's exclusion of leaf2_2 in the main project build file
     goodGraph = new DependencyGraph(project);
-    goodGraph.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.Licenses.get("ApacheV1_0")));
-    goodGraph.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(intermediate.id, intermediate.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", License.Licenses.get("ApacheV2_0")));
-    goodGraph.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.Licenses.get("ApacheV2_0")));
-    goodGraph.addEdge(new Dependency(intermediate.id, intermediate.nonSemanticVersion), new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "compile", License.Licenses.get("ApacheV2_0")));
-    goodGraph.addEdge(new Dependency(intermediate.id, intermediate.nonSemanticVersion), new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "runtime", License.Licenses.get("ApacheV2_0")));
-    goodGraph.addEdge(new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new Dependency(leaf1.id, leaf1.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", License.Licenses.get("GPLV2_0")));
-    goodGraph.addEdge(new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new Dependency(integrationBuild.id, integrationBuild.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("2.1.1-{integration}"), "compile", License.Licenses.get("ApacheV2_0")));
-    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new Dependency(leaf2.id, leaf2.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", License.Licenses.get("LGPLV2_1")));
-    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new Dependency(leaf1_1.id, leaf1_1.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License("Commercial", "Commercial license")));
-    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new Dependency(leaf1_1.id, leaf1_1.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", new License("Commercial", "Commercial license")));
-    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new Dependency(leaf3_3.id, leaf3_3.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "runtime", License.Licenses.get("ApacheV2_0")));
+    goodGraph.addEdge(new Dependency(project.id), new Dependency(multipleVersions.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.Licenses.get("ApacheV1_0")));
+    goodGraph.addEdge(new Dependency(project.id), new Dependency(intermediate.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", License.Licenses.get("ApacheV2_0")));
+    goodGraph.addEdge(new Dependency(project.id), new Dependency(multipleVersionsDifferentDeps.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.Licenses.get("ApacheV2_0")));
+    goodGraph.addEdge(new Dependency(intermediate.id), new Dependency(multipleVersions.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "compile", License.Licenses.get("ApacheV2_0")));
+    goodGraph.addEdge(new Dependency(intermediate.id), new Dependency(multipleVersionsDifferentDeps.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "runtime", License.Licenses.get("ApacheV2_0")));
+    goodGraph.addEdge(new Dependency(multipleVersions.id), new Dependency(leaf1.id), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", License.Licenses.get("GPLV2_0")));
+    goodGraph.addEdge(new Dependency(multipleVersions.id), new Dependency(integrationBuild.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("2.1.1-{integration}"), "compile", License.Licenses.get("ApacheV2_0")));
+    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(leaf2.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", License.Licenses.get("LGPLV2_1")));
+    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(leaf1_1.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License("Commercial", "Commercial license")));
+    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(leaf1_1.id), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", new License("Commercial", "Commercial license")));
+    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(leaf3_3.id), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "runtime", License.Licenses.get("ApacheV2_0")));
     // Excluded
 //    goodGraph.addEdge(new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new Dependency(leaf1.id, leaf1.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.Licenses.get("GPLV2_0")));
 //    goodGraph.addEdge(new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new Dependency(integrationBuild.id, integrationBuild.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("2.1.1-{integration}"), "compile", License.Licenses.get("ApacheV2_0")));
@@ -417,11 +506,11 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     // Override to add exclusions but notice that the exclusions are brought back in because the intermediate pulls leaf1 transitively back in through multipleVersions.
     // The only exclusion that survives is through intermediate's exclusion of leaf2_2 in the main project build file
     goodGraph = new DependencyGraph(project);
-    goodGraph.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.Licenses.get("ApacheV1_0")));
-    goodGraph.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(intermediate.id, intermediate.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", License.Licenses.get("ApacheV2_0")));
-    goodGraph.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.Licenses.get("ApacheV2_0")));
-    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new Dependency(leaf2.id, leaf2.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", License.Licenses.get("LGPLV2_1")));
-    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new Dependency(leaf1_1.id, leaf1_1.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License("Commercial", "Commercial license")));
+    goodGraph.addEdge(new Dependency(project.id), new Dependency(multipleVersions.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.Licenses.get("ApacheV1_0")));
+    goodGraph.addEdge(new Dependency(project.id), new Dependency(intermediate.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", License.Licenses.get("ApacheV2_0")));
+    goodGraph.addEdge(new Dependency(project.id), new Dependency(multipleVersionsDifferentDeps.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.Licenses.get("ApacheV2_0")));
+    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(leaf2.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", License.Licenses.get("LGPLV2_1")));
+    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(leaf1_1.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License("Commercial", "Commercial license")));
     // Excluded
 //    goodGraph.addEdge(new Dependency(intermediate.id, intermediate.nonSemanticVersion), new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "compile", License.Licenses.get("ApacheV2_0")));
 //    goodGraph.addEdge(new Dependency(intermediate.id, intermediate.nonSemanticVersion), new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "runtime", License.Licenses.get("ApacheV2_0")));
@@ -683,20 +772,20 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     ReifiedArtifact multipleVersionsDifferentDeps = new ReifiedArtifact(new ArtifactID("org.savantbuild.test", "multiple-versions-different-dependencies", "multiple-versions-different-dependencies", "jar"), new Version("1.1.0"), new License());
 
     DependencyGraph graph = new DependencyGraph(project);
-    graph.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
-    graph.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(intermediate.id, intermediate.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", new License()));
-    graph.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
-    graph.addEdge(new Dependency(intermediate.id, intermediate.nonSemanticVersion), new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "compile", new License()));
-    graph.addEdge(new Dependency(intermediate.id, intermediate.nonSemanticVersion), new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "runtime", new License()));
-    graph.addEdge(new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new Dependency(leaf1.id, leaf1.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
-    graph.addEdge(new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new Dependency(leaf1.id, leaf1.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", new License()));
-    graph.addEdge(new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new Dependency(integrationBuild.id, integrationBuild.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("2.1.1-{integration}"), "compile", new License()));
-    graph.addEdge(new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new Dependency(integrationBuild.id, integrationBuild.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("2.1.1-{integration}"), "compile", new License()));
-    graph.addEdge(new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new Dependency(leaf2.id, leaf2.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", new License()));
-    graph.addEdge(new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new Dependency(leaf1_1.id, leaf1_1.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
-    graph.addEdge(new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new Dependency(leaf1_1.id, leaf1_1.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("2.0.0"), "compile", new License()));
-    graph.addEdge(new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new Dependency(leaf2_2.id, leaf2_2.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", new License()));
-    graph.addEdge(new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new Dependency(leaf3_3.id, leaf3_3.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "runtime", new License()));
+    graph.addEdge(new Dependency(project.id), new Dependency(multipleVersions.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
+    graph.addEdge(new Dependency(project.id), new Dependency(intermediate.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", new License()));
+    graph.addEdge(new Dependency(project.id), new Dependency(multipleVersionsDifferentDeps.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
+    graph.addEdge(new Dependency(intermediate.id), new Dependency(multipleVersions.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "compile", new License()));
+    graph.addEdge(new Dependency(intermediate.id), new Dependency(multipleVersionsDifferentDeps.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "runtime", new License()));
+    graph.addEdge(new Dependency(multipleVersions.id), new Dependency(leaf1.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
+    graph.addEdge(new Dependency(multipleVersions.id), new Dependency(leaf1.id), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", new License()));
+    graph.addEdge(new Dependency(multipleVersions.id), new Dependency(integrationBuild.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("2.1.1-{integration}"), "compile", new License()));
+    graph.addEdge(new Dependency(multipleVersions.id), new Dependency(integrationBuild.id), new DependencyEdgeValue(new Version("1.1.0"), new Version("2.1.1-{integration}"), "compile", new License()));
+    graph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(leaf2.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", new License()));
+    graph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(leaf1_1.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
+    graph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(leaf1_1.id), new DependencyEdgeValue(new Version("1.1.0"), new Version("2.0.0"), "compile", new License()));
+    graph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(leaf2_2.id), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", new License()));
+    graph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(leaf3_3.id), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "runtime", new License()));
 
     ArtifactGraph expected = new ArtifactGraph(project);
     expected.addEdge(project, multipleVersions, "compile");
@@ -745,15 +834,15 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     ReifiedArtifact multipleVersionsDifferentDeps = new ReifiedArtifact(new ArtifactID("org.savantbuild.test", "multiple-versions-different-dependencies", "multiple-versions-different-dependencies", "jar"), new Version("1.1.0"), new License());
 
     DependencyGraph graph = new DependencyGraph(project);
-    graph.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
-    graph.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(intermediate.id, intermediate.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", new License()));
-    graph.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
-    graph.addEdge(new Dependency(intermediate.id, intermediate.nonSemanticVersion), new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "compile", new License()));
-    graph.addEdge(new Dependency(intermediate.id, intermediate.nonSemanticVersion), new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "runtime", new License()));
-    graph.addEdge(new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new Dependency(leaf.id, leaf.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
-    graph.addEdge(new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new Dependency(leaf.id, leaf.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("2.0.0"), "compile", new License()));
-    graph.addEdge(new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new Dependency(leaf.id, leaf.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", new License()));
-    graph.addEdge(new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new Dependency(leaf.id, leaf.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("2.0.0"), "runtime", new License()));
+    graph.addEdge(new Dependency(project.id), new Dependency(multipleVersions.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
+    graph.addEdge(new Dependency(project.id), new Dependency(intermediate.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", new License()));
+    graph.addEdge(new Dependency(project.id), new Dependency(multipleVersionsDifferentDeps.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
+    graph.addEdge(new Dependency(intermediate.id), new Dependency(multipleVersions.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "compile", new License()));
+    graph.addEdge(new Dependency(intermediate.id), new Dependency(multipleVersionsDifferentDeps.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "runtime", new License()));
+    graph.addEdge(new Dependency(multipleVersions.id), new Dependency(leaf.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
+    graph.addEdge(new Dependency(multipleVersions.id), new Dependency(leaf.id), new DependencyEdgeValue(new Version("1.1.0"), new Version("2.0.0"), "compile", new License()));
+    graph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(leaf.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", new License()));
+    graph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(leaf.id), new DependencyEdgeValue(new Version("1.1.0"), new Version("2.0.0"), "runtime", new License()));
 
     ArtifactGraph expected = new ArtifactGraph(project);
     expected.addEdge(project, multipleVersions, "compile");
@@ -801,17 +890,17 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     ReifiedArtifact multipleVersionsDifferentDeps = new ReifiedArtifact(new ArtifactID("org.savantbuild.test", "multiple-versions-different-dependencies", "multiple-versions-different-dependencies", "jar"), new Version("1.1.0"), new License());
 
     DependencyGraph graph = new DependencyGraph(project);
-    graph.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
-    graph.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(intermediate.id, intermediate.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", new License()));
-    graph.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
-    graph.addEdge(new Dependency(intermediate.id, intermediate.nonSemanticVersion), new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "compile", new License()));
-    graph.addEdge(new Dependency(intermediate.id, intermediate.nonSemanticVersion), new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "runtime", new License()));
-    graph.addEdge(new Dependency(intermediate2.id, intermediate2.nonSemanticVersion), new Dependency(leaf.id, leaf.nonSemanticVersion), new DependencyEdgeValue(new Version("2.0.0"), new Version("2.0.0"), "runtime", new License()));
-    graph.addEdge(new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new Dependency(intermediate2.id, intermediate2.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
-    graph.addEdge(new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new Dependency(intermediate2.id, intermediate2.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", new License()));
-    graph.addEdge(new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new Dependency(intermediate2.id, intermediate2.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("2.0.0"), "runtime", new License()));
-    graph.addEdge(new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new Dependency(intermediate2.id, intermediate2.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", new License()));
-    graph.addEdge(new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new Dependency(leaf.id, leaf.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", new License()));
+    graph.addEdge(new Dependency(project.id), new Dependency(multipleVersions.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
+    graph.addEdge(new Dependency(project.id), new Dependency(intermediate.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", new License()));
+    graph.addEdge(new Dependency(project.id), new Dependency(multipleVersionsDifferentDeps.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
+    graph.addEdge(new Dependency(intermediate.id), new Dependency(multipleVersions.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "compile", new License()));
+    graph.addEdge(new Dependency(intermediate.id), new Dependency(multipleVersionsDifferentDeps.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "runtime", new License()));
+    graph.addEdge(new Dependency(intermediate2.id), new Dependency(leaf.id), new DependencyEdgeValue(new Version("2.0.0"), new Version("2.0.0"), "runtime", new License()));
+    graph.addEdge(new Dependency(multipleVersions.id), new Dependency(intermediate2.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
+    graph.addEdge(new Dependency(multipleVersions.id), new Dependency(intermediate2.id), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", new License()));
+    graph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(intermediate2.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("2.0.0"), "runtime", new License()));
+    graph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(intermediate2.id), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", new License()));
+    graph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(leaf.id), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", new License()));
 
     ArtifactGraph expected = new ArtifactGraph(project);
     expected.addEdge(project, multipleVersions, "compile");
@@ -858,19 +947,19 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     ArtifactID multipleVersionsDifferentDeps = new ArtifactID("org.savantbuild.test", "multiple-versions-different-dependencies", "multiple-versions-different-dependencies", "jar");
 
     DependencyGraph incompatible = new DependencyGraph(project);
-    incompatible.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(multipleVersions, null), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
-    incompatible.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(intermediate, null), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", new License()));
-    incompatible.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(multipleVersionsDifferentDeps, null), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
-    incompatible.addEdge(new Dependency(intermediate, null), new Dependency(multipleVersions, null), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "compile", new License()));
-    incompatible.addEdge(new Dependency(intermediate, null), new Dependency(multipleVersionsDifferentDeps, null), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "runtime", new License()));
-    incompatible.addEdge(new Dependency(multipleVersions, null), new Dependency(leaf, null), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
-    incompatible.addEdge(new Dependency(multipleVersions, null), new Dependency(leaf, null), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", new License()));
-    incompatible.addEdge(new Dependency(multipleVersionsDifferentDeps, null), new Dependency(leaf, null), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", new License()));
-    incompatible.addEdge(new Dependency(multipleVersionsDifferentDeps, null), new Dependency(leaf, null), new DependencyEdgeValue(new Version("1.1.0"), new Version("2.0.0"), "compile", new License()));
+    incompatible.addEdge(new Dependency(project.id), new Dependency(multipleVersions), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
+    incompatible.addEdge(new Dependency(project.id), new Dependency(intermediate), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", new License()));
+    incompatible.addEdge(new Dependency(project.id), new Dependency(multipleVersionsDifferentDeps), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
+    incompatible.addEdge(new Dependency(intermediate), new Dependency(multipleVersions), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "compile", new License()));
+    incompatible.addEdge(new Dependency(intermediate), new Dependency(multipleVersionsDifferentDeps), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "runtime", new License()));
+    incompatible.addEdge(new Dependency(multipleVersions), new Dependency(leaf), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
+    incompatible.addEdge(new Dependency(multipleVersions), new Dependency(leaf), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", new License()));
+    incompatible.addEdge(new Dependency(multipleVersionsDifferentDeps), new Dependency(leaf), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", new License()));
+    incompatible.addEdge(new Dependency(multipleVersionsDifferentDeps), new Dependency(leaf), new DependencyEdgeValue(new Version("1.1.0"), new Version("2.0.0"), "compile", new License()));
 
     // Add the skip node
-    incompatible.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(leaf, null), new DependencyEdgeValue(new Version("1.0.0"), new Version("2.0.0"), "runtime", new License()));
-    incompatible.skipCompatibilityCheck(leaf, null);
+    incompatible.addEdge(new Dependency(project.id), new Dependency(leaf), new DependencyEdgeValue(new Version("1.0.0"), new Version("2.0.0"), "runtime", new License()));
+    incompatible.skipCompatibilityCheck(leaf);
 
     ReifiedArtifact intermediateArtifact = new ReifiedArtifact(intermediate, new Version("1.0.0"), new License());
     ReifiedArtifact multipleVersionsArtifact = new ReifiedArtifact(multipleVersions, new Version("1.1.0"), new License());
@@ -910,9 +999,9 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     ArtifactID intermediate = new ArtifactID("org.savantbuild.test", "intermediate", "intermediate", "jar");
 
     DependencyGraph incompatible = new DependencyGraph(project);
-    incompatible.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(leaf, null), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", new License()));
-    incompatible.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(intermediate, null), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", new License()));
-    incompatible.addEdge(new Dependency(intermediate, null), new Dependency(leaf, null), new DependencyEdgeValue(new Version("1.0.0"), new Version("2.0.0"), "compile", new License()));
+    incompatible.addEdge(new Dependency(project.id), new Dependency(leaf), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", new License()));
+    incompatible.addEdge(new Dependency(project.id), new Dependency(intermediate), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", new License()));
+    incompatible.addEdge(new Dependency(intermediate), new Dependency(leaf), new DependencyEdgeValue(new Version("1.0.0"), new Version("2.0.0"), "compile", new License()));
 
     try {
       service.reduce(incompatible);
@@ -955,15 +1044,15 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     ArtifactID multipleVersionsDifferentDeps = new ArtifactID("org.savantbuild.test", "multiple-versions-different-dependencies", "multiple-versions-different-dependencies", "jar");
 
     DependencyGraph incompatible = new DependencyGraph(project);
-    incompatible.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(multipleVersions, null), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
-    incompatible.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(intermediate, null), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", new License()));
-    incompatible.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(multipleVersionsDifferentDeps, null), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
-    incompatible.addEdge(new Dependency(intermediate, null), new Dependency(multipleVersions, null), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "compile", new License()));
-    incompatible.addEdge(new Dependency(intermediate, null), new Dependency(multipleVersionsDifferentDeps, null), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "runtime", new License()));
-    incompatible.addEdge(new Dependency(multipleVersions, null), new Dependency(leaf, null), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
-    incompatible.addEdge(new Dependency(multipleVersions, null), new Dependency(leaf, null), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", new License()));
-    incompatible.addEdge(new Dependency(multipleVersionsDifferentDeps, null), new Dependency(leaf, null), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", new License()));
-    incompatible.addEdge(new Dependency(multipleVersionsDifferentDeps, null), new Dependency(leaf, null), new DependencyEdgeValue(new Version("1.1.0"), new Version("2.0.0"), "compile", new License()));
+    incompatible.addEdge(new Dependency(project.id), new Dependency(multipleVersions), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
+    incompatible.addEdge(new Dependency(project.id), new Dependency(intermediate), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", new License()));
+    incompatible.addEdge(new Dependency(project.id), new Dependency(multipleVersionsDifferentDeps), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
+    incompatible.addEdge(new Dependency(intermediate), new Dependency(multipleVersions), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "compile", new License()));
+    incompatible.addEdge(new Dependency(intermediate), new Dependency(multipleVersionsDifferentDeps), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "runtime", new License()));
+    incompatible.addEdge(new Dependency(multipleVersions), new Dependency(leaf), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
+    incompatible.addEdge(new Dependency(multipleVersions), new Dependency(leaf), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", new License()));
+    incompatible.addEdge(new Dependency(multipleVersionsDifferentDeps), new Dependency(leaf), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", new License()));
+    incompatible.addEdge(new Dependency(multipleVersionsDifferentDeps), new Dependency(leaf), new DependencyEdgeValue(new Version("1.1.0"), new Version("2.0.0"), "compile", new License()));
 
     try {
       service.reduce(incompatible);
@@ -1002,12 +1091,12 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     ReifiedArtifact d = new ReifiedArtifact(new ArtifactID("org.savantbuild.test", "d", "d", "jar"), new Version("1.1.0"), new License());
 
     DependencyGraph graph = new DependencyGraph(project);
-    graph.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(a.id, a.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
-    graph.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(b.id, b.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "compile", new License()));
-    graph.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(c.id, c.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
-    graph.addEdge(new Dependency(a.id, a.nonSemanticVersion), new Dependency(aChild.id, aChild.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
-    graph.addEdge(new Dependency(b.id, b.nonSemanticVersion), new Dependency(d.id, d.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
-    graph.addEdge(new Dependency(d.id, d.nonSemanticVersion), new Dependency(a.id, a.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
+    graph.addEdge(new Dependency(project.id), new Dependency(a.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
+    graph.addEdge(new Dependency(project.id), new Dependency(b.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "compile", new License()));
+    graph.addEdge(new Dependency(project.id), new Dependency(c.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
+    graph.addEdge(new Dependency(a.id), new Dependency(aChild.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
+    graph.addEdge(new Dependency(b.id), new Dependency(d.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
+    graph.addEdge(new Dependency(d.id), new Dependency(a.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License()));
 
     ArtifactGraph expected = new ArtifactGraph(project);
     expected.addEdge(project, a, "compile");
@@ -1183,7 +1272,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
   private DependencyGraph makeSimpleGraph(String dependency) {
     DependencyGraph graph = new DependencyGraph(project);
     Artifact artifact = new Artifact(dependency);
-    graph.addEdge(new Dependency(project.id, project.nonSemanticVersion), new Dependency(artifact.id, artifact.nonSemanticVersion), new DependencyEdgeValue(project.version, artifact.version, "compile", new License()));
+    graph.addEdge(new Dependency(project.id), new Dependency(artifact.id), new DependencyEdgeValue(project.version, artifact.version, "compile", new License()));
     return graph;
   }
 

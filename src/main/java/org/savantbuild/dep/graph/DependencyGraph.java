@@ -58,8 +58,8 @@ public class DependencyGraph extends HashGraph<Dependency, DependencyEdgeValue> 
     return result;
   }
 
-  public void skipCompatibilityCheck(ArtifactID id, String nonSemanticVersion) {
-    HashNode<Dependency, DependencyEdgeValue> node = getNode(new Dependency(id, nonSemanticVersion));
+  public void skipCompatibilityCheck(ArtifactID id) {
+    HashNode<Dependency, DependencyEdgeValue> node = getNode(new Dependency(id));
     node.value.skipCompatibilityCheck = true;
   }
 
@@ -73,7 +73,7 @@ public class DependencyGraph extends HashGraph<Dependency, DependencyEdgeValue> 
     build.append("digraph Dependencies {\n");
 
     Formatter formatter = new Formatter(build);
-    traverse(new Dependency(root.id, root.nonSemanticVersion), false, new SingleTraversalEdgeFilter<>(), (origin, destination, edge, depth, isLast) -> {
+    traverse(new Dependency(root.id), false, new SingleTraversalEdgeFilter<>(), (origin, destination, edge, depth, isLast) -> {
       formatter.format("  \"%s\" -> \"%s\" [label=\"%s\", headlabel=\"%s\", taillabel=\"%s\"];\n", origin, destination, edge, edge.dependentVersion, edge.dependencyVersion);
       return true;
     });
@@ -102,7 +102,7 @@ public class DependencyGraph extends HashGraph<Dependency, DependencyEdgeValue> 
    */
   public void versionCorrectTraversal(GraphConsumer<Dependency, DependencyEdgeValue> consumer) {
     super.traverse(
-        new Dependency(root.id, root.nonSemanticVersion),
+        new Dependency(root.id),
         false,
         (edge, traversedEdge) -> edge.getValue().dependentVersion.equals(traversedEdge.getValue().dependencyVersion),
         consumer
@@ -112,13 +112,10 @@ public class DependencyGraph extends HashGraph<Dependency, DependencyEdgeValue> 
   public static class Dependency {
     public final ArtifactID id;
 
-    public final String nonSemanticVersion;
-
     public boolean skipCompatibilityCheck;
 
-    public Dependency(ArtifactID id, String nonSemanticVersion) {
+    public Dependency(ArtifactID id) {
       this.id = id;
-      this.nonSemanticVersion = nonSemanticVersion;
     }
 
     @Override

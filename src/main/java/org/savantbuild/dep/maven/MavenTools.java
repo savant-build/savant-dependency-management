@@ -43,8 +43,6 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-
 /**
  * Maven helpers for things like parsing POMs.
  *
@@ -54,15 +52,16 @@ public class MavenTools {
   /**
    * Maven version error.
    */
-  public static final String VersionError = "Invalid Version in the dependency graph from a Maven dependency [%s]. You must " +
-      "specify a semantic version mapping for Savant to properly handle Maven dependencies. This goes at the top-level of the build file and looks like this:\n\n" +
-      "project(...) {\n" +
-      "  workflow {\n" +
-      "    semanticVersions {\n" +
-      "      mapping(id: \"org.badver:badver:1.0.0.Final\", version: \"1.0.0\")\n" +
-      "    }\n" +
-      "  }\n" +
-      "}";
+  public static final String VersionError = """
+      Invalid Version in the dependency graph from a Maven dependency [%s]. You must specify a semantic version mapping for Savant to properly handle Maven dependencies. This goes at the top-level of the build file and looks like this:
+
+      project(...) {
+        workflow {
+          semanticVersions {
+            mapping(id: "org.badver:badver:1.0.0.Final", version: "1.0.0")
+          }
+        }
+      }""";
 
   /**
    * Parses a POM XML file.
@@ -201,7 +200,7 @@ public class MavenTools {
       }
 
       List<ArtifactID> exclusions = new ArrayList<>();
-      if (dep.exclusions.size() > 0) {
+      if (!dep.exclusions.isEmpty()) {
         for (MavenExclusion exclusion : dep.exclusions) {
           exclusions.add(new ArtifactID(exclusion.group, exclusion.id, exclusion.id, "*"));
         }
@@ -231,9 +230,7 @@ public class MavenTools {
         }
       }
 
-      if (savantLicense != null) {
-        licenses.add(savantLicense);
-      }
+      licenses.add(savantLicense);
     }
 
     return licenses;
@@ -252,12 +249,31 @@ public class MavenTools {
     String key = pom.toSpecification();
     Version version = mappings.get(key);
     if (version != null) {
-      return version;
+      return version; // Always favor a mapping
     }
+
+    String pomVersion = pom.version;
     try {
-      return new Version(pom.version);
+      return new Version(pomVersion);
     } catch (VersionException e) {
-      throw new VersionException(String.format(VersionError, key));
+      // If the version is janky (i.e. it contains random characters), throw an exception
+      if (pomVersion.chars().anyMatch(ch -> !Character.isDigit(ch) && ch != '.')) {
+        throw new VersionException(String.format(VersionError, key));
+      }
+
+      // Otherwise, try again by "fixing" the Maven version
+      int dots = (int) pomVersion.chars().filter(ch -> ch == '.').count();
+      if (dots == 0) {
+        pomVersion += ".0.0";
+      } else if (dots == 1) {
+        pomVersion += ".0";
+      }
+
+      try {
+        return new Version(pomVersion);
+      } catch (VersionException e2) {
+        throw new VersionException(String.format(VersionError, key));
+      }
     }
   }
 
@@ -311,10 +327,10 @@ public class MavenTools {
 
   private static void removeInvalidCharactersInPom(Path file, Output output) {
     try {
-      String pomString = new String(Files.readAllBytes(file), UTF_8);
+      String pomString = Files.readString(file);
       if (pomString.contains("&oslash;")) {
         output.warning("Found and replaced [&oslash;] with [O] to keep the parser from exploding.");
-        Files.write(file, pomString.replace("&oslash;", "O").getBytes(UTF_8), StandardOpenOption.TRUNCATE_EXISTING);
+        Files.writeString(file, pomString.replace("&oslash;", "O"), StandardOpenOption.TRUNCATE_EXISTING);
       }
     } catch (IOException e) {
       throw new RuntimeException(e);

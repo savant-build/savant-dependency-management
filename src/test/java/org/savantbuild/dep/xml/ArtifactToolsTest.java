@@ -47,6 +47,7 @@ public class ArtifactToolsTest extends BaseUnitTest {
   public void parse() throws Exception {
     Map<String, Version> mappings = new HashMap<>();
     mappings.put("org.example.test:badver:1.0.0.Final", new Version("1.0.0"));
+    mappings.put("org.example.test:short-badver:1.0", new Version("1.0.0"));
 
     ArtifactMetaData amd = ArtifactTools.parseArtifactMetaData(projectDir.resolve("src/test/resources/amd.xml"), mappings);
     assertEquals(amd.licenses, Arrays.asList(License.Licenses.get("ApacheV2_0"), new License("BSD_2_Clause", "Override the BSD license.")));
@@ -92,8 +93,8 @@ public class ArtifactToolsTest extends BaseUnitTest {
     assertEquals(amd.dependencies.groups.get("compile").dependencies.get(2).id.type, "jar");
 
     assertEquals(amd.dependencies.groups.get("compile").dependencies.get(3).id.group, "org.example.test");
-    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(3).id.project, "badver");
-    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(3).id.name, "badverproactive");
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(3).id.project, "short-badver");
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(3).id.name, "short-badver");
     assertEquals(amd.dependencies.groups.get("compile").dependencies.get(3).version, new Version("1.0.0"));
     assertEquals(amd.dependencies.groups.get("compile").dependencies.get(3).nonSemanticVersion, "1.0");
     assertEquals(amd.dependencies.groups.get("compile").dependencies.get(3).id.type, "jar");

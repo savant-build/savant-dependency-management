@@ -34,7 +34,7 @@ project(group: "org.savantbuild", name: "savant-dependency-management", version:
       dependency(id: "com.fasterxml.jackson.core:jackson-core:2.13.4:jar")
       dependency(id: "com.fasterxml.jackson.core:jackson-databind:2.13.4:jar")
       dependency(id: "org.savantbuild:savant-utils:2.0.0-RC.6")
-      dependency(id: "org.savantbuild:savant-version:2.0.0-RC.6")
+      dependency(id: "org.savantbuild:savant-version:2.0.0-RC.7.{integration}")
     }
     group(name: "test-compile", export: false) {
       dependency(id: "org.testng:testng:6.8.7")

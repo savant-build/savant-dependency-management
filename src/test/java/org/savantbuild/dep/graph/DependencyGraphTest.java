@@ -32,39 +32,39 @@ import static org.testng.Assert.assertEquals;
 public class DependencyGraphTest extends BaseUnitTest {
   @Test
   public void equals() {
-    ReifiedArtifact one = new ReifiedArtifact("group:project:artifact1:1.0:jar", License.Licenses.get("ApacheV2_0"));
-    ReifiedArtifact two = new ReifiedArtifact("group:project:artifact2:1.0:jar", new License());
-    ReifiedArtifact three = new ReifiedArtifact("group:project:artifact3:1.0:jar", new License());
-    ReifiedArtifact four = new ReifiedArtifact("group:project:artifact4:1.0:jar", new License());
+    ReifiedArtifact one = new ReifiedArtifact("group:project:artifact1:1.0.0:jar", License.Licenses.get("ApacheV2_0"));
+    ReifiedArtifact two = new ReifiedArtifact("group:project:artifact2:1.0.0:jar", new License());
+    ReifiedArtifact three = new ReifiedArtifact("group:project:artifact3:1.0.0:jar", new License());
+    ReifiedArtifact four = new ReifiedArtifact("group:project:artifact4:1.0.0:jar", new License());
 
     DependencyGraph graph = new DependencyGraph(one);
-    graph.addEdge(new Dependency(one.id, one.nonSemanticVersion), new Dependency(two.id, two.nonSemanticVersion), new DependencyEdgeValue(one.version, two.version, "compile", new License()));
-    graph.addEdge(new Dependency(one.id, one.nonSemanticVersion), new Dependency(three.id, three.nonSemanticVersion), new DependencyEdgeValue(one.version, three.version, "compile", new License()));
-    graph.addEdge(new Dependency(two.id, two.nonSemanticVersion), new Dependency(four.id, four.nonSemanticVersion), new DependencyEdgeValue(two.version, four.version, "compile", new License()));
-    graph.addEdge(new Dependency(three.id, three.nonSemanticVersion), new Dependency(four.id, four.nonSemanticVersion), new DependencyEdgeValue(three.version, four.version, "compile", new License()));
+    graph.addEdge(new Dependency(one.id), new Dependency(two.id), new DependencyEdgeValue(one.version, two.version, "compile", new License()));
+    graph.addEdge(new Dependency(one.id), new Dependency(three.id), new DependencyEdgeValue(one.version, three.version, "compile", new License()));
+    graph.addEdge(new Dependency(two.id), new Dependency(four.id), new DependencyEdgeValue(two.version, four.version, "compile", new License()));
+    graph.addEdge(new Dependency(three.id), new Dependency(four.id), new DependencyEdgeValue(three.version, four.version, "compile", new License()));
 
     DependencyGraph graph2 = new DependencyGraph(one);
-    graph2.addEdge(new Dependency(three.id, three.nonSemanticVersion), new Dependency(four.id, four.nonSemanticVersion), new DependencyEdgeValue(three.version, four.version, "compile", new License()));
-    graph2.addEdge(new Dependency(two.id, two.nonSemanticVersion), new Dependency(four.id, four.nonSemanticVersion), new DependencyEdgeValue(two.version, four.version, "compile", new License()));
-    graph2.addEdge(new Dependency(one.id, one.nonSemanticVersion), new Dependency(three.id, three.nonSemanticVersion), new DependencyEdgeValue(one.version, three.version, "compile", new License()));
-    graph2.addEdge(new Dependency(one.id, one.nonSemanticVersion), new Dependency(two.id, two.nonSemanticVersion), new DependencyEdgeValue(one.version, two.version, "compile", new License()));
+    graph2.addEdge(new Dependency(three.id), new Dependency(four.id), new DependencyEdgeValue(three.version, four.version, "compile", new License()));
+    graph2.addEdge(new Dependency(two.id), new Dependency(four.id), new DependencyEdgeValue(two.version, four.version, "compile", new License()));
+    graph2.addEdge(new Dependency(one.id), new Dependency(three.id), new DependencyEdgeValue(one.version, three.version, "compile", new License()));
+    graph2.addEdge(new Dependency(one.id), new Dependency(two.id), new DependencyEdgeValue(one.version, two.version, "compile", new License()));
 
     assertEquals(graph, graph2);
   }
 
   @Test
   public void versionCorrectTraversal() {
-    ReifiedArtifact root = new ReifiedArtifact("group:project:root:1.0:jar", new License());
-    ReifiedArtifact one = new ReifiedArtifact("group:project:artifact1:1.0:jar", new License());
-    ReifiedArtifact two = new ReifiedArtifact("group:project:artifact1:1.1:jar", new License());
-    ReifiedArtifact three = new ReifiedArtifact("group:project:artifact3:1.0:jar", new License());
-    ReifiedArtifact four = new ReifiedArtifact("group:project:artifact4:1.0:jar", new License());
+    ReifiedArtifact root = new ReifiedArtifact("group:project:root:1.0.0:jar", new License());
+    ReifiedArtifact one = new ReifiedArtifact("group:project:artifact1:1.0.0:jar", new License());
+    ReifiedArtifact two = new ReifiedArtifact("group:project:artifact1:1.1.0:jar", new License());
+    ReifiedArtifact three = new ReifiedArtifact("group:project:artifact3:1.0.0:jar", new License());
+    ReifiedArtifact four = new ReifiedArtifact("group:project:artifact4:1.0.0:jar", new License());
 
     DependencyGraph graph = new DependencyGraph(root);
-    graph.addEdge(new Dependency(root.id, root.nonSemanticVersion), new Dependency(one.id, one.nonSemanticVersion), new DependencyEdgeValue(root.version, one.version, "compile", new License()));
-    graph.addEdge(new Dependency(root.id, root.nonSemanticVersion), new Dependency(two.id, two.nonSemanticVersion), new DependencyEdgeValue(root.version, two.version, "compile", new License()));
-    graph.addEdge(new Dependency(one.id, one.nonSemanticVersion), new Dependency(three.id, three.nonSemanticVersion), new DependencyEdgeValue(one.version, three.version, "compile", new License()));
-    graph.addEdge(new Dependency(two.id, two.nonSemanticVersion), new Dependency(four.id, four.nonSemanticVersion), new DependencyEdgeValue(two.version, four.version, "compile", new License()));
+    graph.addEdge(new Dependency(root.id), new Dependency(one.id), new DependencyEdgeValue(root.version, one.version, "compile", new License()));
+    graph.addEdge(new Dependency(root.id), new Dependency(two.id), new DependencyEdgeValue(root.version, two.version, "compile", new License()));
+    graph.addEdge(new Dependency(one.id), new Dependency(three.id), new DependencyEdgeValue(one.version, three.version, "compile", new License()));
+    graph.addEdge(new Dependency(two.id), new Dependency(four.id), new DependencyEdgeValue(two.version, four.version, "compile", new License()));
 
     ArtifactID[] path1 = new ArtifactID[2];
     ArtifactID[] path2 = new ArtifactID[2];
