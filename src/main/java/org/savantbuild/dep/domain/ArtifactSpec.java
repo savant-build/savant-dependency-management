@@ -15,20 +15,22 @@
  */
 package org.savantbuild.dep.domain;
 
-import org.savantbuild.domain.Version;
-
 import static java.util.Arrays.stream;
 
+/**
+ * An artifact specification that complies with Savant and Maven definitions.
+ *
+ * @author Brady Wied
+ * @author Brian Pontarelli
+ */
 public class ArtifactSpec {
   public final ArtifactID id;
 
-  public final Version version;
+  public final String mavenSpec;
+
+  public final String version;
 
   public ArtifactSpec(String spec) {
-    this(spec, true);
-  }
-
-  public ArtifactSpec(String spec, boolean parseVersion) {
     String[] parts = spec.split(":");
     if (parts.length < 3) {
       throw new IllegalArgumentException("Invalid artifact specification [" + spec + "]. It must have 3, 4, or 5 parts");
@@ -38,20 +40,19 @@ public class ArtifactSpec {
       throw new IllegalArgumentException("Invalid artifact specification [" + spec + "]. One of the parts is empty (i.e. foo::3.0");
     }
 
-    String draftVersion;
-
     if (parts.length == 3) {
       id = new ArtifactID(parts[0], parts[1], parts[1], "jar");
-      draftVersion = parts[2];
+      version = parts[2];
     } else if (parts.length == 4) {
       id = new ArtifactID(parts[0], parts[1], parts[1], parts[3]);
-      draftVersion = parts[2];
+      version = parts[2];
     } else if (parts.length == 5) {
       id = new ArtifactID(parts[0], parts[1], parts[2], parts[4]);
-      draftVersion = parts[3];
+      version = parts[3];
     } else {
       throw new IllegalArgumentException("Invalid artifact specification [" + spec + "]. It must have 3, 4, or 5 parts");
     }
-    version = parseVersion ? new Version(draftVersion) : null;
+
+    mavenSpec = id.group + ":" + id.name + ":" + version;
   }
 }

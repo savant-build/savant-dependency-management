@@ -31,7 +31,7 @@ import org.savantbuild.dep.maven.MavenTools;
 import org.savantbuild.dep.maven.POM;
 import org.savantbuild.dep.workflow.process.NegativeCacheException;
 import org.savantbuild.dep.workflow.process.ProcessFailureException;
-import org.savantbuild.dep.xml.ArtifactTools;
+import org.savantbuild.dep.ArtifactTools;
 import org.savantbuild.domain.Version;
 import org.savantbuild.domain.VersionException;
 import org.savantbuild.output.Output;
@@ -218,7 +218,7 @@ public class Workflow {
 
     // Load the imports in the POM until there are no more imports. Each iteration needs to fill in variables
     List<MavenDependency> imports = pom.imports();
-    while (imports.size() > 0) {
+    while (!imports.isEmpty()) {
       for (MavenDependency anImport : imports) {
         Artifact dep = MavenTools.toArtifact(anImport, "pom", mappings);
         POM importPOM = loadPOM(dep);

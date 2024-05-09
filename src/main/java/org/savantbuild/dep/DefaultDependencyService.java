@@ -49,7 +49,6 @@ import org.savantbuild.dep.workflow.ArtifactMissingException;
 import org.savantbuild.dep.workflow.PublishWorkflow;
 import org.savantbuild.dep.workflow.Workflow;
 import org.savantbuild.dep.workflow.process.ProcessFailureException;
-import org.savantbuild.dep.xml.ArtifactTools;
 import org.savantbuild.domain.Version;
 import org.savantbuild.output.Output;
 import org.savantbuild.security.MD5;

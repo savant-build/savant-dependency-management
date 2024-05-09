@@ -31,12 +31,13 @@ import java.util.Map;
 import org.savantbuild.dep.LicenseException;
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.ArtifactID;
+import org.savantbuild.dep.domain.ArtifactSpec;
 import org.savantbuild.dep.domain.Dependencies;
 import org.savantbuild.dep.domain.DependencyGroup;
 import org.savantbuild.dep.domain.License;
 import org.savantbuild.dep.domain.ReifiedArtifact;
+import org.savantbuild.dep.ArtifactTools;
 import org.savantbuild.domain.Version;
-import org.savantbuild.domain.VersionException;
 import org.savantbuild.output.Output;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -49,20 +50,6 @@ import org.w3c.dom.NodeList;
  * @author Brian Pontarelli
  */
 public class MavenTools {
-  /**
-   * Maven version error.
-   */
-  public static final String VersionError = """
-      Invalid Version in the dependency graph from a Maven dependency [%s]. You must specify a semantic version mapping for Savant to properly handle Maven dependencies. This goes at the top-level of the build file and looks like this:
-
-      project(...) {
-        workflow {
-          semanticVersions {
-            mapping(id: "org.badver:badver:1.0.0.Final", version: "1.0.0")
-          }
-        }
-      }""";
-
   /**
    * Parses a POM XML file.
    *
@@ -175,7 +162,8 @@ public class MavenTools {
   }
 
   public static Artifact toArtifact(POM pom, String type, Map<String, Version> mappings) {
-    Version version = determineVersion(pom, mappings);
+    ArtifactSpec spec = new ArtifactSpec(pom.toSpecification());
+    Version version = ArtifactTools.determineSemanticVersion(spec, mappings);
     ArtifactID id = new ArtifactID(pom.group, pom.id, pom.id, type);
     return new Artifact(id, version, pom.version, null);
   }
@@ -206,7 +194,8 @@ public class MavenTools {
         }
       }
 
-      Version mapping = determineVersion(dep, mappings);
+      ArtifactSpec spec = new ArtifactSpec(dep.toSpecification());
+      Version mapping = ArtifactTools.determineSemanticVersion(spec, mappings);
       ArtifactID id = new ArtifactID(dep.group, dep.id, dep.getArtifactName(), (dep.type == null ? "jar" : dep.type));
       dep.savantArtifact = new ReifiedArtifact(id, mapping, dep.version, exclusions, Collections.emptyList());
       savantDependencyGroup.dependencies.add(dep.savantArtifact);
@@ -243,38 +232,6 @@ public class MavenTools {
     }
 
     return null;
-  }
-
-  private static Version determineVersion(POM pom, Map<String, Version> mappings) {
-    String key = pom.toSpecification();
-    Version version = mappings.get(key);
-    if (version != null) {
-      return version; // Always favor a mapping
-    }
-
-    String pomVersion = pom.version;
-    try {
-      return new Version(pomVersion);
-    } catch (VersionException e) {
-      // If the version is janky (i.e. it contains random characters), throw an exception
-      if (pomVersion.chars().anyMatch(ch -> !Character.isDigit(ch) && ch != '.')) {
-        throw new VersionException(String.format(VersionError, key));
-      }
-
-      // Otherwise, try again by "fixing" the Maven version
-      int dots = (int) pomVersion.chars().filter(ch -> ch == '.').count();
-      if (dots == 0) {
-        pomVersion += ".0.0";
-      } else if (dots == 1) {
-        pomVersion += ".0";
-      }
-
-      try {
-        return new Version(pomVersion);
-      } catch (VersionException e2) {
-        throw new VersionException(String.format(VersionError, key));
-      }
-    }
   }
 
   private static Element firstChild(Element root, String childName) {

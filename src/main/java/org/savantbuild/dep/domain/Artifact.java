@@ -15,7 +15,6 @@
  */
 package org.savantbuild.dep.domain;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -63,24 +62,33 @@ public class Artifact {
   }
 
   /**
-   * Constructs an Artifact with the given ID and version.
-   *
-   * @param id                 The artifact ID (group, project, name, type).
-   * @param version            The version of the artifact.
-   * @param nonSemanticVersion The non-semantic version.
-   * @param exclusions         Any exclusions.
+   * Shorthand for {@link Artifact#Artifact(ArtifactID, Version, String, boolean, List)} that passes in false for the
+   * compatibility check.
    */
   public Artifact(ArtifactID id, Version version, String nonSemanticVersion, List<ArtifactID> exclusions) {
+    this(id, version, nonSemanticVersion, false, exclusions);
+  }
+
+  /**
+   * Constructs an Artifact with the given ID and version.
+   *
+   * @param id                     The artifact ID (group, project, name, type).
+   * @param version                The version of the artifact.
+   * @param nonSemanticVersion     The non-semantic version.
+   * @param skipCompatibilityCheck Whether compatibility checks should be skipped or run.
+   * @param exclusions             Any exclusions.
+   */
+  public Artifact(ArtifactID id, Version version, String nonSemanticVersion, boolean skipCompatibilityCheck, List<ArtifactID> exclusions) {
     Objects.requireNonNull(id, "Artifacts must have an ArtifactID");
     Objects.requireNonNull(version, "Artifacts must have a Version");
 
     this.id = id;
     this.nonSemanticVersion = nonSemanticVersion;
-    this.skipCompatibilityCheck = false;
+    this.skipCompatibilityCheck = skipCompatibilityCheck;
     this.version = version;
 
     if (exclusions != null) {
-      this.exclusions = Collections.unmodifiableList(new ArrayList<>(exclusions));
+      this.exclusions = List.copyOf(exclusions);
     } else {
       this.exclusions = Collections.emptyList();
     }
@@ -119,14 +127,14 @@ public class Artifact {
   public Artifact(String spec, String nonSemanticVersion, boolean skipCompatibilityCheck, List<ArtifactID> exclusions) {
     Objects.requireNonNull(spec, "Artifacts must have a full specification");
 
+    var artifactSpec = new ArtifactSpec(spec);
     this.nonSemanticVersion = nonSemanticVersion;
     this.skipCompatibilityCheck = skipCompatibilityCheck;
-    var artifactSpec = new ArtifactSpec(spec);
-    id = artifactSpec.id;
-    version = artifactSpec.version;
+    this.id = artifactSpec.id;
+    this.version = new Version(artifactSpec.version);
 
     if (exclusions != null) {
-      this.exclusions = Collections.unmodifiableList(new ArrayList<>(exclusions));
+      this.exclusions = List.copyOf(exclusions);
     } else {
       this.exclusions = Collections.emptyList();
     }
@@ -134,9 +142,14 @@ public class Artifact {
 
   @Override
   public boolean equals(Object o) {
-    if (this == o) return true;
-    if (!(o instanceof Artifact)) return false;
-    final Artifact artifact = (Artifact) o;
+    if (this == o) {
+      return true;
+    }
+
+    if (!(o instanceof final Artifact artifact)) {
+      return false;
+    }
+
     return Objects.equals(exclusions, artifact.exclusions) && Objects.equals(id, artifact.id) && Objects.equals(version, artifact.version);
   }
 
@@ -298,6 +311,7 @@ public class Artifact {
   /**
    * @return Whether the version of this artifact is an integration build version.
    */
+  @SuppressWarnings("unused")
   public boolean isIntegrationBuild() {
     return version.isIntegration();
   }

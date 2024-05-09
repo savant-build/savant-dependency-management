@@ -53,7 +53,6 @@ import org.savantbuild.dep.workflow.process.CacheProcess;
 import org.savantbuild.dep.workflow.process.MavenCacheProcess;
 import org.savantbuild.dep.workflow.process.MavenProcess;
 import org.savantbuild.dep.workflow.process.URLProcess;
-import org.savantbuild.dep.xml.ArtifactTools;
 import org.savantbuild.domain.Version;
 import org.savantbuild.security.MD5;
 import org.savantbuild.security.MD5Exception;
