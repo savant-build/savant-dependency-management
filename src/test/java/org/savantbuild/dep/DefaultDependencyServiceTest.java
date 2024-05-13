@@ -260,7 +260,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
   }
 
   @Test
-  public void buildGraphWithExclusions() {
+  public void exclusions() {
     // Override to add exclusions. Because the project AND the exclusions artifact both exclude leaf1 and leaf1_1, this prevents them from being included in the graph
     goodGraph = new DependencyGraph(project);
     goodGraph.addEdge(new Dependency(project.id), new Dependency(multipleVersions.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.Licenses.get("ApacheV1_0")));
@@ -289,250 +289,8 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
         )
     );
 
-    DependencyGraph actual = service.buildGraph(project, dependencies, workflow);
-    assertEquals(actual, goodGraph);
-  }
-
-  @Test
-  public void buildGraphWithNonSemanticVersions() {
-//    output.enableDebug();
-
-    dependencies = new Dependencies(
-        new DependencyGroup("compile", true,
-            new Artifact("org.savantbuild.test:has-non-semantic-versioned-dep:1.0.0")
-        )
-    );
-
-    workflow = new Workflow(
-        new FetchWorkflow(
-            output,
-            new CacheProcess(output, cache.toString(), integration.toString()),
-            new MavenCacheProcess(output, mavenCache.toString(), null),
-            new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null),
-            new MavenProcess(output, "http://localhost:7042/test-deps/maven", null, null)
-        ),
-        new PublishWorkflow(
-            new CacheProcess(output, cache.toString(), integration.toString()),
-            new MavenCacheProcess(output, mavenCache.toString(), null)
-        ),
-        output
-    );
-    workflow.mappings.put("org.savantbuild.test:badver:1.0.0.Final", new Version("1.0.0"));
-
-    ArtifactID hasNonSemanticId = new ArtifactID("org.savantbuild.test:has-non-semantic-versioned-dep");
-    ArtifactID badVerId = new ArtifactID("org.savantbuild.test:badver");
-    DependencyGraph expected = new DependencyGraph(project);
-    expected.addEdge(new Dependency(project.id), new Dependency(hasNonSemanticId), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("GPLV2_0", null)));
-    expected.addEdge(new Dependency(hasNonSemanticId), new Dependency(badVerId), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("Apache-2.0", null)));
-    expected.addEdge(new Dependency(badVerId), new Dependency(leaf1_1.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("Commercial", "Commercial license")));
-
-    DependencyGraph actual = service.buildGraph(project, dependencies, workflow);
-    assertEquals(actual, expected);
-    ArtifactGraph artifactGraph = service.reduce(actual);
-    ReifiedArtifact badVer = artifactGraph.values()
-                                          .stream()
-                                          .filter(r -> r.id.name.equals("badver"))
-                                          .findFirst()
-                                          .orElseThrow();
-    assertNull(badVer.nonSemanticVersion);
-  }
-
-  @Test
-  public void buildGraphWithShortNonSemanticVersions() {
-//    output.enableDebug();
-
-    dependencies = new Dependencies(
-        new DependencyGroup("compile", true,
-            new Artifact("org.savantbuild.test:has-short-non-semantic-versioned-dep:1.0.0")
-        )
-    );
-
-    workflow = new Workflow(
-        new FetchWorkflow(
-            output,
-            new CacheProcess(output, cache.toString(), integration.toString()),
-            new MavenCacheProcess(output, mavenCache.toString(), null),
-            new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null),
-            new MavenProcess(output, "http://localhost:7042/test-deps/maven", null, null)
-        ),
-        new PublishWorkflow(
-            new CacheProcess(output, cache.toString(), integration.toString()),
-            new MavenCacheProcess(output, mavenCache.toString(), null)
-        ),
-        output
-    );
-    workflow.mappings.put("org.savantbuild.test:badver:1.0", new Version("1.0.0"));
-
-    ArtifactID hasNonSemanticId = new ArtifactID("org.savantbuild.test:has-short-non-semantic-versioned-dep");
-    ArtifactID badVerId = new ArtifactID("org.savantbuild.test:badver");
-    DependencyGraph expected = new DependencyGraph(project);
-    expected.addEdge(new Dependency(project.id), new Dependency(hasNonSemanticId), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("GPLV2_0", null)));
-    expected.addEdge(new Dependency(hasNonSemanticId), new Dependency(badVerId), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("Apache-2.0", null)));
-    expected.addEdge(new Dependency(badVerId), new Dependency(leaf1_1.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("Commercial", "Commercial license")));
-
-    DependencyGraph actual = service.buildGraph(project, dependencies, workflow);
-    assertEquals(actual, expected);
-    ArtifactGraph artifactGraph = service.reduce(actual);
-    ReifiedArtifact badVer = artifactGraph.values()
-                                          .stream()
-                                          .filter(r -> r.id.name.equals("badver"))
-                                          .findFirst()
-                                          .orElseThrow();
-    assertNull(badVer.nonSemanticVersion);
-  }
-
-  @Test
-  public void buildGraphWithTopLevelNonSemanticVersions() {
-//    output.enableDebug();
-
-    dependencies = new Dependencies(
-        new DependencyGroup("compile", true,
-            new Artifact("org.savantbuild.test:badver:1.0.0", "1.0.0.Final", false, List.of())
-        )
-    );
-
-    workflow = new Workflow(
-        new FetchWorkflow(
-            output,
-            new CacheProcess(output, cache.toString(), integration.toString()),
-            new MavenCacheProcess(output, mavenCache.toString(), null),
-            new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null),
-            new MavenProcess(output, "http://localhost:7042/test-deps/maven", null, null)
-        ),
-        new PublishWorkflow(
-            new CacheProcess(output, cache.toString(), integration.toString()),
-            new MavenCacheProcess(output, mavenCache.toString(), null)
-        ),
-        output
-    );
-    workflow.mappings.put("org.savantbuild.test:badver:1.0.0.Final", new Version("1.0.0"));
-
-    ArtifactID badVerId = new ArtifactID("org.savantbuild.test:badver");
-    DependencyGraph expected = new DependencyGraph(project);
-    expected.addEdge(new Dependency(project.id), new Dependency(badVerId), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("Apache-2.0", null)));
-    expected.addEdge(new Dependency(badVerId), new Dependency(leaf1_1.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("Commercial", "Commercial license")));
-
-    DependencyGraph actual = service.buildGraph(project, dependencies, workflow);
-    assertEquals(actual, expected);
-    ArtifactGraph artifactGraph = service.reduce(actual);
-    ReifiedArtifact badVer = artifactGraph.values()
-                                          .stream()
-                                          .filter(r -> r.id.name.equals("badver"))
-                                          .findFirst()
-                                          .orElseThrow();
-    assertNull(badVer.nonSemanticVersion);
-  }
-
-  @Test
-  public void buildGraphWithTopLevelShortNonSemanticVersions() {
-//    output.enableDebug();
-
-    dependencies = new Dependencies(
-        new DependencyGroup("compile", true,
-            new Artifact("org.savantbuild.test:badver:1.0.0", "1.0", false, List.of())
-        )
-    );
-
-    workflow = new Workflow(
-        new FetchWorkflow(
-            output,
-            new CacheProcess(output, cache.toString(), integration.toString()),
-            new MavenCacheProcess(output, mavenCache.toString(), null),
-            new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null),
-            new MavenProcess(output, "http://localhost:7042/test-deps/maven", null, null)
-        ),
-        new PublishWorkflow(
-            new CacheProcess(output, cache.toString(), integration.toString()),
-            new MavenCacheProcess(output, mavenCache.toString(), null)
-        ),
-        output
-    );
-    workflow.mappings.put("org.savantbuild.test:badver:1.0", new Version("1.0.0"));
-
-    ArtifactID badVerId = new ArtifactID("org.savantbuild.test:badver");
-    DependencyGraph expected = new DependencyGraph(project);
-    expected.addEdge(new Dependency(project.id), new Dependency(badVerId), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("Apache-2.0", null)));
-    expected.addEdge(new Dependency(badVerId), new Dependency(leaf1_1.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("Commercial", "Commercial license")));
-
-    DependencyGraph actual = service.buildGraph(project, dependencies, workflow);
-    assertEquals(actual, expected);
-    ArtifactGraph artifactGraph = service.reduce(actual);
-    ReifiedArtifact badVer = artifactGraph.values()
-                                          .stream()
-                                          .filter(r -> r.id.name.equals("badver"))
-                                          .findFirst()
-                                          .orElseThrow();
-    assertNull(badVer.nonSemanticVersion);
-  }
-
-  @Test
-  public void buildGraphWithTransitiveAndDirectExclusions() {
-    // Override to add exclusions but notice that the exclusions are brought back in because the intermediate pulls leaf1 transitively back in through multipleVersions.
-    // The only exclusion that survives is through intermediate's exclusion of leaf2_2 in the main project build file
-    goodGraph = new DependencyGraph(project);
-    goodGraph.addEdge(new Dependency(project.id), new Dependency(multipleVersions.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.Licenses.get("ApacheV1_0")));
-    goodGraph.addEdge(new Dependency(project.id), new Dependency(intermediate.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", License.Licenses.get("ApacheV2_0")));
-    goodGraph.addEdge(new Dependency(project.id), new Dependency(multipleVersionsDifferentDeps.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.Licenses.get("ApacheV2_0")));
-    goodGraph.addEdge(new Dependency(intermediate.id), new Dependency(multipleVersions.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "compile", License.Licenses.get("ApacheV2_0")));
-    goodGraph.addEdge(new Dependency(intermediate.id), new Dependency(multipleVersionsDifferentDeps.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "runtime", License.Licenses.get("ApacheV2_0")));
-    goodGraph.addEdge(new Dependency(multipleVersions.id), new Dependency(leaf1.id), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", License.Licenses.get("GPLV2_0")));
-    goodGraph.addEdge(new Dependency(multipleVersions.id), new Dependency(integrationBuild.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("2.1.1-{integration}"), "compile", License.Licenses.get("ApacheV2_0")));
-    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(leaf2.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", License.Licenses.get("LGPLV2_1")));
-    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(leaf1_1.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License("Commercial", "Commercial license")));
-    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(leaf1_1.id), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", new License("Commercial", "Commercial license")));
-    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(leaf3_3.id), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "runtime", License.Licenses.get("ApacheV2_0")));
-    // Excluded
-//    goodGraph.addEdge(new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new Dependency(leaf1.id, leaf1.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.Licenses.get("GPLV2_0")));
-//    goodGraph.addEdge(new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new Dependency(integrationBuild.id, integrationBuild.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("2.1.1-{integration}"), "compile", License.Licenses.get("ApacheV2_0")));
-//    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new Dependency(leaf2_2.id, leaf2_2.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", new License("OtherNonDistributableOpenSource", "Open source")));
-
-    dependencies = new Dependencies(
-        new DependencyGroup("compile", true,
-            new Artifact(multipleVersions.id, new Version("1.0.0"), Collections.singletonList(leaf1.id)),
-            new Artifact(multipleVersionsDifferentDeps.id, new Version("1.0.0"))
-        ),
-        new DependencyGroup("runtime", true,
-            new Artifact(intermediate.id, new Version("1.0.0"), Arrays.asList(integrationBuild.id, leaf2_2.id))
-        )
-    );
-
-    DependencyGraph actual = service.buildGraph(project, dependencies, workflow);
-    assertEquals(actual, goodGraph);
-  }
-
-  @Test
-  public void buildGraphWithWildcardExclusions() {
-    // Override to add exclusions but notice that the exclusions are brought back in because the intermediate pulls leaf1 transitively back in through multipleVersions.
-    // The only exclusion that survives is through intermediate's exclusion of leaf2_2 in the main project build file
-    goodGraph = new DependencyGraph(project);
-    goodGraph.addEdge(new Dependency(project.id), new Dependency(multipleVersions.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.Licenses.get("ApacheV1_0")));
-    goodGraph.addEdge(new Dependency(project.id), new Dependency(intermediate.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", License.Licenses.get("ApacheV2_0")));
-    goodGraph.addEdge(new Dependency(project.id), new Dependency(multipleVersionsDifferentDeps.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.Licenses.get("ApacheV2_0")));
-    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(leaf2.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", License.Licenses.get("LGPLV2_1")));
-    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(leaf1_1.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License("Commercial", "Commercial license")));
-    // Excluded
-//    goodGraph.addEdge(new Dependency(intermediate.id, intermediate.nonSemanticVersion), new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "compile", License.Licenses.get("ApacheV2_0")));
-//    goodGraph.addEdge(new Dependency(intermediate.id, intermediate.nonSemanticVersion), new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "runtime", License.Licenses.get("ApacheV2_0")));
-//    goodGraph.addEdge(new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new Dependency(leaf1.id, leaf1.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", License.Licenses.get("GPLV2_0")));
-//    goodGraph.addEdge(new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new Dependency(leaf1.id, leaf1.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.Licenses.get("GPLV2_0")));
-//    goodGraph.addEdge(new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new Dependency(integrationBuild.id, integrationBuild.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("2.1.1-{integration}"), "compile", License.Licenses.get("ApacheV2_0")));
-//    goodGraph.addEdge(new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new Dependency(integrationBuild.id, integrationBuild.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("2.1.1-{integration}"), "compile", License.Licenses.get("ApacheV2_0")));
-//    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new Dependency(leaf2_2.id, leaf2_2.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", new License("OtherNonDistributableOpenSource", "Open source")));
-//    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new Dependency(leaf1_1.id, leaf1_1.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", new License("Commercial", "Commercial license")));
-//    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new Dependency(leaf3_3.id, leaf3_3.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "runtime", License.Licenses.get("ApacheV2_0")));
-
-    dependencies = new Dependencies(
-        new DependencyGroup("compile", true,
-            new Artifact(multipleVersions.id, new Version("1.0.0"), Collections.singletonList(new ArtifactID("*:*:*:*"))),
-            new Artifact(multipleVersionsDifferentDeps.id, new Version("1.0.0"))
-        ),
-        new DependencyGroup("runtime", true,
-            new Artifact(intermediate.id, new Version("1.0.0"), Collections.singletonList(new ArtifactID("*:*:*:*")))
-        )
-    );
-
-    DependencyGraph actual = service.buildGraph(project, dependencies, workflow);
-    assertEquals(actual, goodGraph);
+    var result = buildAndResolve();
+    assertEquals(result.dependencyGraph, goodGraph);
   }
 
   @Test
@@ -557,7 +315,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
         output
     );
 
-    service.buildGraph(project, dependencies, workflow);
+    buildAndResolve();
   }
 
   @Test
@@ -617,7 +375,51 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     workflow.mappings.put("org.springframework:spring-beans:3.0.5.RELEASE", new Version("3.0.5"));
     workflow.mappings.put("org.xerial.snappy:snappy-java:1.1.7.1", new Version("1.1.7+1"));
 
-    service.buildGraph(project, dependencies, workflow);
+    buildAndResolve();
+  }
+
+  @Test
+  public void nonSemanticVersions() {
+//    output.enableDebug();
+
+    dependencies = new Dependencies(
+        new DependencyGroup("compile", true,
+            new Artifact("org.savantbuild.test:has-non-semantic-versioned-dep:1.0.0")
+        )
+    );
+
+    workflow = new Workflow(
+        new FetchWorkflow(
+            output,
+            new CacheProcess(output, cache.toString(), integration.toString()),
+            new MavenCacheProcess(output, mavenCache.toString(), null),
+            new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null),
+            new MavenProcess(output, "http://localhost:7042/test-deps/maven", null, null)
+        ),
+        new PublishWorkflow(
+            new CacheProcess(output, cache.toString(), integration.toString()),
+            new MavenCacheProcess(output, mavenCache.toString(), null)
+        ),
+        output
+    );
+    workflow.mappings.put("org.savantbuild.test:badver:1.0.0.Final", new Version("1.0.0"));
+
+    ArtifactID hasNonSemanticId = new ArtifactID("org.savantbuild.test:has-non-semantic-versioned-dep");
+    ArtifactID badVerId = new ArtifactID("org.savantbuild.test:badver");
+    DependencyGraph expected = new DependencyGraph(project);
+    expected.addEdge(new Dependency(project.id), new Dependency(hasNonSemanticId), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("GPLV2_0", null)));
+    expected.addEdge(new Dependency(hasNonSemanticId), new Dependency(badVerId), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("Apache-2.0", null)));
+    expected.addEdge(new Dependency(badVerId), new Dependency(leaf1_1.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("Commercial", "Commercial license")));
+
+    var result = buildAndResolve();
+    assertEquals(result.dependencyGraph, expected);
+
+    ReifiedArtifact badVer = result.artifactGraph.values()
+                                                 .stream()
+                                                 .filter(r -> r.id.name.equals("badver"))
+                                                 .findFirst()
+                                                 .orElseThrow();
+    assertEquals(badVer.nonSemanticVersion, "1.0.0.Final");
   }
 
   @Test
@@ -1009,7 +811,6 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
       assertEquals(e.dependency.id, leaf);
       assertEquals(e.min, new Version("1.0.0"));
       assertEquals(e.max, new Version("2.0.0"));
-      e.printStackTrace();
     }
   }
 
@@ -1060,7 +861,6 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
       assertEquals(e.dependency.id, leaf);
       assertEquals(e.min, new Version("1.0.0"));
       assertEquals(e.max, new Version("2.0.0"));
-      e.printStackTrace();
     }
   }
 
@@ -1254,6 +1054,206 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     verifyResolvedArtifacts(actual);
   }
 
+  @Test
+  public void shortNonSemanticVersions() {
+    dependencies = new Dependencies(
+        new DependencyGroup("compile", true,
+            new Artifact("org.savantbuild.test:has-short-non-semantic-versioned-dep:1.0.0")
+        )
+    );
+
+    workflow = new Workflow(
+        new FetchWorkflow(
+            output,
+            new CacheProcess(output, cache.toString(), integration.toString()),
+            new MavenCacheProcess(output, mavenCache.toString(), null),
+            new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null),
+            new MavenProcess(output, "http://localhost:7042/test-deps/maven", null, null)
+        ),
+        new PublishWorkflow(
+            new CacheProcess(output, cache.toString(), integration.toString()),
+            new MavenCacheProcess(output, mavenCache.toString(), null)
+        ),
+        output
+    );
+    workflow.mappings.put("org.savantbuild.test:badver:1.0", new Version("1.0.0"));
+
+    ArtifactID hasNonSemanticId = new ArtifactID("org.savantbuild.test:has-short-non-semantic-versioned-dep");
+    ArtifactID badVerId = new ArtifactID("org.savantbuild.test:badver");
+    DependencyGraph expected = new DependencyGraph(project);
+    expected.addEdge(new Dependency(project.id), new Dependency(hasNonSemanticId), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("GPLV2_0", null)));
+    expected.addEdge(new Dependency(hasNonSemanticId), new Dependency(badVerId), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("Apache-2.0", null)));
+    expected.addEdge(new Dependency(badVerId), new Dependency(leaf1_1.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("Commercial", "Commercial license")));
+
+    var result = buildAndResolve();
+    assertEquals(result.dependencyGraph, expected);
+
+    ReifiedArtifact badVer = result.artifactGraph.values()
+                                                 .stream()
+                                                 .filter(r -> r.id.name.equals("badver"))
+                                                 .findFirst()
+                                                 .orElseThrow();
+    assertEquals(badVer.nonSemanticVersion, "1.0");
+  }
+
+  @Test
+  public void topLevelNonSemanticVersions() {
+    dependencies = new Dependencies(
+        new DependencyGroup("compile", true,
+            new Artifact("org.savantbuild.test:badver:1.0.0", "1.0.0.Final", false, List.of())
+        )
+    );
+
+    workflow = new Workflow(
+        new FetchWorkflow(
+            output,
+            new CacheProcess(output, cache.toString(), integration.toString()),
+            new MavenCacheProcess(output, mavenCache.toString(), null),
+            new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null),
+            new MavenProcess(output, "http://localhost:7042/test-deps/maven", null, null)
+        ),
+        new PublishWorkflow(
+            new CacheProcess(output, cache.toString(), integration.toString()),
+            new MavenCacheProcess(output, mavenCache.toString(), null)
+        ),
+        output
+    );
+    workflow.mappings.put("org.savantbuild.test:badver:1.0.0.Final", new Version("1.0.0"));
+
+    ArtifactID badVerId = new ArtifactID("org.savantbuild.test:badver");
+    DependencyGraph expected = new DependencyGraph(project);
+    expected.addEdge(new Dependency(project.id), new Dependency(badVerId), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("Apache-2.0", null)));
+    expected.addEdge(new Dependency(badVerId), new Dependency(leaf1_1.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("Commercial", "Commercial license")));
+
+    var result = buildAndResolve();
+    assertEquals(result.dependencyGraph, expected);
+
+    ReifiedArtifact badVer = result.artifactGraph.values()
+                                                 .stream()
+                                                 .filter(r -> r.id.name.equals("badver"))
+                                                 .findFirst()
+                                                 .orElseThrow();
+    assertEquals(badVer.nonSemanticVersion, "1.0.0.Final");
+  }
+
+  @Test
+  public void topLevelShortNonSemanticVersions() {
+    dependencies = new Dependencies(
+        new DependencyGroup("compile", true,
+            new Artifact("org.savantbuild.test:badver:1.0.0", "1.0", false, List.of())
+        )
+    );
+
+    workflow = new Workflow(
+        new FetchWorkflow(
+            output,
+            new CacheProcess(output, cache.toString(), integration.toString()),
+            new MavenCacheProcess(output, mavenCache.toString(), null),
+            new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null),
+            new MavenProcess(output, "http://localhost:7042/test-deps/maven", null, null)
+        ),
+        new PublishWorkflow(
+            new CacheProcess(output, cache.toString(), integration.toString()),
+            new MavenCacheProcess(output, mavenCache.toString(), null)
+        ),
+        output
+    );
+    workflow.mappings.put("org.savantbuild.test:badver:1.0", new Version("1.0.0"));
+
+    ArtifactID badVerId = new ArtifactID("org.savantbuild.test:badver");
+    DependencyGraph expected = new DependencyGraph(project);
+    expected.addEdge(new Dependency(project.id), new Dependency(badVerId), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("Apache-2.0", null)));
+    expected.addEdge(new Dependency(badVerId), new Dependency(leaf1_1.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.parse("Commercial", "Commercial license")));
+
+    var result = buildAndResolve();
+    assertEquals(result.dependencyGraph, expected);
+
+    ReifiedArtifact badVer = result.artifactGraph.values()
+                                                 .stream()
+                                                 .filter(r -> r.id.name.equals("badver"))
+                                                 .findFirst()
+                                                 .orElseThrow();
+    assertEquals(badVer.nonSemanticVersion, "1.0");
+  }
+
+  @Test
+  public void transitiveAndDirectExclusions() {
+    // Override to add exclusions but notice that the exclusions are brought back in because the intermediate pulls leaf1 transitively back in through multipleVersions.
+    // The only exclusion that survives is through intermediate's exclusion of leaf2_2 in the main project build file
+    goodGraph = new DependencyGraph(project);
+    goodGraph.addEdge(new Dependency(project.id), new Dependency(multipleVersions.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.Licenses.get("ApacheV1_0")));
+    goodGraph.addEdge(new Dependency(project.id), new Dependency(intermediate.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", License.Licenses.get("ApacheV2_0")));
+    goodGraph.addEdge(new Dependency(project.id), new Dependency(multipleVersionsDifferentDeps.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.Licenses.get("ApacheV2_0")));
+    goodGraph.addEdge(new Dependency(intermediate.id), new Dependency(multipleVersions.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "compile", License.Licenses.get("ApacheV2_0")));
+    goodGraph.addEdge(new Dependency(intermediate.id), new Dependency(multipleVersionsDifferentDeps.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "runtime", License.Licenses.get("ApacheV2_0")));
+    goodGraph.addEdge(new Dependency(multipleVersions.id), new Dependency(leaf1.id), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", License.Licenses.get("GPLV2_0")));
+    goodGraph.addEdge(new Dependency(multipleVersions.id), new Dependency(integrationBuild.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("2.1.1-{integration}"), "compile", License.Licenses.get("ApacheV2_0")));
+    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(leaf2.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", License.Licenses.get("LGPLV2_1")));
+    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(leaf1_1.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License("Commercial", "Commercial license")));
+    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(leaf1_1.id), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", new License("Commercial", "Commercial license")));
+    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(leaf3_3.id), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "runtime", License.Licenses.get("ApacheV2_0")));
+    // Excluded
+    //  * goodGraph.addEdge(new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new Dependency(leaf1.id, leaf1.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.Licenses.get("GPLV2_0")));
+    //  * goodGraph.addEdge(new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new Dependency(integrationBuild.id, integrationBuild.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("2.1.1-{integration}"), "compile", License.Licenses.get("ApacheV2_0")));
+    //  * goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new Dependency(leaf2_2.id, leaf2_2.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", new License("OtherNonDistributableOpenSource", "Open source")));
+
+    dependencies = new Dependencies(
+        new DependencyGroup("compile", true,
+            new Artifact(multipleVersions.id, new Version("1.0.0"), Collections.singletonList(leaf1.id)),
+            new Artifact(multipleVersionsDifferentDeps.id, new Version("1.0.0"))
+        ),
+        new DependencyGroup("runtime", true,
+            new Artifact(intermediate.id, new Version("1.0.0"), Arrays.asList(integrationBuild.id, leaf2_2.id))
+        )
+    );
+
+    var result = buildAndResolve();
+    assertEquals(result.dependencyGraph, goodGraph);
+  }
+
+  @Test
+  public void wildcardExclusions() {
+    // Override to add exclusions but notice that the exclusions are brought back in because the intermediate pulls leaf1 transitively back in through multipleVersions.
+    // The only exclusion that survives is through intermediate's exclusion of leaf2_2 in the main project build file
+    goodGraph = new DependencyGraph(project);
+    goodGraph.addEdge(new Dependency(project.id), new Dependency(multipleVersions.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.Licenses.get("ApacheV1_0")));
+    goodGraph.addEdge(new Dependency(project.id), new Dependency(intermediate.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", License.Licenses.get("ApacheV2_0")));
+    goodGraph.addEdge(new Dependency(project.id), new Dependency(multipleVersionsDifferentDeps.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.Licenses.get("ApacheV2_0")));
+    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(leaf2.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "runtime", License.Licenses.get("LGPLV2_1")));
+    goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id), new Dependency(leaf1_1.id), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", new License("Commercial", "Commercial license")));
+    // Excluded
+    //  * goodGraph.addEdge(new Dependency(intermediate.id, intermediate.nonSemanticVersion), new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "compile", License.Licenses.get("ApacheV2_0")));
+    //  * goodGraph.addEdge(new Dependency(intermediate.id, intermediate.nonSemanticVersion), new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.1.0"), "runtime", License.Licenses.get("ApacheV2_0")));
+    //  * goodGraph.addEdge(new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new Dependency(leaf1.id, leaf1.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", License.Licenses.get("GPLV2_0")));
+    //  * goodGraph.addEdge(new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new Dependency(leaf1.id, leaf1.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("1.0.0"), "compile", License.Licenses.get("GPLV2_0")));
+    //  * goodGraph.addEdge(new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new Dependency(integrationBuild.id, integrationBuild.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("2.1.1-{integration}"), "compile", License.Licenses.get("ApacheV2_0")));
+    //  * goodGraph.addEdge(new Dependency(multipleVersions.id, multipleVersions.nonSemanticVersion), new Dependency(integrationBuild.id, integrationBuild.nonSemanticVersion), new DependencyEdgeValue(new Version("1.0.0"), new Version("2.1.1-{integration}"), "compile", License.Licenses.get("ApacheV2_0")));
+    //  * goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new Dependency(leaf2_2.id, leaf2_2.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", new License("OtherNonDistributableOpenSource", "Open source")));
+    //  * goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new Dependency(leaf1_1.id, leaf1_1.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "compile", new License("Commercial", "Commercial license")));
+    //  * goodGraph.addEdge(new Dependency(multipleVersionsDifferentDeps.id, multipleVersionsDifferentDeps.nonSemanticVersion), new Dependency(leaf3_3.id, leaf3_3.nonSemanticVersion), new DependencyEdgeValue(new Version("1.1.0"), new Version("1.0.0"), "runtime", License.Licenses.get("ApacheV2_0")));
+
+    dependencies = new Dependencies(
+        new DependencyGroup("compile", true,
+            new Artifact(multipleVersions.id, new Version("1.0.0"), Collections.singletonList(new ArtifactID("*:*:*:*"))),
+            new Artifact(multipleVersionsDifferentDeps.id, new Version("1.0.0"))
+        ),
+        new DependencyGroup("runtime", true,
+            new Artifact(intermediate.id, new Version("1.0.0"), Collections.singletonList(new ArtifactID("*:*:*:*")))
+        )
+    );
+
+    DependencyGraph actual = service.buildGraph(project, dependencies, workflow);
+    assertEquals(actual, goodGraph);
+  }
+
+  private ResolveResult buildAndResolve() {
+    var graph = service.buildGraph(project, dependencies, workflow);
+    var reduced = service.reduce(graph);
+    var rules = new TraversalRules().with("compile", new GroupTraversalRule(true, true));
+    var resolved = service.resolve(reduced, workflow, rules);
+    return new ResolveResult(graph, reduced, resolved);
+  }
+
   private Dependencies makeSimpleDependencies(String dependency) {
     return new Dependencies(
         new DependencyGroup("compile", true,
@@ -1280,5 +1280,9 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     Set<ResolvedArtifact> artifacts = actual.values();
     artifacts.remove(projectResolved);
     artifacts.forEach((artifact) -> assertTrue(Files.isRegularFile(artifact.file)));
+  }
+
+  record ResolveResult(DependencyGraph dependencyGraph, ArtifactGraph artifactGraph,
+                       ResolvedArtifactGraph resolvedArtifactGraph) {
   }
 }

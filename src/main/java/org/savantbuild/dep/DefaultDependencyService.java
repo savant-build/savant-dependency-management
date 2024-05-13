@@ -267,7 +267,7 @@ public class DefaultDependencyService implements DependencyService {
                                                       .getValue();
 
     // Build the artifact for this node, save it in the Map and put it in the ArtifactGraph
-    ReifiedArtifact destinationArtifact = new ReifiedArtifact(destination.id, max, edgeValue.licenses);
+    ReifiedArtifact destinationArtifact = new ReifiedArtifact(destination.id, max, edgeValue.dependencyNonSemanticVersion, edgeValue.licenses);
     artifacts.put(destination.id, destinationArtifact);
 
     significantInbound.forEach((edge) -> {
@@ -309,7 +309,7 @@ public class DefaultDependencyService implements DependencyService {
         ArtifactMetaData amd = workflow.fetchMetaData(dependency);
 
         // Create an edge using nodes so that we can be explicit
-        DependencyEdgeValue edge = new DependencyEdgeValue(origin.version, dependency.version, type, amd.licenses);
+        DependencyEdgeValue edge = new DependencyEdgeValue(origin.version, origin.nonSemanticVersion, dependency.version, dependency.nonSemanticVersion, type, amd.licenses);
         graph.addEdge(new Dependency(origin.id), new Dependency(dependency.id), edge);
         if (dependency.skipCompatibilityCheck) {
           output.debugln("SKIPPING COMPATIBILITY CHECK for [%s]", dependency.id);
