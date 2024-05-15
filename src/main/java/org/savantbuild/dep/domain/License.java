@@ -170,9 +170,14 @@ public final class License {
 
   @Override
   public boolean equals(Object o) {
-    if (this == o) return true;
-    if (!(o instanceof License)) return false;
-    final License license = (License) o;
+    if (this == o) {
+      return true;
+    }
+
+    if (!(o instanceof final License license)) {
+      return false;
+    }
+
     return Objects.equals(identifier, license.identifier) && Objects.equals(exception, license.exception) &&
         Objects.equals(customText, license.customText) && Objects.equals(text, license.text);
   }
@@ -187,34 +192,34 @@ public final class License {
   }
 
   @JsonIgnoreProperties(ignoreUnknown = true)
-  private static class LicenseExceptionText {
+  private static class LicenseExceptionTextJSON {
     public String licenseExceptionText;
   }
 
   @JsonIgnoreProperties(ignoreUnknown = true)
-  private static class LicenseExceptions {
+  private static class LicenseExceptionsJSON {
     public List<LicenseTextException> exceptions = new ArrayList<>();
   }
 
   @JsonIgnoreProperties(ignoreUnknown = true)
-  private static class LicenseText {
+  private static class LicenseTextJSON {
     public String licenseText;
   }
 
   @JsonIgnoreProperties(ignoreUnknown = true)
-  private static class Licenses {
+  private static class LicensesJSON {
     public List<License> licenses = new ArrayList<>();
   }
 
   static {
     try (InputStream is = License.class.getResourceAsStream("/licenses.json")) {
       ObjectMapper objectMapper = new ObjectMapper();
-      Licenses licenses = objectMapper.readerFor(Licenses.class).readValue(is);
+      LicensesJSON licenses = objectMapper.readerFor(LicensesJSON.class).readValue(is);
       for (License license : licenses.licenses) {
         Licenses.put(license.identifier, license);
 
         try (InputStream ltis = License.class.getResourceAsStream("/license-details/" + license.identifier + ".json")) {
-          LicenseText text = objectMapper.readerFor(LicenseText.class).readValue(ltis);
+          LicenseTextJSON text = objectMapper.readerFor(LicenseTextJSON.class).readValue(ltis);
           license.text = text.licenseText;
         } catch (Exception e) {
           throw new IllegalStateException(e);
@@ -226,12 +231,12 @@ public final class License {
 
     try (InputStream is = License.class.getResourceAsStream("/exceptions.json")) {
       ObjectMapper objectMapper = new ObjectMapper();
-      LicenseExceptions exceptions = objectMapper.readerFor(LicenseExceptions.class).readValue(is);
+      LicenseExceptionsJSON exceptions = objectMapper.readerFor(LicenseExceptionsJSON.class).readValue(is);
       for (LicenseTextException le : exceptions.exceptions) {
         Exceptions.put(le.identifier, le);
 
         try (InputStream ltis = License.class.getResourceAsStream("/license-exceptions/" + le.identifier + ".json")) {
-          LicenseExceptionText text = objectMapper.readerFor(LicenseExceptionText.class).readValue(ltis);
+          LicenseExceptionTextJSON text = objectMapper.readerFor(LicenseExceptionTextJSON.class).readValue(ltis);
           le.text = text.licenseExceptionText;
         } catch (Exception e) {
           throw new IllegalStateException(e);
