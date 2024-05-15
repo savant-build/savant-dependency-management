@@ -76,25 +76,25 @@ public class ArtifactTools {
       return version; // Always favor a mapping
     }
 
-    String pomVersion = spec.version;
+    String originalVersion = spec.version;
     try {
-      return new Version(pomVersion);
+      return new Version(originalVersion);
     } catch (VersionException e) {
       // If the version is janky (i.e. it contains random characters), throw an exception
-      if (pomVersion.chars().anyMatch(ch -> !Character.isDigit(ch) && ch != '.')) {
+      if (originalVersion.chars().anyMatch(ch -> !Character.isDigit(ch) && ch != '.')) {
         throw new VersionException(String.format(VersionError, spec.mavenSpec));
       }
 
       // Otherwise, try again by "fixing" the Maven version
-      int dots = (int) pomVersion.chars().filter(ch -> ch == '.').count();
+      int dots = (int) originalVersion.chars().filter(ch -> ch == '.').count();
       if (dots == 0) {
-        pomVersion += ".0.0";
+        originalVersion += ".0.0";
       } else if (dots == 1) {
-        pomVersion += ".0";
+        originalVersion += ".0";
       }
 
       try {
-        return new Version(pomVersion);
+        return new Version(originalVersion);
       } catch (VersionException e2) {
         throw new VersionException(String.format(VersionError, spec.mavenSpec));
       }
