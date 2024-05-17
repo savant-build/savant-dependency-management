@@ -6,11 +6,11 @@
   "licenseId": "SWL",
   "crossRef": [
     {
-      "match": "true",
+      "match": "false",
       "url": "https://fedoraproject.org/wiki/Licensing/SWL",
       "isValid": true,
       "isLive": true,
-      "timestamp": "2022-08-12T00:22:48Z",
+      "timestamp": "2024-05-16T01:25:09Z",
       "isWayBackLink": false,
       "order": 0
     }
