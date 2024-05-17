@@ -104,9 +104,10 @@ public final class License {
     this.text = other.text;
   }
 
-  public License(License other, LicenseTextException exception) {
+  public License(License other, LicenseTextException exception, String text) {
     this(other);
     this.exception = exception;
+    this.text = text;
   }
 
   /**
@@ -134,8 +135,8 @@ public final class License {
   }
 
   /**
-   * Parses a Savant SPDX identifier to determine the type of license. Savant supports additional license types and flexible
-   * license text.
+   * Parses a Savant SPDX identifier to determine the type of license. Savant supports additional license types and
+   * flexible license text.
    *
    * @param identifier The Savant SPDX id.
    * @param text       (Optional) The license text.
@@ -143,11 +144,12 @@ public final class License {
    * @throws LicenseException If the identifier was invalid.
    */
   public static License parse(String identifier, String text) throws LicenseException {
-    if (text != null) {
+    boolean isCustom = CustomLicenses.contains(identifier);
+    if (isCustom && text != null) {
       return new License(identifier, text);
     }
 
-    if (CustomLicenses.contains(identifier)) {
+    if (isCustom) {
       throw new LicenseException(identifier);
     }
 
@@ -165,7 +167,11 @@ public final class License {
       }
     }
 
-    return exception != null ? new License(license, exception) : license;
+    if (exception == null && (text == null || text.isBlank())) {
+      return license;
+    }
+
+    return new License(license, exception, text);
   }
 
   @Override
@@ -263,7 +269,7 @@ public final class License {
     Licenses.put("EclipseV1_0", Licenses.get("EPL-1.0"));
     Licenses.put("GPLV1_0", Licenses.get("GPL-1.0-only"));
     Licenses.put("GPLV2_0", Licenses.get("GPL-2.0-only"));
-    Licenses.put("GPLV2_0_CE", new License(Licenses.get("GPL-2.0-only"), Exceptions.get("classpath-exception-2.0")));
+    Licenses.put("GPLV2_0_CE", new License(Licenses.get("GPL-2.0-only"), Exceptions.get("classpath-exception-2.0"), null));
     Licenses.put("GPLV3_0", Licenses.get("GPL-3.0-only"));
     Licenses.put("LGPLV2_1", Licenses.get("LGPL-2.1-only"));
     Licenses.put("LGPLV3_0", Licenses.get("LGPL-3.0-only"));

@@ -18,6 +18,7 @@ package org.savantbuild.dep.domain;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertSame;
 import static org.testng.Assert.fail;
 
@@ -34,6 +35,8 @@ public class LicenseTest {
     assertSame(License.parse("ApacheV1_0", null), License.parse("Apache-1.0", null));
     assertEquals(License.parse("Commercial", "Text").text, "Text");
     assertEquals(License.parse("BSD-2-Clause", "Text").text, "Text");
+    assertEquals(License.parse("GPL-2.0 WITH Classpath-exception-2.0", null).exception.identifier, "Classpath-exception-2.0");
+    assertEquals(License.parse("GPL-2.0 WITH Classpath-exception-2.0", "Text").text, "Text");
 
     try {
       License.parse("bad", null);
@@ -55,5 +58,16 @@ public class LicenseTest {
     } catch (Exception e) {
       // Expected
     }
+  }
+
+  @Test
+  public void equality() {
+    assertEquals(License.parse("GPL-2.0", null), License.parse("GPL-2.0", "Custom")); // Custom text doesn't matter for SPDX
+    assertNotEquals(License.parse("GPL-2.0", null), License.parse("GPL-3.0", null));
+    assertEquals(License.parse("GPL-2.0 WITH Classpath-exception-2.0", null), License.parse("GPL-2.0 WITH Classpath-exception-2.0", null));
+    assertEquals(License.parse("GPL-2.0 WITH Classpath-exception-2.0", null), License.parse("GPL-2.0 WITH Classpath-exception-2.0", "Custom"));
+    assertNotEquals(License.parse("GPL-2.0 WITH Classpath-exception-2.0", null), License.parse("GPL-3.0 WITH Classpath-exception-2.0", null));
+    assertEquals(License.parse("Other", "Custom"), License.parse("Other", "Custom"));
+    assertNotEquals(License.parse("Other", "Custom"), License.parse("Other", "Custom 1"));
   }
 }
