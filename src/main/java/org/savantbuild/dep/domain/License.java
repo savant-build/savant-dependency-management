@@ -82,7 +82,7 @@ public final class License {
    */
   public License(String identifier, String text) {
     boolean badId = !CustomLicenses.contains(identifier) && !Licenses.containsKey(identifier);
-    if (text == null || text.trim().isEmpty() || badId) {
+    if (text == null || text.isBlank() || badId) {
       throw new LicenseException(identifier);
     }
 
@@ -178,8 +178,13 @@ public final class License {
       return false;
     }
 
-    return Objects.equals(identifier, license.identifier) && Objects.equals(exception, license.exception) &&
-        Objects.equals(customText, license.customText) && Objects.equals(text, license.text);
+    // If the license is SPDX, then all that matters is the id and the exception
+    if (Licenses.containsKey(identifier)) {
+      return Objects.equals(identifier, license.identifier) && Objects.equals(exception, license.exception);
+    }
+
+    // Otherwise, the text is the main component if everything else is the same
+    return Objects.equals(identifier, license.identifier) && Objects.equals(exception, license.exception) && Objects.equals(text, license.text);
   }
 
   @Override
