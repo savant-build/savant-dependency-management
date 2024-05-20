@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Inversoft Inc., All Rights Reserved
+ * Copyright (c) 2014-2024, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.savantbuild.dep.ArtifactTools;
 import org.savantbuild.dep.BaseUnitTest;
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.ArtifactID;
@@ -47,9 +48,10 @@ public class ArtifactToolsTest extends BaseUnitTest {
   public void parse() throws Exception {
     Map<String, Version> mappings = new HashMap<>();
     mappings.put("org.example.test:badver:1.0.0.Final", new Version("1.0.0"));
+    mappings.put("org.example.test:short-badver:1.0", new Version("1.0.0"));
 
     ArtifactMetaData amd = ArtifactTools.parseArtifactMetaData(projectDir.resolve("src/test/resources/amd.xml"), mappings);
-    assertEquals(amd.licenses, Arrays.asList(License.Licenses.get("ApacheV2_0"), new License("BSD_2_Clause", "Override the BSD license.")));
+    assertEquals(amd.licenses, Arrays.asList(License.Licenses.get("ApacheV2_0"), License.parse("BSD_2_Clause", "Override the BSD license.")));
     assertEquals(amd.dependencies.groups.size(), 2);
     assertEquals(amd.dependencies.groups.get("runtime").dependencies.size(), 2);
     assertEquals(amd.dependencies.groups.get("runtime").name, "runtime");
@@ -70,7 +72,7 @@ public class ArtifactToolsTest extends BaseUnitTest {
         new ArtifactID("org.example", "exclude-3", "exclude-4", "zip")
     ));
 
-    assertEquals(amd.dependencies.groups.get("compile").dependencies.size(), 3);
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.size(), 4);
     assertEquals(amd.dependencies.groups.get("compile").name, "compile");
     assertEquals(amd.dependencies.groups.get("compile").dependencies.get(0).id.group, "org.example.test");
     assertEquals(amd.dependencies.groups.get("compile").dependencies.get(0).id.project, "test-project3");
@@ -90,6 +92,13 @@ public class ArtifactToolsTest extends BaseUnitTest {
     assertEquals(amd.dependencies.groups.get("compile").dependencies.get(2).version, new Version("1.0.0"));
     assertEquals(amd.dependencies.groups.get("compile").dependencies.get(2).nonSemanticVersion, "1.0.0.Final");
     assertEquals(amd.dependencies.groups.get("compile").dependencies.get(2).id.type, "jar");
+
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(3).id.group, "org.example.test");
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(3).id.project, "short-badver");
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(3).id.name, "short-badver");
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(3).version, new Version("1.0.0"));
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(3).nonSemanticVersion, "1.0");
+    assertEquals(amd.dependencies.groups.get("compile").dependencies.get(3).id.type, "jar");
   }
 
   /**
@@ -133,7 +142,7 @@ public class ArtifactToolsTest extends BaseUnitTest {
     deps.groups.put("compile-optional", compileOptional);
     deps.groups.put("test", test);
 
-    ArtifactMetaData amd = new ArtifactMetaData(deps, License.Licenses.get("ApacheV2_0"), License.Licenses.get("BSD_2_Clause"), new License("BSD-1-Clause", "Override the license."));
+    ArtifactMetaData amd = new ArtifactMetaData(deps, License.Licenses.get("ApacheV2_0"), License.Licenses.get("BSD_2_Clause"), License.parse("BSD-1-Clause", "Override the license."));
     Path tmp = ArtifactTools.generateXML(amd);
     assertNotNull(tmp);
     assertTrue(Files.isRegularFile(tmp));

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Inversoft Inc., All Rights Reserved
+ * Copyright (c) 2014-2024, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,10 +32,10 @@ import static org.testng.Assert.assertEquals;
 public class DependencyGraphTest extends BaseUnitTest {
   @Test
   public void equals() {
-    ReifiedArtifact one = new ReifiedArtifact("group:project:artifact1:1.0:jar", License.Licenses.get("ApacheV2_0"));
-    ReifiedArtifact two = new ReifiedArtifact("group:project:artifact2:1.0:jar", new License());
-    ReifiedArtifact three = new ReifiedArtifact("group:project:artifact3:1.0:jar", new License());
-    ReifiedArtifact four = new ReifiedArtifact("group:project:artifact4:1.0:jar", new License());
+    ReifiedArtifact one = new ReifiedArtifact("group:project:artifact1:1.0.0:jar", License.Licenses.get("ApacheV2_0"));
+    ReifiedArtifact two = new ReifiedArtifact("group:project:artifact2:1.0.0:jar", new License());
+    ReifiedArtifact three = new ReifiedArtifact("group:project:artifact3:1.0.0:jar", new License());
+    ReifiedArtifact four = new ReifiedArtifact("group:project:artifact4:1.0.0:jar", new License());
 
     DependencyGraph graph = new DependencyGraph(one);
     graph.addEdge(new Dependency(one.id), new Dependency(two.id), new DependencyEdgeValue(one.version, two.version, "compile", new License()));
@@ -54,11 +54,11 @@ public class DependencyGraphTest extends BaseUnitTest {
 
   @Test
   public void versionCorrectTraversal() {
-    ReifiedArtifact root = new ReifiedArtifact("group:project:root:1.0:jar", new License());
-    ReifiedArtifact one = new ReifiedArtifact("group:project:artifact1:1.0:jar", new License());
-    ReifiedArtifact two = new ReifiedArtifact("group:project:artifact1:1.1:jar", new License());
-    ReifiedArtifact three = new ReifiedArtifact("group:project:artifact3:1.0:jar", new License());
-    ReifiedArtifact four = new ReifiedArtifact("group:project:artifact4:1.0:jar", new License());
+    ReifiedArtifact root = new ReifiedArtifact("group:project:root:1.0.0:jar", new License());
+    ReifiedArtifact one = new ReifiedArtifact("group:project:artifact1:1.0.0:jar", new License());
+    ReifiedArtifact two = new ReifiedArtifact("group:project:artifact1:1.1.0:jar", new License());
+    ReifiedArtifact three = new ReifiedArtifact("group:project:artifact3:1.0.0:jar", new License());
+    ReifiedArtifact four = new ReifiedArtifact("group:project:artifact4:1.0.0:jar", new License());
 
     DependencyGraph graph = new DependencyGraph(root);
     graph.addEdge(new Dependency(root.id), new Dependency(one.id), new DependencyEdgeValue(root.version, one.version, "compile", new License()));

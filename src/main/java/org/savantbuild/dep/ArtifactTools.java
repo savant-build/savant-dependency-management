@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Inversoft Inc., All Rights Reserved
+ * Copyright (c) 2024, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
  * either express or implied. See the License for the specific
  * language governing permissions and limitations under the License.
  */
-package org.savantbuild.dep.xml;
+package org.savantbuild.dep;
 
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
@@ -30,10 +30,10 @@ import java.util.Map;
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.ArtifactID;
 import org.savantbuild.dep.domain.ArtifactMetaData;
+import org.savantbuild.dep.domain.ArtifactSpec;
 import org.savantbuild.dep.domain.Dependencies;
 import org.savantbuild.dep.domain.DependencyGroup;
 import org.savantbuild.dep.domain.License;
-import org.savantbuild.dep.maven.MavenTools;
 import org.savantbuild.domain.Version;
 import org.savantbuild.domain.VersionException;
 import org.xml.sax.Attributes;
@@ -46,6 +46,61 @@ import org.xml.sax.helpers.DefaultHandler;
  * @author Brian Pontarelli
  */
 public class ArtifactTools {
+  /**
+   * Maven version error.
+   */
+  public static final String VersionError = """
+      Invalid Version in the dependency graph from a Maven dependency [%s]. You must specify a semantic version mapping for Savant to properly handle Maven dependencies. This goes at the top-level of the build file and looks like this:
+
+      project(...) {
+        workflow {
+          semanticVersions {
+            mapping(id: "org.badver:badver:1.0.0.Final", version: "1.0.0")
+          }
+        }
+      }""";
+
+  /**
+   * Determines the semantic version of an artifact based on the original version from the specification, which might be
+   * a Maven version.
+   *
+   * @param spec     The specification.
+   * @param mappings The version mappings from non-semantic to semantic.
+   * @return The version and never null.
+   * @throws VersionException If the version is non-semantic and there is no mapping.
+   */
+  public static Version determineSemanticVersion(ArtifactSpec spec, Map<String, Version> mappings)
+      throws VersionException {
+    Version version = mappings.get(spec.mavenSpec);
+    if (version != null) {
+      return version; // Always favor a mapping
+    }
+
+    String originalVersion = spec.version;
+    try {
+      return new Version(originalVersion);
+    } catch (VersionException e) {
+      // If the version is janky (i.e. it contains random characters), throw an exception
+      if (originalVersion.chars().anyMatch(ch -> !Character.isDigit(ch) && ch != '.')) {
+        throw new VersionException(String.format(VersionError, spec.mavenSpec));
+      }
+
+      // Otherwise, try again by "fixing" the Maven version
+      int dots = (int) originalVersion.chars().filter(ch -> ch == '.').count();
+      if (dots == 0) {
+        originalVersion += ".0.0";
+      } else if (dots == 1) {
+        originalVersion += ".0";
+      }
+
+      try {
+        return new Version(originalVersion);
+      } catch (VersionException e2) {
+        throw new VersionException(String.format(VersionError, spec.mavenSpec));
+      }
+    }
+  }
+
   /**
    * Generates a temporary file that contains ArtifactMetaData XML which includes all the artifacts in the
    * ArtifactMetaData given.
@@ -86,7 +141,7 @@ public class ArtifactTools {
             String version = dependency.nonSemanticVersion != null ? dependency.nonSemanticVersion : dependency.version.toString();
             print(pw, "      <dependency group=\"%s\" project=\"%s\" name=\"%s\" version=\"%s\" type=\"%s\">\n", id.group, id.project, id.name, version, id.type);
 
-            if (dependency.exclusions.size() > 0) {
+            if (!dependency.exclusions.isEmpty()) {
               for (ArtifactID exclusion : dependency.exclusions) {
                 print(pw, "        <exclusion group=\"%s\" project=\"%s\" name=\"%s\" type=\"%s\"/>\n", exclusion.group, exclusion.project, exclusion.name, exclusion.type);
               }
@@ -118,7 +173,8 @@ public class ArtifactTools {
    * @throws ParserConfigurationException If the parser configuration in the JDK is invalid.
    * @throws IOException If the parse operation failed because of an IO error.
    */
-  public static ArtifactMetaData parseArtifactMetaData(Path file, Map<String, Version> mappings) throws SAXException, VersionException, ParserConfigurationException, IOException {
+  public static ArtifactMetaData parseArtifactMetaData(Path file, Map<String, Version> mappings)
+      throws SAXException, VersionException, ParserConfigurationException, IOException {
     SAXParser parser = SAXParserFactory.newInstance().newSAXParser();
     ArtifactMetaDataHandler handler = new ArtifactMetaDataHandler(mappings);
     parser.parse(file.toFile(), handler);
@@ -142,13 +198,13 @@ public class ArtifactTools {
 
     public Dependencies dependencies;
 
+    public DependencyGroup dependencyGroup;
+
     public ArtifactID dependencyId;
 
     public String dependencyNonSemanticVersion;
 
     public Version dependencyVersion;
-
-    public DependencyGroup group;
 
     public String licenseId;
 
@@ -183,7 +239,7 @@ public class ArtifactTools {
         licenseId = null;
         licenseText = null;
       } else if (qName.equals("dependency")) {
-        group.dependencies.add(new Artifact(dependencyId, dependencyVersion, dependencyNonSemanticVersion, exclusions));
+        dependencyGroup.dependencies.add(new Artifact(dependencyId, dependencyVersion, dependencyNonSemanticVersion, exclusions));
         dependencyId = null;
         dependencyVersion = null;
         exclusions.clear();
@@ -192,27 +248,28 @@ public class ArtifactTools {
 
     @Override
     public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
+      String name, group, project, type, version;
       switch (qName) {
         case "dependencies":
           dependencies = new Dependencies();
           break;
         case "dependency-group":
-          String name = attributes.getValue("name");
+          name = attributes.getValue("name");
           if (name == null) {
             throw new SAXException("Invalid AMD file. The dependency-group elements must specify a [name] attribute");
           }
 
-          group = new DependencyGroup(name, true);
-          dependencies.groups.put(name, group);
+          dependencyGroup = new DependencyGroup(name, true);
+          dependencies.groups.put(name, dependencyGroup);
 
           break;
         case "dependency":
-          String group = attributes.getValue("group");
+          group = attributes.getValue("group");
           if (group == null) {
             throw new SAXException("Invalid AMD file. The dependency elements must specify a [group] attribute");
           }
 
-          String project = attributes.getValue("project");
+          project = attributes.getValue("project");
           if (project == null) {
             throw new SAXException("Invalid AMD file. The dependency elements must specify a [project] attribute");
           }
@@ -222,17 +279,17 @@ public class ArtifactTools {
             throw new SAXException("Invalid AMD file. The dependency elements must specify a [name] attribute");
           }
 
-          String type = attributes.getValue("type");
+          type = attributes.getValue("type");
           if (type == null) {
             throw new SAXException("Invalid AMD file. The dependency elements must specify a [type] attribute");
           }
 
-          String version = attributes.getValue("version");
+          version = attributes.getValue("version");
           if (version == null) {
             throw new SAXException("Invalid AMD file. The dependency elements must specify a [version] attribute");
           }
 
-          if (this.group == null) {
+          if (this.dependencyGroup == null) {
             throw new SAXException("Invalid AMD file. A dependency doesn't appear to be inside a dependency-group element");
           }
 
@@ -243,15 +300,8 @@ public class ArtifactTools {
           } catch (VersionException e) {
             dependencyNonSemanticVersion = version;
 
-            String spec = group + ":" + project + ":" + name + ":" + version;
-            dependencyVersion = mappings.get(spec);
-            if (dependencyVersion == null) {
-              spec = group + ":" + project + ":" + version;
-              dependencyVersion = mappings.get(spec);
-            }
-            if (dependencyVersion == null) {
-              throw new VersionException(String.format(MavenTools.VersionError, spec));
-            }
+            ArtifactSpec spec = new ArtifactSpec(group + ":" + project + ":" + name + ":" + version + ":" + type);
+            dependencyVersion = ArtifactTools.determineSemanticVersion(spec, mappings);
           }
 
           break;

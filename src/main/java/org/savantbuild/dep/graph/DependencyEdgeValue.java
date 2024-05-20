@@ -15,9 +15,7 @@
  */
 package org.savantbuild.dep.graph;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -30,7 +28,11 @@ import org.savantbuild.domain.Version;
  * @author Brian Pontarelli
  */
 public class DependencyEdgeValue {
+  public final String dependencyNonSemanticVersion;
+
   public final Version dependencyVersion;
+
+  public final String dependentNonSemanticVersion;
 
   public final Version dependentVersion;
 
@@ -39,18 +41,21 @@ public class DependencyEdgeValue {
   public final String type;
 
   public DependencyEdgeValue(Version dependentVersion, Version dependencyVersion, String type, License... licenses) {
-    this(dependentVersion, dependencyVersion, type, Arrays.asList(licenses));
+    this(dependentVersion, null, dependencyVersion, null, type, Arrays.asList(licenses));
   }
 
-  public DependencyEdgeValue(Version dependentVersion, Version dependencyVersion, String type, List<License> licenses) {
+  public DependencyEdgeValue(Version dependentVersion, String dependentNonSemanticVersion, Version dependencyVersion,
+                             String dependencyNonSemanticVersion, String type, List<License> licenses) {
     Objects.requireNonNull(dependentVersion, "DependencyEdgeValue requires a dependentVersion");
     Objects.requireNonNull(dependencyVersion, "DependencyEdgeValue requires a dependencyVersion");
     Objects.requireNonNull(type, "DependencyEdgeValue requires a type");
     Objects.requireNonNull(licenses, "DependencyEdgeValue requires a license");
     this.dependentVersion = dependentVersion;
+    this.dependentNonSemanticVersion = dependentNonSemanticVersion;
     this.dependencyVersion = dependencyVersion;
+    this.dependencyNonSemanticVersion = dependencyNonSemanticVersion;
     this.type = type;
-    this.licenses = Collections.unmodifiableList(new ArrayList<>(licenses));
+    this.licenses = List.copyOf(licenses);
   }
 
   @Override

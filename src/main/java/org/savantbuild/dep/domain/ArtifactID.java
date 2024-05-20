@@ -20,7 +20,7 @@ import java.util.Objects;
 import static java.util.Arrays.stream;
 
 /**
- * This class is contains the properties that define an artifacts identity. Any two artifacts whose identity match are
+ * This class contains the properties that define an artifacts identity. Any two artifacts whose identity match are
  * considered the same artifact. All other properties associated with the artifact usually determine the artifacts
  * variant (such as version).
  *

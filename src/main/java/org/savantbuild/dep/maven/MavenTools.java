@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Inversoft Inc., All Rights Reserved
+ * Copyright (c) 2022-2024, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,19 +31,18 @@ import java.util.Map;
 import org.savantbuild.dep.LicenseException;
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.ArtifactID;
+import org.savantbuild.dep.domain.ArtifactSpec;
 import org.savantbuild.dep.domain.Dependencies;
 import org.savantbuild.dep.domain.DependencyGroup;
 import org.savantbuild.dep.domain.License;
 import org.savantbuild.dep.domain.ReifiedArtifact;
+import org.savantbuild.dep.ArtifactTools;
 import org.savantbuild.domain.Version;
-import org.savantbuild.domain.VersionException;
 import org.savantbuild.output.Output;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Maven helpers for things like parsing POMs.
@@ -51,19 +50,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
  * @author Brian Pontarelli
  */
 public class MavenTools {
-  /**
-   * Maven version error.
-   */
-  public static final String VersionError = "Invalid Version in the dependency graph from a Maven dependency [%s]. You must " +
-      "specify a semantic version mapping for Savant to properly handle Maven dependencies. This goes at the top-level of the build file and looks like this:\n\n" +
-      "project(...) {\n" +
-      "  workflow {\n" +
-      "    semanticVersions {\n" +
-      "      mapping(id: \"org.badver:badver:1.0.0.Final\", version: \"1.0.0\")\n" +
-      "    }\n" +
-      "  }\n" +
-      "}";
-
   /**
    * Parses a POM XML file.
    *
@@ -176,7 +162,8 @@ public class MavenTools {
   }
 
   public static Artifact toArtifact(POM pom, String type, Map<String, Version> mappings) {
-    Version version = determineVersion(pom, mappings);
+    ArtifactSpec spec = new ArtifactSpec(pom.toSpecification());
+    Version version = ArtifactTools.determineSemanticVersion(spec, mappings);
     ArtifactID id = new ArtifactID(pom.group, pom.id, pom.id, type);
     return new Artifact(id, version, pom.version, null);
   }
@@ -201,13 +188,14 @@ public class MavenTools {
       }
 
       List<ArtifactID> exclusions = new ArrayList<>();
-      if (dep.exclusions.size() > 0) {
+      if (!dep.exclusions.isEmpty()) {
         for (MavenExclusion exclusion : dep.exclusions) {
           exclusions.add(new ArtifactID(exclusion.group, exclusion.id, exclusion.id, "*"));
         }
       }
 
-      Version mapping = determineVersion(dep, mappings);
+      ArtifactSpec spec = new ArtifactSpec(dep.toSpecification());
+      Version mapping = ArtifactTools.determineSemanticVersion(spec, mappings);
       ArtifactID id = new ArtifactID(dep.group, dep.id, dep.getArtifactName(), (dep.type == null ? "jar" : dep.type));
       dep.savantArtifact = new ReifiedArtifact(id, mapping, dep.version, exclusions, Collections.emptyList());
       savantDependencyGroup.dependencies.add(dep.savantArtifact);
@@ -231,9 +219,7 @@ public class MavenTools {
         }
       }
 
-      if (savantLicense != null) {
-        licenses.add(savantLicense);
-      }
+      licenses.add(savantLicense);
     }
 
     return licenses;
@@ -246,22 +232,6 @@ public class MavenTools {
     }
 
     return null;
-  }
-
-  private static Version determineVersion(POM pom, Map<String, Version> mappings) {
-    Version version;
-    try {
-      version = new Version(pom.version);
-    } catch (VersionException e) {
-      // Look up the mapping
-      String key = pom.toSpecification();
-      version = mappings.get(key);
-      if (version == null) {
-        throw new VersionException(String.format(VersionError, key));
-      }
-    }
-
-    return version;
   }
 
   private static Element firstChild(Element root, String childName) {
@@ -314,10 +284,10 @@ public class MavenTools {
 
   private static void removeInvalidCharactersInPom(Path file, Output output) {
     try {
-      String pomString = new String(Files.readAllBytes(file), UTF_8);
+      String pomString = Files.readString(file);
       if (pomString.contains("&oslash;")) {
         output.warning("Found and replaced [&oslash;] with [O] to keep the parser from exploding.");
-        Files.write(file, pomString.replace("&oslash;", "O").getBytes(UTF_8), StandardOpenOption.TRUNCATE_EXISTING);
+        Files.writeString(file, pomString.replace("&oslash;", "O"), StandardOpenOption.TRUNCATE_EXISTING);
       }
     } catch (IOException e) {
       throw new RuntimeException(e);

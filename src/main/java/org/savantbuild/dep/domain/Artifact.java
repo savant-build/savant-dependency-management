@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Inversoft Inc., All Rights Reserved
+ * Copyright (c) 2014-2024, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,14 +15,11 @@
  */
 package org.savantbuild.dep.domain;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
 import org.savantbuild.domain.Version;
-
-import static java.util.Arrays.stream;
 
 /**
  * <p>
@@ -65,24 +62,33 @@ public class Artifact {
   }
 
   /**
-   * Constructs an Artifact with the given ID and version.
-   *
-   * @param id                 The artifact ID (group, project, name, type).
-   * @param version            The version of the artifact.
-   * @param nonSemanticVersion The non-semantic version.
-   * @param exclusions         Any exclusions.
+   * Shorthand for {@link Artifact#Artifact(ArtifactID, Version, String, boolean, List)} that passes in false for the
+   * compatibility check.
    */
   public Artifact(ArtifactID id, Version version, String nonSemanticVersion, List<ArtifactID> exclusions) {
+    this(id, version, nonSemanticVersion, false, exclusions);
+  }
+
+  /**
+   * Constructs an Artifact with the given ID and version.
+   *
+   * @param id                     The artifact ID (group, project, name, type).
+   * @param version                The version of the artifact.
+   * @param nonSemanticVersion     The non-semantic version.
+   * @param skipCompatibilityCheck Whether compatibility checks should be skipped or run.
+   * @param exclusions             Any exclusions.
+   */
+  public Artifact(ArtifactID id, Version version, String nonSemanticVersion, boolean skipCompatibilityCheck, List<ArtifactID> exclusions) {
     Objects.requireNonNull(id, "Artifacts must have an ArtifactID");
     Objects.requireNonNull(version, "Artifacts must have a Version");
 
     this.id = id;
     this.nonSemanticVersion = nonSemanticVersion;
-    this.skipCompatibilityCheck = false;
+    this.skipCompatibilityCheck = skipCompatibilityCheck;
     this.version = version;
 
     if (exclusions != null) {
-      this.exclusions = Collections.unmodifiableList(new ArrayList<>(exclusions));
+      this.exclusions = List.copyOf(exclusions);
     } else {
       this.exclusions = Collections.emptyList();
     }
@@ -121,33 +127,14 @@ public class Artifact {
   public Artifact(String spec, String nonSemanticVersion, boolean skipCompatibilityCheck, List<ArtifactID> exclusions) {
     Objects.requireNonNull(spec, "Artifacts must have a full specification");
 
+    var artifactSpec = new ArtifactSpec(spec);
     this.nonSemanticVersion = nonSemanticVersion;
     this.skipCompatibilityCheck = skipCompatibilityCheck;
-
-    String[] parts = spec.split(":");
-    if (parts.length < 3) {
-      throw new IllegalArgumentException("Invalid artifact specification [" + spec + "]. It must have 3, 4, or 5 parts");
-    }
-
-    if (stream(parts).anyMatch(String::isEmpty)) {
-      throw new IllegalArgumentException("Invalid artifact specification [" + spec + "]. One of the parts is empty (i.e. foo::3.0");
-    }
-
-    if (parts.length == 3) {
-      id = new ArtifactID(parts[0], parts[1], parts[1], "jar");
-      version = new Version(parts[2]);
-    } else if (parts.length == 4) {
-      id = new ArtifactID(parts[0], parts[1], parts[1], parts[3]);
-      version = new Version(parts[2]);
-    } else if (parts.length == 5) {
-      id = new ArtifactID(parts[0], parts[1], parts[2], parts[4]);
-      version = new Version(parts[3]);
-    } else {
-      throw new IllegalArgumentException("Invalid artifact specification [" + spec + "]. It must have 3, 4, or 5 parts");
-    }
+    this.id = artifactSpec.id;
+    this.version = new Version(artifactSpec.version);
 
     if (exclusions != null) {
-      this.exclusions = Collections.unmodifiableList(new ArrayList<>(exclusions));
+      this.exclusions = List.copyOf(exclusions);
     } else {
       this.exclusions = Collections.emptyList();
     }
@@ -155,9 +142,14 @@ public class Artifact {
 
   @Override
   public boolean equals(Object o) {
-    if (this == o) return true;
-    if (!(o instanceof Artifact)) return false;
-    final Artifact artifact = (Artifact) o;
+    if (this == o) {
+      return true;
+    }
+
+    if (!(o instanceof final Artifact artifact)) {
+      return false;
+    }
+
     return Objects.equals(exclusions, artifact.exclusions) && Objects.equals(id, artifact.id) && Objects.equals(version, artifact.version);
   }
 
@@ -319,6 +311,7 @@ public class Artifact {
   /**
    * @return Whether the version of this artifact is an integration build version.
    */
+  @SuppressWarnings("unused")
   public boolean isIntegrationBuild() {
     return version.isIntegration();
   }

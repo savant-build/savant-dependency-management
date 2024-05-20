@@ -70,7 +70,7 @@ public class URLProcessTest extends BaseUnitTest {
   public void metaData(String url) throws Exception {
     PathTools.prune(projectDir.resolve("build/test/cache"));
 
-    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:multiple-versions:multiple-versions:1.0:jar", License.Licenses.get("ApacheV2_0"));
+    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:multiple-versions:multiple-versions:1.0.0:jar", License.Licenses.get("ApacheV2_0"));
 
     CacheProcess process = new CacheProcess(output, cache.toString(), integration.toString());
     PublishWorkflow pw = new PublishWorkflow();
@@ -86,7 +86,7 @@ public class URLProcessTest extends BaseUnitTest {
   public void missingAMD(String url) throws Exception {
     PathTools.prune(projectDir.resolve("build/test/cache"));
 
-    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:missing-item:missing-item:1.0:jar", License.Licenses.get("ApacheV2_0"));
+    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:missing-item:missing-item:1.0.0:jar", License.Licenses.get("ApacheV2_0"));
 
     CacheProcess process = new CacheProcess(output, cache.toString(), integration.toString());
     PublishWorkflow pw = new PublishWorkflow();
@@ -102,7 +102,7 @@ public class URLProcessTest extends BaseUnitTest {
   public void missingItem(String url) throws Exception {
     PathTools.prune(projectDir.resolve("build/test/cache"));
 
-    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:missing-item:missing-item:1.0:jar", License.Licenses.get("ApacheV2_0"));
+    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:missing-item:missing-item:1.0.0:jar", License.Licenses.get("ApacheV2_0"));
 
     CacheProcess process = new CacheProcess(output, cache.toString(), integration.toString());
     PublishWorkflow pw = new PublishWorkflow();
@@ -118,7 +118,7 @@ public class URLProcessTest extends BaseUnitTest {
   public void missingMD5() throws Exception {
     PathTools.prune(projectDir.resolve("build/test/cache"));
 
-    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:missing-md5:missing-md5:1.0:jar", License.Licenses.get("ApacheV2_0"));
+    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:missing-md5:missing-md5:1.0.0:jar", License.Licenses.get("ApacheV2_0"));
 
     CacheProcess process = new CacheProcess(output, cache.toString(), integration.toString());
     PublishWorkflow pw = new PublishWorkflow();
