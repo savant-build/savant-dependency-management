@@ -2,3 +2,5 @@
 build
 *.neg
 .savant
+# Fetched/generated deps that come from idea-plugin tests
+test-deps/savant/org/slf4j/slf4j-api
