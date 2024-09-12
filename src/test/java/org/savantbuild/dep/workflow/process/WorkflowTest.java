@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Inversoft Inc., All Rights Reserved
+ * Copyright (c) 2022-2024, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +36,7 @@ import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 
 /**
@@ -44,6 +45,61 @@ import static org.testng.Assert.assertTrue;
  * @author Brian Pontarelli
  */
 public class WorkflowTest extends BaseUnitTest {
+  @Test
+  public void fetchSource_publish_no_process_exists() throws Exception {
+    // arrange
+    Path cache = projectDir.resolve("build/test/cache");
+    PathTools.prune(cache);
+
+    Workflow workflow = new Workflow(
+        new FetchWorkflow(
+            output,
+            new CacheProcess(output, cache.toString(), cache.toString()),
+            new MavenProcess(output, "https://repo1.maven.org/maven2", null, null)
+        ),
+        new PublishWorkflow(
+        ),
+        output
+    );
+
+    Artifact artifact = new ReifiedArtifact("org.apache.groovy:groovy:4.0.5", License.Licenses.get("Apache-2.0"));
+
+    // act
+    var sourcePath = workflow.fetchSource(artifact);
+
+    // assert
+    assertNull(sourcePath);
+  }
+
+  @Test
+  public void fetchSource_publish_process_exists() throws Exception {
+    // arrange
+    Path cache = projectDir.resolve("build/test/cache");
+    PathTools.prune(cache);
+
+    Workflow workflow = new Workflow(
+        new FetchWorkflow(
+            output,
+            new CacheProcess(output, cache.toString(), cache.toString()),
+            new MavenProcess(output, "https://repo1.maven.org/maven2", null, null)
+        ),
+        new PublishWorkflow(
+            new CacheProcess(output, cache.toString(), cache.toString())
+        ),
+        output
+    );
+
+    Artifact artifact = new ReifiedArtifact("org.apache.groovy:groovy:4.0.5", License.Licenses.get("Apache-2.0"));
+
+    // act
+    var sourcePath = workflow.fetchSource(artifact);
+
+    // assert
+    // expect src, not sources, because both are fetched, and src is the "steady state"
+    // that we will get if we run this consistently
+    assertEquals(sourcePath.toString(), "../savant-dependency-management/build/test/cache/org/apache/groovy/groovy/4.0.5/groovy-4.0.5-src.jar");
+  }
+
   @Test
   public void mavenCentral() throws Exception {
     Path cache = projectDir.resolve("build/test/cache");
