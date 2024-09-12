@@ -95,8 +95,8 @@ public class WorkflowTest extends BaseUnitTest {
     var sourcePath = workflow.fetchSource(artifact);
 
     // assert
-    // expect src, not sources, because both are fetched, and src is the "steady state"
-    // that we will get if we run this consistently
+    // expect src, not sources, because src is what will get published to the cache
+    // and that will result in less noisy output for things like the IDEA plugin
     assertEquals(sourcePath.toString(), "../savant-dependency-management/build/test/cache/org/apache/groovy/groovy/4.0.5/groovy-4.0.5-src.jar");
   }
 
