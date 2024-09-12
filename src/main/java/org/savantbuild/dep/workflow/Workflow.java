@@ -153,6 +153,7 @@ public class Workflow {
         // Publish the Savant named source JAR to prevent going back out to remote repositories next time we want to load source JARs
         if (file != null) {
           item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactSourceFile());
+          // we should be returning our locally cached/published source path, not the remote source path
           return publishWorkflow.publish(item, file);
         }
       }
