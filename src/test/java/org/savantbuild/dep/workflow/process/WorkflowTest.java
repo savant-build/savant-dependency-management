@@ -46,7 +46,7 @@ import static org.testng.Assert.assertTrue;
  */
 public class WorkflowTest extends BaseUnitTest {
   @Test
-  public void fetchSource_publish_no_process_exists() throws Exception {
+  public void fetchSource_publish_source_file_does_not_exist() throws Exception {
     // arrange
     Path cache = projectDir.resolve("build/test/cache");
     PathTools.prune(cache);
@@ -72,7 +72,7 @@ public class WorkflowTest extends BaseUnitTest {
   }
 
   @Test
-  public void fetchSource_publish_process_exists() throws Exception {
+  public void fetchSource_publish_source_file_exists() throws Exception {
     // arrange
     Path cache = projectDir.resolve("build/test/cache");
     PathTools.prune(cache);
