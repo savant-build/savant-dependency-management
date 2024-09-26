@@ -154,7 +154,7 @@ public class Workflow {
         if (file != null) {
           item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactSourceFile());
           // we should be returning our locally cached/published source path, not the remote source path
-          return publishWorkflow.publish(item, file);
+          file = publishWorkflow.publish(item, file);
         }
       }
 
