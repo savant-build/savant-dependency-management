@@ -15,14 +15,17 @@
  */
 package org.savantbuild.dep.workflow.process;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
+import java.util.List;
 
 import org.savantbuild.dep.BaseUnitTest;
 import org.savantbuild.dep.PathTools;
 import org.savantbuild.dep.domain.Artifact;
+import org.savantbuild.dep.domain.ArtifactID;
 import org.savantbuild.dep.domain.ArtifactMetaData;
 import org.savantbuild.dep.domain.Dependencies;
 import org.savantbuild.dep.domain.DependencyGroup;
@@ -98,6 +101,38 @@ public class WorkflowTest extends BaseUnitTest {
     // expect src, not sources, because src is what will get published to the cache
     // and that will result in less noisy output for things like the IDEA plugin
     assertEquals(sourcePath.toString(), "../savant-dependency-management/build/test/cache/org/apache/groovy/groovy/4.0.5/groovy-4.0.5-src.jar");
+  }
+
+  @Test
+  public void fetchSource_publish_source_file_semantic_mapping_exists() throws IOException {
+    // arrange
+    Path cache = projectDir.resolve("build/test/cache");
+    PathTools.prune(cache);
+
+    Workflow workflow = new Workflow(
+        new FetchWorkflow(
+            output,
+            new CacheProcess(output, cache.toString(), cache.toString()),
+            new MavenProcess(output, "https://repo1.maven.org/maven2", null, null)
+        ),
+        new PublishWorkflow(
+            new CacheProcess(output, cache.toString(), cache.toString())
+        ),
+        output
+    );
+
+    Artifact artifact = new ReifiedArtifact(new ArtifactID("org.xerial.snappy:snappy-java:snappy-java:jar"),
+        new Version("1.1.10+5"),
+        "1.1.10.5",
+        List.of(License.Licenses.get("Apache-2.0")));
+
+    // act
+    var sourcePath = workflow.fetchSource(artifact);
+
+    // assert
+    // expect src, not sources, because src is what will get published to the cache
+    // and that will result in less noisy output for things like the IDEA plugin
+    assertEquals(sourcePath.toString(), "../savant-dependency-management/build/test/cache/org/xerial/snappy/snappy-java/1.1.10+5/snappy-java-1.1.10+5-src.jar");
   }
 
   @Test
