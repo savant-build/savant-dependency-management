@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Inversoft Inc., All Rights Reserved
+ * Copyright (c) 2014-2024, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.savantbuild.dep.ArtifactTools;
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.ArtifactMetaData;
 import org.savantbuild.dep.domain.ResolvableItem;
@@ -31,7 +32,6 @@ import org.savantbuild.dep.maven.MavenTools;
 import org.savantbuild.dep.maven.POM;
 import org.savantbuild.dep.workflow.process.NegativeCacheException;
 import org.savantbuild.dep.workflow.process.ProcessFailureException;
-import org.savantbuild.dep.ArtifactTools;
 import org.savantbuild.domain.Version;
 import org.savantbuild.domain.VersionException;
 import org.savantbuild.output.Output;
@@ -153,7 +153,8 @@ public class Workflow {
         // Publish the Savant named source JAR to prevent going back out to remote repositories next time we want to load source JARs
         if (file != null) {
           item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactSourceFile());
-          publishWorkflow.publish(item, file);
+          // we should be returning our locally cached/published source path, not the remote source path
+          file = publishWorkflow.publish(item, file);
         }
       }
 
@@ -164,7 +165,7 @@ public class Workflow {
         // Publish the Savant named source JAR to prevent going back out to remote repositories next time we want to load source JARs
         if (file != null) {
           item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactSourceFile());
-          publishWorkflow.publish(item, file);
+          file = publishWorkflow.publish(item, file);
         }
       }
 
