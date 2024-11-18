@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Inversoft Inc., All Rights Reserved
+ * Copyright (c) 2014-2024, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -75,7 +75,7 @@ public class URLProcess implements Process {
     try {
       URI md5URI = NetTools.build(url, item.group.replace('.', '/'), item.project, item.version, item.item + ".md5");
       output.debugln("      - Download [" + md5URI + "]");
-      Path md5File = NetTools.downloadToPath(md5URI, username, password, null);
+      Path md5File = downloadToPath(md5URI, username, password, null);
       if (md5File == null) {
         output.debugln("      - Not found");
         return null;
@@ -93,7 +93,7 @@ public class URLProcess implements Process {
       output.debugln("      - Download [" + itemURI + "]");
       Path itemFile;
       try {
-        itemFile = NetTools.downloadToPath(itemURI, username, password, md5);
+        itemFile = downloadToPath(itemURI, username, password, md5);
       } catch (MD5Exception e) {
         throw new MD5Exception("MD5 mismatch when fetching item from [" + itemURI + "]");
       }
@@ -132,5 +132,32 @@ public class URLProcess implements Process {
   @Override
   public String toString() {
     return "URL(" + url + ")";
+  }
+
+  private Path downloadToPath(URI uri, String username, String password, MD5 md5) throws IOException {
+    try {
+      return NetTools.downloadToPath(uri, username, password, md5);
+    } catch (IOException e) {
+      // Do not retry a FileNotFoundException
+      if (e instanceof FileNotFoundException) {
+        throw e;
+      }
+
+      long ms = 5_000;
+      String reason = "[" + e.getClass() + "] " + e.getMessage();
+      String cause = e.getCause() != null
+          ? "[" + e.getCause().getClass() + "] " + e.getCause().getMessage()
+          : "-";
+      output.infoln(
+          "      - Retry Download [" + uri + "] after [" + ms + "] ms\n" +
+              "          Reason: " + reason + "\n" +
+              "          Cause: " + cause);
+      try {
+        Thread.sleep(ms);
+      } catch (InterruptedException ignore) {
+      }
+
+      return NetTools.downloadToPath(uri, username, password, md5);
+    }
   }
 }
