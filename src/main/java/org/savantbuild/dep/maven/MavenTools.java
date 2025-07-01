@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2024, Inversoft Inc., All Rights Reserved
+ * Copyright (c) 2022-2025, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import org.savantbuild.dep.ArtifactTools;
 import org.savantbuild.dep.LicenseException;
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.ArtifactID;
@@ -36,7 +37,6 @@ import org.savantbuild.dep.domain.Dependencies;
 import org.savantbuild.dep.domain.DependencyGroup;
 import org.savantbuild.dep.domain.License;
 import org.savantbuild.dep.domain.ReifiedArtifact;
-import org.savantbuild.dep.ArtifactTools;
 import org.savantbuild.domain.Version;
 import org.savantbuild.output.Output;
 import org.w3c.dom.Document;
@@ -67,7 +67,7 @@ public class MavenTools {
       DocumentBuilder b = DocumentBuilderFactory.newInstance().newDocumentBuilder();
       Document d = b.parse(file.toFile());
       Element pomElement = d.getDocumentElement();
-      pom.version = childText(pomElement, "version");
+      pom.version = ArtifactTools.parseVersionHandlingRanges(childText(pomElement, "version"));
       pom.group = childText(pomElement, "groupId");
       pom.id = childText(pomElement, "artifactId");
       pom.name = childText(pomElement, "name");
@@ -78,7 +78,7 @@ public class MavenTools {
       if (parentNode != null) {
         pom.parentGroup = childText(parentNode, "groupId");
         pom.parentId = childText(parentNode, "artifactId");
-        pom.parentVersion = childText(parentNode, "version");
+        pom.parentVersion = ArtifactTools.parseVersionHandlingRanges(childText(parentNode, "version"));
       }
 
       // Grab the properties
@@ -250,7 +250,7 @@ public class MavenTools {
     MavenDependency artifact = new MavenDependency();
     artifact.group = childText(dependencyNode, "groupId");
     artifact.id = childText(dependencyNode, "artifactId");
-    artifact.version = childText(dependencyNode, "version");
+    artifact.version = ArtifactTools.parseVersionHandlingRanges(childText(dependencyNode, "version"));
     artifact.classifier = childText(dependencyNode, "classifier");
     artifact.type = childText(dependencyNode, "type");
     artifact.optional = childText(dependencyNode, "optional");

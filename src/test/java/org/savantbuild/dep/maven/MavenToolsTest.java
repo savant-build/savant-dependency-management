@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2024, Inversoft Inc., All Rights Reserved
+ * Copyright (c) 2022-2025, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -78,6 +78,28 @@ public class MavenToolsTest extends BaseUnitTest {
     // Everything is optional
     Dependencies dependencies = MavenTools.toSavantDependencies(pom, Collections.emptyMap());
     assertEquals(dependencies, new Dependencies());
+  }
+
+  @Test
+  public void parse_versionRanges() {
+    POM pom = MavenTools.parsePOM(Paths.get("../savant-dependency-management/src/test/resources/bcutil-jdk18on-1.80.pom"), new SystemOutOutput(true));
+    pom.replaceKnownVariablesAndFillInDependencies();
+
+    assertEquals(pom.group, "org.bouncycastle");
+    assertEquals(pom.id, "bcutil-jdk18on");
+    assertEquals(pom.name, "Bouncy Castle ASN.1 Extension and Utility APIs");
+    assertEquals(pom.version, "1.80");
+    assertNull(pom.parentGroup);
+    assertNull(pom.parentId);
+    assertNull(pom.parentVersion);
+
+    assertEquals(pom.dependencies, Arrays.asList(
+            new MavenDependency("org.bouncycastle", "bcprov-jdk18on", "1.80", "compile", "jar")
+        )
+    );
+
+    Dependencies dependencies = MavenTools.toSavantDependencies(pom, Collections.emptyMap());
+    assertEquals(dependencies, new Dependencies(new DependencyGroup("compile", true , new Artifact("org.bouncycastle:bcprov-jdk18on:1.80.0"))));
   }
 
   @Test
