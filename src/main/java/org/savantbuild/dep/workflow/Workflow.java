@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2024, Inversoft Inc., All Rights Reserved
+ * Copyright (c) 2014-2025, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ import org.savantbuild.dep.domain.ResolvableItem;
 import org.savantbuild.dep.maven.MavenDependency;
 import org.savantbuild.dep.maven.MavenTools;
 import org.savantbuild.dep.maven.POM;
+import org.savantbuild.dep.workflow.process.DoNotPublishProcess;
 import org.savantbuild.dep.workflow.process.NegativeCacheException;
 import org.savantbuild.dep.workflow.process.ProcessFailureException;
 import org.savantbuild.domain.Version;
@@ -52,6 +53,8 @@ public class Workflow {
   public final Output output;
 
   public final PublishWorkflow publishWorkflow;
+
+  public final Map<String, String> rangeMappings = new HashMap<>();
 
   public Workflow(FetchWorkflow fetchWorkflow, PublishWorkflow publishWorkflow, Output output) {
     this.fetchWorkflow = fetchWorkflow;
@@ -77,7 +80,13 @@ public class Workflow {
     if (file == null && artifact.nonSemanticVersion != null) {
       // Try the bad version
       item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.nonSemanticVersion, artifact.getArtifactNonSemanticFile());
-      file = fetchWorkflow.fetchItem(item, publishWorkflow);
+      // Don't write out non-semantic versioned artifacts, we will re-publish below using the semantic version
+      file = fetchWorkflow.fetchItem(item, new PublishWorkflow(new DoNotPublishProcess()));
+      // Publish the Savant named JAR to prevent going back out to remote repositories next time we want to load JARs
+      if (file != null) {
+        item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile());
+        file = publishWorkflow.publish(item, file);
+      }
     }
 
     if (file == null) {
@@ -160,7 +169,8 @@ public class Workflow {
 
       if (file == null && artifact.nonSemanticVersion != null) {
         item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.nonSemanticVersion, artifact.getArtifactNonSemanticAlternativeSourceFile());
-        file = fetchWorkflow.fetchItem(item, publishWorkflow);
+        // Don't write out non-semantic versioned source artifacts, we will re-publish below using the semantic version
+        file = fetchWorkflow.fetchItem(item, new PublishWorkflow(new DoNotPublishProcess()));
 
         // Publish the Savant named source JAR to prevent going back out to remote repositories next time we want to load source JARs
         if (file != null) {
@@ -200,6 +210,7 @@ public class Workflow {
 
     POM pom = MavenTools.parsePOM(file, output);
     pom.replaceKnownVariablesAndFillInDependencies();
+    pom.replaceRangeValuesWithMappings(rangeMappings);
 
     // Recursively load the parent POM and any dependencies that are `import`
     if (pom.parentGroup != null && pom.parentId != null && pom.parentVersion != null) {
@@ -236,6 +247,7 @@ public class Workflow {
 
     // Fill in variables again in case there are new ones. This also fills out any missing dependencies
     pom.replaceKnownVariablesAndFillInDependencies();
+    pom.replaceRangeValuesWithMappings(rangeMappings);
 
     return pom;
   }
