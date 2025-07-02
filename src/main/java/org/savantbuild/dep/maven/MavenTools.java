@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025, Inversoft Inc., All Rights Reserved
+ * Copyright (c) 2022-2024, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import org.savantbuild.dep.ArtifactTools;
 import org.savantbuild.dep.LicenseException;
 import org.savantbuild.dep.domain.Artifact;
 import org.savantbuild.dep.domain.ArtifactID;
@@ -37,6 +36,7 @@ import org.savantbuild.dep.domain.Dependencies;
 import org.savantbuild.dep.domain.DependencyGroup;
 import org.savantbuild.dep.domain.License;
 import org.savantbuild.dep.domain.ReifiedArtifact;
+import org.savantbuild.dep.ArtifactTools;
 import org.savantbuild.domain.Version;
 import org.savantbuild.output.Output;
 import org.w3c.dom.Document;

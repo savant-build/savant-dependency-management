@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2025, Inversoft Inc., All Rights Reserved
+ * Copyright (c) 2024, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,7 +51,7 @@ public class ArtifactTools {
    */
   public static final String VersionError = """
       Invalid Version in the dependency graph from a Maven dependency [%s]. You must specify a semantic version mapping for Savant to properly handle Maven dependencies. This goes at the top-level of the build file and looks like this:
-      
+
       project(...) {
         workflow {
           semanticVersions {
