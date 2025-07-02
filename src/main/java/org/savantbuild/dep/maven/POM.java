@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017, Inversoft Inc., All Rights Reserved
+ * Copyright (c) 2013-2025, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -101,6 +101,16 @@ public class POM {
 
     for (MavenDependency dep : dependencies) {
       fillInDependency(dep, allProperties);
+    }
+  }
+
+  public void replaceRangeValuesWithMappings(Map<String, String> rangeMappings) {
+    for (MavenDependency dep : dependencies) {
+      mapConcreteRanges(dep, rangeMappings);
+    }
+
+    for (MavenDependency dep : dependenciesDefinitions) {
+      mapConcreteRanges(dep, rangeMappings);
     }
   }
 
@@ -215,5 +225,40 @@ public class POM {
                                   .orElse(null);
     }
     dep.version = MavenTools.replaceProperties(dep.version, allProperties);
+  }
+
+  private void mapConcreteRanges(MavenDependency dep, Map<String, String> rangeMappings) {
+    if (dep.version == null) {
+      return;
+    }
+
+    boolean isRange = dep.version.startsWith("[") || dep.version.startsWith("(");
+    if (isRange) {
+      // Handle hard requirement, not sure why anyone would do this?
+      if (dep.version.startsWith("[") && dep.version.endsWith("]") && !dep.version.contains(",")) {
+        dep.version = dep.version.substring(1, dep.version.length() - 1);
+        return;
+      }
+
+      // Apart from the above case, a mapping is required.
+      String concreteMavenVersion = rangeMappings.get(dep.toSpecification());
+      if (concreteMavenVersion == null) {
+        throw new VersionRangeException("""
+            Fortunately, version ranges are not supported. You must provide a rangeMapping in the build file.
+            
+            Example:
+            
+            semanticVersions {
+              rangeMapping(id: "{spec}", version: "{version}")
+            }
+            
+            Where {version} is the concrete version within the range that you wish to utilize from the external maven repository.
+            Note that this version should be the exact version as it is found in Maven. If the version is not semantic, it is possible
+            that you may also need to provide a version mapping as well.
+            """.replace("{spec}", dep.toSpecification()));
+      }
+
+      dep.version = concreteMavenVersion;
+    }
   }
 }

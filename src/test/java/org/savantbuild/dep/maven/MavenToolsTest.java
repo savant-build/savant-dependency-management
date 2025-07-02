@@ -26,10 +26,10 @@ import org.savantbuild.dep.domain.Dependencies;
 import org.savantbuild.dep.domain.DependencyGroup;
 import org.savantbuild.domain.Version;
 import org.savantbuild.output.SystemOutOutput;
-import org.testng.annotations.Test;
-
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNull;
+import static org.testng.AssertJUnit.fail;
+import org.testng.annotations.Test;
 
 /**
  * Tests the Maven malarky.
@@ -81,28 +81,6 @@ public class MavenToolsTest extends BaseUnitTest {
   }
 
   @Test
-  public void parse_versionRanges() {
-    POM pom = MavenTools.parsePOM(Paths.get("../savant-dependency-management/src/test/resources/bcutil-jdk18on-1.80.pom"), new SystemOutOutput(true));
-    pom.replaceKnownVariablesAndFillInDependencies();
-
-    assertEquals(pom.group, "org.bouncycastle");
-    assertEquals(pom.id, "bcutil-jdk18on");
-    assertEquals(pom.name, "Bouncy Castle ASN.1 Extension and Utility APIs");
-    assertEquals(pom.version, "1.80");
-    assertNull(pom.parentGroup);
-    assertNull(pom.parentId);
-    assertNull(pom.parentVersion);
-
-    assertEquals(pom.dependencies, Arrays.asList(
-            new MavenDependency("org.bouncycastle", "bcprov-jdk18on", "1.80", "compile", "jar")
-        )
-    );
-
-    Dependencies dependencies = MavenTools.toSavantDependencies(pom, Collections.emptyMap());
-    assertEquals(dependencies, new Dependencies(new DependencyGroup("compile", true , new Artifact("org.bouncycastle:bcprov-jdk18on:1.80.0"))));
-  }
-
-  @Test
   public void parseRequired() {
     // arrange
     POM pom = parseGroovyJsonPOM();
@@ -146,5 +124,77 @@ public class MavenToolsTest extends BaseUnitTest {
     var expectedArtifact = new Artifact("org.apache.groovy:groovy:4.0.6");
     var expectedDependencyGroup = new DependencyGroup("compile", true, expectedArtifact);
     assertEquals(dependencies, new Dependencies(expectedDependencyGroup));
+  }
+
+  @Test
+  public void parse_concreteRange() {
+    POM pom = new POM();
+    pom.version = "1.80.0";
+    // No mapping required for a concrete range
+    pom.dependencies.add(new MavenDependency("org.bouncycastle", "bcprov-jdk18on", "[1.80]", "compile", "jar"));
+
+    pom.replaceKnownVariablesAndFillInDependencies();
+    pom.replaceRangeValuesWithMappings(Map.of());
+
+    // Expect the maven dependency to have a concrete version
+    assertEquals(pom.dependencies, Arrays.asList(
+            new MavenDependency("org.bouncycastle", "bcprov-jdk18on", "1.80", "compile", "jar")
+        )
+    );
+
+    // The final dependency has a sematic version of 1.80.0
+    Dependencies dependencies = MavenTools.toSavantDependencies(pom, Collections.emptyMap());
+    assertEquals(dependencies, new Dependencies(new DependencyGroup("compile", true, new Artifact("org.bouncycastle:bcprov-jdk18on:1.80.0"))));
+  }
+
+  @Test
+  public void parse_versionRanges() {
+    POM pom = MavenTools.parsePOM(Paths.get("../savant-dependency-management/src/test/resources/bcutil-jdk18on-1.80.pom"), new SystemOutOutput(true));
+    pom.replaceKnownVariablesAndFillInDependencies();
+    pom.replaceRangeValuesWithMappings(Map.of("org.bouncycastle:bcprov-jdk18on:[1.80,1.81)", "1.80"));
+
+    assertEquals(pom.group, "org.bouncycastle");
+    assertEquals(pom.id, "bcutil-jdk18on");
+    assertEquals(pom.name, "Bouncy Castle ASN.1 Extension and Utility APIs");
+    assertEquals(pom.version, "1.80");
+    assertNull(pom.parentGroup);
+    assertNull(pom.parentId);
+    assertNull(pom.parentVersion);
+
+    // Expect the maven dependency to have a concrete version
+    assertEquals(pom.dependencies, Arrays.asList(
+            new MavenDependency("org.bouncycastle", "bcprov-jdk18on", "1.80", "compile", "jar")
+        )
+    );
+
+    // The final dependency has a sematic version of 1.80.0
+    Dependencies dependencies = MavenTools.toSavantDependencies(pom, Collections.emptyMap());
+    assertEquals(dependencies, new Dependencies(new DependencyGroup("compile", true, new Artifact("org.bouncycastle:bcprov-jdk18on:1.80.0"))));
+  }
+
+  @Test
+  public void parse_versionRanges_noMapping() {
+    POM pom = MavenTools.parsePOM(Paths.get("../savant-dependency-management/src/test/resources/bcutil-jdk18on-1.80.pom"), new SystemOutOutput(true));
+    pom.replaceKnownVariablesAndFillInDependencies();
+
+    try {
+      pom.replaceRangeValuesWithMappings(Map.of());
+      fail("Expected this to fail.");
+    } catch (VersionRangeException e) {
+
+      assertEquals(e.getMessage(), """
+          Fortunately, version ranges are not supported. You must provide a rangeMapping in the build file.
+          
+          Example:
+          
+          semanticVersions {
+            rangeMapping(id: "org.bouncycastle:bcprov-jdk18on:[1.80,1.81)", version: "{version}")
+          }
+          
+          Where {version} is the concrete version within the range that you wish to utilize from the external maven repository.
+          Note that this version should be the exact version as it is found in Maven. If the version is not semantic, it is possible
+          that you may also need to provide a version mapping as well.
+          """);
+    }
   }
 }

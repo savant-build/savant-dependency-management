@@ -34,9 +34,6 @@ import org.savantbuild.dep.domain.ArtifactSpec;
 import org.savantbuild.dep.domain.Dependencies;
 import org.savantbuild.dep.domain.DependencyGroup;
 import org.savantbuild.dep.domain.License;
-import org.savantbuild.dep.maven.ArtifactVersion;
-import org.savantbuild.dep.maven.VersionRange;
-import org.savantbuild.dep.maven.VersionRestriction;
 import org.savantbuild.domain.Version;
 import org.savantbuild.domain.VersionException;
 import org.xml.sax.Attributes;
@@ -83,9 +80,6 @@ public class ArtifactTools {
     try {
       return new Version(originalVersion);
     } catch (VersionException e) {
-      // Try and extract a version from a range
-      originalVersion = parseVersionHandlingRanges(originalVersion);
-
       // If the version is janky (i.e. it contains random characters), throw an exception
       if (originalVersion.chars().anyMatch(ch -> !Character.isDigit(ch) && ch != '.')) {
         throw new VersionException(String.format(VersionError, spec.mavenSpec));
@@ -185,41 +179,6 @@ public class ArtifactTools {
     ArtifactMetaDataHandler handler = new ArtifactMetaDataHandler(mappings);
     parser.parse(file.toFile(), handler);
     return new ArtifactMetaData(handler.dependencies, handler.licenses);
-  }
-
-  /**
-   * @param version the version as specified by the artifact.
-   * @return the recommended version.
-   */
-  public static String parseVersionHandlingRanges(String version) {
-    if (version == null) {
-      return null;
-    }
-
-    try {
-      VersionRange versionRange = VersionRange.parse(version);
-      ArtifactVersion recommendedVersion = versionRange.getRecommendedVersion();
-      if (recommendedVersion == null) {
-        VersionRestriction restriction = versionRange.getRestrictions().get(0);
-        if (restriction.isUpperBoundInclusive()) {
-          recommendedVersion = restriction.getUpperBound();
-        } else if (restriction.isLowerBoundInclusive()) {
-          recommendedVersion = restriction.getLowerBound();
-        }
-
-        // Ask Maven
-        if (recommendedVersion != null) {
-          return recommendedVersion.toString();
-        }
-
-        // TODO :
-        // Let the caller know that we have some boundary conditions, and need to ask Maven for all
-        // possible versions and then take our best guess.
-      }
-    } catch (VersionException ignore) {
-    }
-
-    return version;
   }
 
   private static void print(PrintWriter writer, String message, Object... args) {
@@ -339,7 +298,7 @@ public class ArtifactTools {
             dependencyVersion = new Version(version);
             dependencyNonSemanticVersion = version; // This is a fallback just for Maven
           } catch (VersionException e) {
-            dependencyNonSemanticVersion = ArtifactTools.parseVersionHandlingRanges(version);
+            dependencyNonSemanticVersion = version;
 
             ArtifactSpec spec = new ArtifactSpec(group + ":" + project + ":" + name + ":" + version + ":" + type);
             dependencyVersion = ArtifactTools.determineSemanticVersion(spec, mappings);

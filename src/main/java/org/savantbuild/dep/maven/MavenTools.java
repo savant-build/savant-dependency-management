@@ -67,7 +67,7 @@ public class MavenTools {
       DocumentBuilder b = DocumentBuilderFactory.newInstance().newDocumentBuilder();
       Document d = b.parse(file.toFile());
       Element pomElement = d.getDocumentElement();
-      pom.version = ArtifactTools.parseVersionHandlingRanges(childText(pomElement, "version"));
+      pom.version = childText(pomElement, "version");
       pom.group = childText(pomElement, "groupId");
       pom.id = childText(pomElement, "artifactId");
       pom.name = childText(pomElement, "name");
@@ -78,7 +78,7 @@ public class MavenTools {
       if (parentNode != null) {
         pom.parentGroup = childText(parentNode, "groupId");
         pom.parentId = childText(parentNode, "artifactId");
-        pom.parentVersion = ArtifactTools.parseVersionHandlingRanges(childText(parentNode, "version"));
+        pom.parentVersion = childText(parentNode, "version");
       }
 
       // Grab the properties
@@ -250,7 +250,7 @@ public class MavenTools {
     MavenDependency artifact = new MavenDependency();
     artifact.group = childText(dependencyNode, "groupId");
     artifact.id = childText(dependencyNode, "artifactId");
-    artifact.version = ArtifactTools.parseVersionHandlingRanges(childText(dependencyNode, "version"));
+    artifact.version = childText(dependencyNode, "version");
     artifact.classifier = childText(dependencyNode, "classifier");
     artifact.type = childText(dependencyNode, "type");
     artifact.optional = childText(dependencyNode, "optional");

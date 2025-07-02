@@ -54,6 +54,8 @@ public class Workflow {
 
   public final PublishWorkflow publishWorkflow;
 
+  public final Map<String, String> rangeMappings = new HashMap<>();
+
   public Workflow(FetchWorkflow fetchWorkflow, PublishWorkflow publishWorkflow, Output output) {
     this.fetchWorkflow = fetchWorkflow;
     this.publishWorkflow = publishWorkflow;
@@ -208,6 +210,7 @@ public class Workflow {
 
     POM pom = MavenTools.parsePOM(file, output);
     pom.replaceKnownVariablesAndFillInDependencies();
+    pom.replaceRangeValuesWithMappings(rangeMappings);
 
     // Recursively load the parent POM and any dependencies that are `import`
     if (pom.parentGroup != null && pom.parentId != null && pom.parentVersion != null) {
@@ -244,6 +247,7 @@ public class Workflow {
 
     // Fill in variables again in case there are new ones. This also fills out any missing dependencies
     pom.replaceKnownVariablesAndFillInDependencies();
+    pom.replaceRangeValuesWithMappings(rangeMappings);
 
     return pom;
   }
