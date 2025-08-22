@@ -154,6 +154,9 @@ public class URLProcess implements Process {
         return cacheArtifactPath;
       }
       final Path downloaded = NetTools.downloadToPath(uri, username, password, md5);
+      if (downloaded == null) {
+        return null;
+      }
       if (cacheArtifactPath != null) {
         Files.createDirectories(cacheArtifactPath.getParent());
         Files.copy(downloaded, cacheArtifactPath);
@@ -180,6 +183,9 @@ public class URLProcess implements Process {
       }
 
       final Path downloaded = NetTools.downloadToPath(uri, username, password, md5);
+      if (downloaded == null) {
+        return null;
+      }
       if (cacheArtifactPath != null) {
         Files.createDirectories(cacheArtifactPath.getParent());
         Files.copy(downloaded, cacheArtifactPath);

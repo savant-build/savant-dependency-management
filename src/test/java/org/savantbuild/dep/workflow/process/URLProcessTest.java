@@ -61,6 +61,18 @@ public class URLProcessTest extends BaseUnitTest {
     assertEquals((Object) file.toAbsolutePath(), Paths.get(result).toAbsolutePath());
   }
 
+  @Test
+  public void fetch_cache_dir_not_found() throws Exception {
+    Path cacheDir = Paths.get("build/test/system_cache");
+    PathTools.prune(cacheDir);
+    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:notfound:notfound:1.0.0:jar", License.Licenses.get("ApacheV2_0"));
+    ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile());
+
+    URLProcess ufp = new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null, cacheDir);
+    Path file = ufp.fetch(item, new PublishWorkflow(new CacheProcess(output, cache.toString(), integration.toString())));
+    assertNull(file);
+  }
+
   @Test(dataProvider = "fetchData")
   public void fetch_cache_dir(String url, String name, String version, String result) throws Exception {
     // arrange
