@@ -29,6 +29,7 @@ import org.savantbuild.dep.domain.License;
 import org.savantbuild.dep.domain.ReifiedArtifact;
 import org.savantbuild.dep.domain.ResolvableItem;
 import org.savantbuild.dep.workflow.PublishWorkflow;
+import static org.testng.Assert.assertFalse;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
@@ -78,17 +79,18 @@ public class URLProcessTest extends BaseUnitTest {
     server.stop(0);
     file = ufp.fetch(item, new PublishWorkflow(new CacheProcess(output, cache.toString(), integration.toString())));
     assertNotNull(file);
-    try (Stream<Path> stream = Files.walk(cacheDir)) {
-      final List<String> actualFiles = stream.map(Path::toString)
-                                             .toList();
-      if (file.startsWith("file:")) {
+    if (url.startsWith("file:")) {
+      assertFalse(Files.exists(cacheDir));
+    }
+    else {
+      try (Stream<Path> stream = Files.walk(cacheDir)) {
+        final List<String> actualFiles = stream.filter(Files::isRegularFile)
+                                               .map(Path::toString)
+                                               .sorted()
+                                               .toList();
         assertEquals(actualFiles,
-            List.of(),
-            "file schemes should not be cached");
-      }
-      else {
-        assertEquals(actualFiles,
-            List.of("host/artifact"),
+            List.of("build/test/system_cache/localhost/test-deps/savant/org/savantbuild/test/%s/1.0.0/%s-1.0.0.jar".formatted(name, name),
+                "build/test/system_cache/localhost/test-deps/savant/org/savantbuild/test/%s/1.0.0/%s-1.0.0.jar.md5".formatted(name, name)),
             "URLs should be cached");
       }
     }

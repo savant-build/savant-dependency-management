@@ -137,9 +137,28 @@ public class URLProcess implements Process {
     return "URL(" + url + ")";
   }
 
+  private Path getCacheArtifactPath(URI uri) {
+    if (cachePath == null || uri.getScheme().equals("file")) {
+      return null;
+    }
+
+    return cachePath.resolve(uri.getHost()).resolve(uri.getPath()
+                                                       // no leading slash
+                                                       .substring(1));
+  }
+
   private Path downloadToPath(URI uri, String username, String password, MD5 md5) throws IOException {
+    final Path cacheArtifactPath = getCacheArtifactPath(uri);
     try {
-      return NetTools.downloadToPath(uri, username, password, md5);
+      if (cacheArtifactPath != null && Files.exists(cacheArtifactPath)) {
+        return cacheArtifactPath;
+      }
+      final Path downloaded = NetTools.downloadToPath(uri, username, password, md5);
+      if (cacheArtifactPath != null) {
+        Files.createDirectories(cacheArtifactPath.getParent());
+        Files.copy(downloaded, cacheArtifactPath);
+      }
+      return downloaded;
     } catch (IOException e) {
       // Do not retry a FileNotFoundException
       if (e instanceof FileNotFoundException) {
@@ -160,7 +179,12 @@ public class URLProcess implements Process {
       } catch (InterruptedException ignore) {
       }
 
-      return NetTools.downloadToPath(uri, username, password, md5);
+      final Path downloaded = NetTools.downloadToPath(uri, username, password, md5);
+      if (cacheArtifactPath != null) {
+        Files.createDirectories(cacheArtifactPath.getParent());
+        Files.copy(downloaded, cacheArtifactPath);
+      }
+      return downloaded;
     }
   }
 }
