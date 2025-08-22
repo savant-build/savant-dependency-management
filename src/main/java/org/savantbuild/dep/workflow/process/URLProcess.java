@@ -78,33 +78,41 @@ public class URLProcess implements Process {
     try {
       URI md5URI = NetTools.build(url, item.group.replace('.', '/'), item.project, item.version, item.item + ".md5");
       output.debugln("      - Download [" + md5URI + "]");
-      Path md5File = downloadToPath(md5URI, username, password, null);
-      if (md5File == null) {
+      final DownloadedArtifact md5Download = downloadToPath(md5URI, username, password, null);
+      if (md5Download == null) {
         output.debugln("      - Not found");
         return null;
       }
 
       MD5 md5;
       try {
-        md5 = MD5.load(md5File);
+        md5 = MD5.load(md5Download.path);
       } catch (IOException e) {
-        Files.delete(md5File);
+        Files.delete(md5Download.path);
         throw new ProcessFailureException(item, e);
       }
 
       URI itemURI = NetTools.build(url, item.group.replace('.', '/'), item.project, item.version, item.item);
       output.debugln("      - Download [" + itemURI + "]");
-      Path itemFile;
+      DownloadedArtifact itemDownload;
       try {
-        itemFile = downloadToPath(itemURI, username, password, md5);
+        itemDownload = downloadToPath(itemURI, username, password, md5);
       } catch (MD5Exception e) {
         throw new MD5Exception("MD5 mismatch when fetching item from [" + itemURI + "]");
       }
 
-      if (itemFile != null) {
-        output.infoln("Downloaded [%s]", itemURI);
+      Path itemFile = null;
+      if (itemDownload != null) {
+        if (itemDownload.cached) {
+          output.infoln("Copied [%s] from machine cache at [%s]", itemURI,
+              itemDownload.path);
+        }
+        else {
+          output.infoln("Downloaded [%s]", itemURI);
+        }
         ResolvableItem md5Item = new ResolvableItem(item, item.item + ".md5");
-        md5File = publishWorkflow.publish(md5Item, md5File);
+        Path md5File = publishWorkflow.publish(md5Item, md5Download.path);
+        itemFile = itemDownload.path;
         try {
           itemFile = publishWorkflow.publish(item, itemFile);
         } catch (ProcessFailureException e) {
@@ -147,11 +155,13 @@ public class URLProcess implements Process {
                                                        .substring(1));
   }
 
-  private Path downloadToPath(URI uri, String username, String password, MD5 md5) throws IOException {
+  record DownloadedArtifact(Path path, boolean cached) {}
+
+  private DownloadedArtifact downloadToPath(URI uri, String username, String password, MD5 md5) throws IOException {
     final Path cacheArtifactPath = getCacheArtifactPath(uri);
     try {
       if (cacheArtifactPath != null && Files.exists(cacheArtifactPath)) {
-        return cacheArtifactPath;
+        return new DownloadedArtifact(cacheArtifactPath, true);
       }
       final Path downloaded = NetTools.downloadToPath(uri, username, password, md5);
       if (downloaded == null) {
@@ -161,7 +171,7 @@ public class URLProcess implements Process {
         Files.createDirectories(cacheArtifactPath.getParent());
         Files.copy(downloaded, cacheArtifactPath);
       }
-      return downloaded;
+      return new DownloadedArtifact(downloaded, false);
     } catch (IOException e) {
       // Do not retry a FileNotFoundException
       if (e instanceof FileNotFoundException) {
@@ -189,8 +199,9 @@ public class URLProcess implements Process {
       if (cacheArtifactPath != null) {
         Files.createDirectories(cacheArtifactPath.getParent());
         Files.copy(downloaded, cacheArtifactPath);
+        return new DownloadedArtifact(cacheArtifactPath, true);
       }
-      return downloaded;
+      return new DownloadedArtifact(downloaded, false);
     }
   }
 }
