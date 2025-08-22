@@ -15,8 +15,12 @@
  */
 package org.savantbuild.dep.workflow.process;
 
+import java.nio.file.FileVisitOption;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
+import java.util.stream.Stream;
 
 import org.savantbuild.dep.BaseUnitTest;
 import org.savantbuild.dep.PathTools;
@@ -48,12 +52,46 @@ public class URLProcessTest extends BaseUnitTest {
     PathTools.prune(projectDir.resolve("build/test/cache"));
 
     Artifact artifact = new ReifiedArtifact("org.savantbuild.test:" + name + ":" + name + ":" + version + ":jar", License.Licenses.get("ApacheV2_0"));
-    URLProcess ufp = new URLProcess(output, url, null, null);
+    URLProcess ufp = new URLProcess(output, url, null, null, null);
     ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile());
     Path file = ufp.fetch(item, new PublishWorkflow(new CacheProcess(output, cache.toString(), integration.toString())));
     assertNotNull(file);
 
     assertEquals((Object) file.toAbsolutePath(), Paths.get(result).toAbsolutePath());
+  }
+
+  @Test(dataProvider = "fetchData")
+  public void fetch_cache_dir(String url, String name, String version, String result) throws Exception {
+    // arrange
+    Path cacheDir = Paths.get("build/test/system_cache");
+    PathTools.prune(cacheDir);
+    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:" + name + ":" + name + ":" + version + ":jar", License.Licenses.get("ApacheV2_0"));
+    ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile());
+
+    // act
+    URLProcess ufp = new URLProcess(output, url, null, null, cacheDir);
+    Path file = ufp.fetch(item, new PublishWorkflow(new CacheProcess(output, cache.toString(), integration.toString())));
+
+    // assert
+    assertNotNull(file);
+    // now stop the server and fetch again, it should still work
+    server.stop(0);
+    file = ufp.fetch(item, new PublishWorkflow(new CacheProcess(output, cache.toString(), integration.toString())));
+    assertNotNull(file);
+    try (Stream<Path> stream = Files.walk(cacheDir)) {
+      final List<String> actualFiles = stream.map(Path::toString)
+                                             .toList();
+      if (file.startsWith("file:")) {
+        assertEquals(actualFiles,
+            List.of(),
+            "file schemes should not be cached");
+      }
+      else {
+        assertEquals(actualFiles,
+            List.of("host/artifact"),
+            "URLs should be cached");
+      }
+    }
   }
 
   @DataProvider(name = "fetchData")
@@ -76,7 +114,7 @@ public class URLProcessTest extends BaseUnitTest {
     PublishWorkflow pw = new PublishWorkflow();
     pw.getProcesses().add(process);
 
-    URLProcess ufp = new URLProcess(output, url, null, null);
+    URLProcess ufp = new URLProcess(output, url, null, null, null);
     ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactMetaDataFile());
     Path amd = ufp.fetch(item, pw);
     assertNotNull(amd);
@@ -92,7 +130,7 @@ public class URLProcessTest extends BaseUnitTest {
     PublishWorkflow pw = new PublishWorkflow();
     pw.getProcesses().add(process);
 
-    URLProcess ufp = new URLProcess(output, url, null, null);
+    URLProcess ufp = new URLProcess(output, url, null, null, null);
     ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactMetaDataFile());
     Path file = ufp.fetch(item, pw);
     assertNull(file);
@@ -108,7 +146,7 @@ public class URLProcessTest extends BaseUnitTest {
     PublishWorkflow pw = new PublishWorkflow();
     pw.getProcesses().add(process);
 
-    URLProcess ufp = new URLProcess(output, url, null, null);
+    URLProcess ufp = new URLProcess(output, url, null, null, null);
     ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile());
     Path file = ufp.fetch(item, pw);
     assertNull(file);
@@ -124,7 +162,7 @@ public class URLProcessTest extends BaseUnitTest {
     PublishWorkflow pw = new PublishWorkflow();
     pw.getProcesses().add(process);
 
-    URLProcess ufp = new URLProcess(output, makeLocalURL(), null, null);
+    URLProcess ufp = new URLProcess(output, makeLocalURL(), null, null, null);
     ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile());
     Path file = ufp.fetch(item, pw);
     assertNull(file);

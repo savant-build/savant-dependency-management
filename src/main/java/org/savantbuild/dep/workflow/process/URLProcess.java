@@ -48,8 +48,11 @@ public class URLProcess implements Process {
 
   public final String username;
 
-  public URLProcess(Output output, String url, String username, String password) {
+  public final Path cachePath;
+
+  public URLProcess(Output output, String url, String username, String password, Path cachePath) {
     this.output = output;
+    this.cachePath = cachePath;
 
     Objects.requireNonNull(url, "The [url] attribute is required for the [url] workflow process");
     if (username != null || password != null) {

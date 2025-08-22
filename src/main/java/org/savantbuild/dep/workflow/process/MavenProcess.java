@@ -15,6 +15,8 @@
  */
 package org.savantbuild.dep.workflow.process;
 
+import java.nio.file.Path;
+
 import org.savantbuild.output.Output;
 
 /**
@@ -27,8 +29,9 @@ import org.savantbuild.output.Output;
  * @author Brian Pontarelli
  */
 public class MavenProcess extends URLProcess {
-  public MavenProcess(Output output, String url, String username, String password) {
-    super(output, url, username, password);
+  public MavenProcess(Output output, String url, String username, String password,
+                      Path cachePath) {
+    super(output, url, username, password,cachePath);
   }
 
   @Override

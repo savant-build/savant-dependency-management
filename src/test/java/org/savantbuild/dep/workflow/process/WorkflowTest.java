@@ -58,7 +58,7 @@ public class WorkflowTest extends BaseUnitTest {
         new FetchWorkflow(
             output,
             new CacheProcess(output, cache.toString(), cache.toString()),
-            new MavenProcess(output, "https://repo1.maven.org/maven2", null, null)
+            new MavenProcess(output, "https://repo1.maven.org/maven2", null, null, null)
         ),
         new PublishWorkflow(
         ),
@@ -84,7 +84,7 @@ public class WorkflowTest extends BaseUnitTest {
         new FetchWorkflow(
             output,
             new CacheProcess(output, cache.toString(), cache.toString()),
-            new MavenProcess(output, "https://repo1.maven.org/maven2", null, null)
+            new MavenProcess(output, "https://repo1.maven.org/maven2", null, null, null)
         ),
         new PublishWorkflow(
             new CacheProcess(output, cache.toString(), cache.toString())
@@ -113,7 +113,7 @@ public class WorkflowTest extends BaseUnitTest {
         new FetchWorkflow(
             output,
             new CacheProcess(output, cache.toString(), cache.toString()),
-            new MavenProcess(output, "https://repo1.maven.org/maven2", null, null)
+            new MavenProcess(output, "https://repo1.maven.org/maven2", null, null, null)
         ),
         new PublishWorkflow(
             new CacheProcess(output, cache.toString(), cache.toString())
@@ -144,7 +144,7 @@ public class WorkflowTest extends BaseUnitTest {
         new FetchWorkflow(
             output,
             new CacheProcess(output, cache.toString(), cache.toString()),
-            new MavenProcess(output, "https://repo1.maven.org/maven2", null, null)
+            new MavenProcess(output, "https://repo1.maven.org/maven2", null, null, null)
         ),
         new PublishWorkflow(
             new CacheProcess(output, cache.toString(), cache.toString())
@@ -177,7 +177,7 @@ public class WorkflowTest extends BaseUnitTest {
         new FetchWorkflow(
             output,
             new CacheProcess(output, cache.toString(), cache.toString()),
-            new MavenProcess(output, "https://repo1.maven.org/maven2", null, null)
+            new MavenProcess(output, "https://repo1.maven.org/maven2", null, null, null)
         ),
         new PublishWorkflow(
             new CacheProcess(output, cache.toString(), cache.toString())

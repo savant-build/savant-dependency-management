@@ -306,7 +306,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
         new FetchWorkflow(
             output,
             new MavenCacheProcess(output, mavenCache.toString(), mavenCache.toString()),
-            new MavenProcess(output, "https://repo1.maven.org/maven2", null, null)
+            new MavenProcess(output, "https://repo1.maven.org/maven2", null, null, null)
         ),
         new PublishWorkflow(
             new MavenCacheProcess(output, mavenCache.toString(), mavenCache.toString())
@@ -332,8 +332,8 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
             output,
             new CacheProcess(output, cache.toString(), integration.toString()),
             new MavenCacheProcess(output, mavenCache.toString(), null),
-            new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null),
-            new MavenProcess(output, "https://repo1.maven.org/maven2", null, null)
+            new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null, null),
+            new MavenProcess(output, "https://repo1.maven.org/maven2", null, null, null)
         ),
         new PublishWorkflow(
             new CacheProcess(output, cache.toString(), integration.toString()),
@@ -392,8 +392,8 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
             output,
             new CacheProcess(output, cache.toString(), integration.toString()),
             new MavenCacheProcess(output, mavenCache.toString(), null),
-            new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null),
-            new MavenProcess(output, "http://localhost:7042/test-deps/maven", null, null)
+            new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null, null),
+            new MavenProcess(output, "http://localhost:7042/test-deps/maven", null, null, null)
         ),
         new PublishWorkflow(
             new CacheProcess(output, cache.toString(), integration.toString()),
@@ -1066,8 +1066,8 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
             output,
             new CacheProcess(output, cache.toString(), integration.toString()),
             new MavenCacheProcess(output, mavenCache.toString(), null),
-            new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null),
-            new MavenProcess(output, "http://localhost:7042/test-deps/maven", null, null)
+            new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null, null),
+            new MavenProcess(output, "http://localhost:7042/test-deps/maven", null, null, null)
         ),
         new PublishWorkflow(
             new CacheProcess(output, cache.toString(), integration.toString()),
@@ -1108,8 +1108,8 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
             output,
             new CacheProcess(output, cache.toString(), integration.toString()),
             new MavenCacheProcess(output, mavenCache.toString(), null),
-            new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null),
-            new MavenProcess(output, "http://localhost:7042/test-deps/maven", null, null)
+            new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null, null),
+            new MavenProcess(output, "http://localhost:7042/test-deps/maven", null, null, null)
         ),
         new PublishWorkflow(
             new CacheProcess(output, cache.toString(), integration.toString()),
@@ -1148,8 +1148,8 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
             output,
             new CacheProcess(output, cache.toString(), integration.toString()),
             new MavenCacheProcess(output, mavenCache.toString(), null),
-            new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null),
-            new MavenProcess(output, "http://localhost:7042/test-deps/maven", null, null)
+            new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null, null),
+            new MavenProcess(output, "http://localhost:7042/test-deps/maven", null, null, null)
         ),
         new PublishWorkflow(
             new CacheProcess(output, cache.toString(), integration.toString()),
