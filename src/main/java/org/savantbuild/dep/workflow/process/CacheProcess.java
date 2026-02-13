@@ -39,7 +39,7 @@ public class CacheProcess implements Process {
 
   public CacheProcess(Output output, String dir, String integrationDir) {
     this.output = output;
-    this.dir = dir != null ? dir : ".savant/cache";
+    this.dir = dir != null ? dir : System.getProperty("user.home") + "/.savant/cache";
     this.integrationDir = integrationDir != null ? integrationDir : System.getProperty("user.home") + "/.savant/cache";
   }
 

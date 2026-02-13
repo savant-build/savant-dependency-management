@@ -38,8 +38,10 @@ import org.savantbuild.domain.Version;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
+import static org.testng.Assert.assertSame;
 import static org.testng.Assert.assertTrue;
 
 /**
@@ -160,12 +162,13 @@ public class WorkflowTest extends BaseUnitTest {
     Dependencies expected = new Dependencies();
     assertEquals(amd.dependencies, expected);
 
+    // POMs are still fetched and cached by the fetch/publish workflow
     assertTrue(Files.isRegularFile(Paths.get("build/test/cache/org/apache/groovy/groovy/4.0.5/groovy-4.0.5.pom")));
     assertTrue(Files.isRegularFile(Paths.get("build/test/cache/org/apache/groovy/groovy/4.0.5/groovy-4.0.5.pom.md5")));
 
-    // AMDs are written to the cache when POMs are translated
-    assertTrue(Files.isRegularFile(Paths.get("build/test/cache/org/apache/groovy/groovy/4.0.5/groovy-4.0.5.jar.amd")));
-    assertTrue(Files.isRegularFile(Paths.get("build/test/cache/org/apache/groovy/groovy/4.0.5/groovy-4.0.5.jar.amd.md5")));
+    // AMDs are NOT written to disk for Maven artifacts -- they are generated in-memory only
+    assertFalse(Files.exists(Paths.get("build/test/cache/org/apache/groovy/groovy/4.0.5/groovy-4.0.5.jar.amd")));
+    assertFalse(Files.exists(Paths.get("build/test/cache/org/apache/groovy/groovy/4.0.5/groovy-4.0.5.jar.amd.md5")));
   }
 
   @Test
@@ -219,11 +222,109 @@ public class WorkflowTest extends BaseUnitTest {
     );
     assertEquals(amd.dependencies, expected);
 
+    // POMs are still fetched and cached by the fetch/publish workflow
     assertTrue(Files.isRegularFile(Paths.get("build/test/cache/io/vertx/vertx-core/3.9.8/vertx-core-3.9.8.pom")));
     assertTrue(Files.isRegularFile(Paths.get("build/test/cache/io/vertx/vertx-core/3.9.8/vertx-core-3.9.8.pom.md5")));
 
-    // AMDs are written to the cache when the POMs are translated
-    assertTrue(Files.isRegularFile(Paths.get("build/test/cache/io/vertx/vertx-core/3.9.8/vertx-core-3.9.8.jar.amd")));
-    assertTrue(Files.isRegularFile(Paths.get("build/test/cache/io/vertx/vertx-core/3.9.8/vertx-core-3.9.8.jar.amd.md5")));
+    // AMDs are NOT written to disk for Maven artifacts -- they are generated in-memory only
+    assertFalse(Files.exists(Paths.get("build/test/cache/io/vertx/vertx-core/3.9.8/vertx-core-3.9.8.jar.amd")));
+    assertFalse(Files.exists(Paths.get("build/test/cache/io/vertx/vertx-core/3.9.8/vertx-core-3.9.8.jar.amd.md5")));
+  }
+
+  @Test
+  public void fetchMetaData_inMemoryCache() throws Exception {
+    // arrange
+    Path cache = projectDir.resolve("build/test/cache");
+    PathTools.prune(cache);
+
+    Workflow workflow = new Workflow(
+        new FetchWorkflow(
+            output,
+            new CacheProcess(output, cache.toString(), cache.toString()),
+            new MavenProcess(output, "https://repo1.maven.org/maven2", null, null)
+        ),
+        new PublishWorkflow(
+            new CacheProcess(output, cache.toString(), cache.toString())
+        ),
+        output
+    );
+
+    Artifact artifact = new ReifiedArtifact("org.apache.groovy:groovy:4.0.5", License.Licenses.get("Apache-2.0"));
+
+    // act - fetch twice
+    ArtifactMetaData amd1 = workflow.fetchMetaData(artifact);
+    ArtifactMetaData amd2 = workflow.fetchMetaData(artifact);
+
+    // assert - both calls return the same cached instance
+    assertNotNull(amd1);
+    assertSame(amd1, amd2, "Second fetchMetaData call should return the same in-memory cached instance");
+  }
+
+  @Test
+  public void fetchMetaData_mappingsAppliedFresh() throws Exception {
+    // Verifies that the stale-cache problem is fixed: mappings from the build file are applied
+    // fresh on every build (every new Workflow instance), not baked into a cached AMD file.
+    Path cache = projectDir.resolve("build/test/cache");
+    PathTools.prune(cache);
+
+    // First workflow with no mappings for netty
+    Workflow workflow1 = new Workflow(
+        new FetchWorkflow(
+            output,
+            new CacheProcess(output, cache.toString(), cache.toString()),
+            new MavenProcess(output, "https://repo1.maven.org/maven2", null, null)
+        ),
+        new PublishWorkflow(
+            new CacheProcess(output, cache.toString(), cache.toString())
+        ),
+        output
+    );
+    workflow1.mappings.put("io.netty:netty-common:4.1.65.Final", new Version("4.1.65"));
+    workflow1.mappings.put("io.netty:netty-buffer:4.1.65.Final", new Version("4.1.65"));
+    workflow1.mappings.put("io.netty:netty-transport:4.1.65.Final", new Version("4.1.65"));
+    workflow1.mappings.put("io.netty:netty-handler:4.1.65.Final", new Version("4.1.65"));
+    workflow1.mappings.put("io.netty:netty-handler-proxy:4.1.65.Final", new Version("4.1.65"));
+    workflow1.mappings.put("io.netty:netty-codec-http:4.1.65.Final", new Version("4.1.65"));
+    workflow1.mappings.put("io.netty:netty-codec-http2:4.1.65.Final", new Version("4.1.65"));
+    workflow1.mappings.put("io.netty:netty-resolver:4.1.65.Final", new Version("4.1.65"));
+    workflow1.mappings.put("io.netty:netty-resolver-dns:4.1.65.Final", new Version("4.1.65"));
+
+    Artifact artifact = new ReifiedArtifact("io.vertx:vertx-core:3.9.8", License.Licenses.get("Apache-2.0"));
+    ArtifactMetaData amd1 = workflow1.fetchMetaData(artifact);
+    assertNotNull(amd1);
+
+    // Verify the mapping was applied (netty-common should be 4.1.65)
+    Artifact nettyCommon = amd1.dependencies.groups.get("compile").dependencies.get(0);
+    assertEquals(nettyCommon.version, new Version("4.1.65"));
+
+    // Second workflow with DIFFERENT mappings -- should see the new version
+    Workflow workflow2 = new Workflow(
+        new FetchWorkflow(
+            output,
+            new CacheProcess(output, cache.toString(), cache.toString()),
+            new MavenProcess(output, "https://repo1.maven.org/maven2", null, null)
+        ),
+        new PublishWorkflow(
+            new CacheProcess(output, cache.toString(), cache.toString())
+        ),
+        output
+    );
+    workflow2.mappings.put("io.netty:netty-common:4.1.65.Final", new Version("4.1.100"));
+    workflow2.mappings.put("io.netty:netty-buffer:4.1.65.Final", new Version("4.1.100"));
+    workflow2.mappings.put("io.netty:netty-transport:4.1.65.Final", new Version("4.1.100"));
+    workflow2.mappings.put("io.netty:netty-handler:4.1.65.Final", new Version("4.1.100"));
+    workflow2.mappings.put("io.netty:netty-handler-proxy:4.1.65.Final", new Version("4.1.100"));
+    workflow2.mappings.put("io.netty:netty-codec-http:4.1.65.Final", new Version("4.1.100"));
+    workflow2.mappings.put("io.netty:netty-codec-http2:4.1.65.Final", new Version("4.1.100"));
+    workflow2.mappings.put("io.netty:netty-resolver:4.1.65.Final", new Version("4.1.100"));
+    workflow2.mappings.put("io.netty:netty-resolver-dns:4.1.65.Final", new Version("4.1.100"));
+
+    ArtifactMetaData amd2 = workflow2.fetchMetaData(artifact);
+    assertNotNull(amd2);
+
+    // With the old behavior (disk-cached AMDs), this would STILL return 4.1.65 (stale cache).
+    // With in-memory AMDs, the fresh mappings are applied and netty-common should be 4.1.100.
+    Artifact nettyCommon2 = amd2.dependencies.groups.get("compile").dependencies.get(0);
+    assertEquals(nettyCommon2.version, new Version("4.1.100"));
   }
 }
