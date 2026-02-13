@@ -17,7 +17,6 @@ package org.savantbuild.dep.workflow;
 
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
@@ -36,7 +35,6 @@ import org.savantbuild.dep.workflow.process.ProcessFailureException;
 import org.savantbuild.domain.Version;
 import org.savantbuild.domain.VersionException;
 import org.savantbuild.output.Output;
-import org.savantbuild.security.MD5;
 import org.savantbuild.security.MD5Exception;
 import org.xml.sax.SAXException;
 
@@ -55,6 +53,16 @@ public class Workflow {
   public final PublishWorkflow publishWorkflow;
 
   public final Map<String, String> rangeMappings = new HashMap<>();
+
+  // In-memory AMD cache for the duration of this build. Keyed by "group:project:name:version".
+  // Prevents re-parsing the same artifact's AMD/POM multiple times during a single build invocation.
+  // HashMap is safe here -- the resolution pipeline is single-threaded (no parallel streams or executors).
+  private final Map<String, ArtifactMetaData> amdCache = new HashMap<>();
+
+  // In-memory POM cache for the duration of this build. Keyed by "group:project:version".
+  // Parent POMs and BOM POMs are shared across sibling dependencies -- this avoids re-parsing them.
+  // HashMap is safe here -- the resolution pipeline is single-threaded (no parallel streams or executors).
+  private final Map<String, POM> pomCache = new HashMap<>();
 
   public Workflow(FetchWorkflow fetchWorkflow, PublishWorkflow publishWorkflow, Output output) {
     this.fetchWorkflow = fetchWorkflow;
@@ -97,43 +105,57 @@ public class Workflow {
   }
 
   /**
-   * Fetches the artifact metadata. Every artifact in Savant is required to have an AMD file. Otherwise, it is
-   * considered a missing artifact entirely. Therefore, Savant never negative caches AMD files and this method will
-   * always return an AMD file or throw an ArtifactMetaDataMissingException.
+   * Fetches the artifact metadata using a two-path resolution strategy:
+   * <ol>
+   *   <li>Check in-memory cache (covers both Savant-native and Maven-generated AMDs)</li>
+   *   <li>Try fetching a pre-built AMD file via the fetch workflow (Savant-native artifacts have AMD files
+   *       in the Savant repository). If found, parse and cache in memory.</li>
+   *   <li>If no AMD file exists, this is a Maven artifact. Load the POM, translate it to ArtifactMetaData
+   *       using the current build's semantic version mappings, and cache in memory only (no disk write).
+   *       This ensures mappings are always applied fresh and never become stale.</li>
+   * </ol>
    *
    * @param artifact The artifact to fetch the metadata for.
    * @return The ArtifactMetaData object and never null.
-   * @throws ArtifactMetaDataMissingException If the AMD file could not be found.
+   * @throws ArtifactMetaDataMissingException If neither an AMD file nor a POM could be found.
    * @throws ProcessFailureException If any of the processes encountered a failure while attempting to fetch the AMD
-   *     file.
+   *     file or POM.
    * @throws MD5Exception If the item's MD5 file did not match the item.
    */
   public ArtifactMetaData fetchMetaData(Artifact artifact) throws ArtifactMetaDataMissingException, ProcessFailureException, MD5Exception {
+    String cacheKey = artifact.id.group + ":" + artifact.id.project + ":" + artifact.id.name + ":" + artifact.version;
+
+    // 1. Check in-memory cache first
+    ArtifactMetaData cached = amdCache.get(cacheKey);
+    if (cached != null) {
+      return cached;
+    }
+
     ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactMetaDataFile());
     try {
+      // 2. Try to fetch pre-built AMD (Savant-native artifacts have AMD files in the repo).
+      //    If found, the fetch/publish workflow handles disk caching in ~/.savant/cache (global).
       Path file = fetchWorkflow.fetchItem(item, publishWorkflow);
-      if (file == null) {
-        POM pom = loadPOM(artifact);
-        if (pom != null) {
-          ArtifactMetaData amd = translatePOM(pom);
-          Path amdFile = ArtifactTools.generateXML(amd);
-          file = publishWorkflow.publish(item, amdFile);
-
-          // Write the MD5
-          MD5 amdMD5 = MD5.forPath(amdFile);
-          Path amdMD5File = Files.createTempFile("savant", "amd-md5");
-          MD5.writeMD5(amdMD5, amdMD5File);
-          ResolvableItem md5Item = new ResolvableItem(item, item.item + ".md5");
-          publishWorkflow.publish(md5Item, amdMD5File);
-          Files.delete(amdMD5File);
-        }
+      if (file != null) {
+        ArtifactMetaData amd = ArtifactTools.parseArtifactMetaData(file, mappings);
+        amdCache.put(cacheKey, amd);
+        return amd;
       }
 
-      if (file == null) {
+      // 3. No AMD found -- this is a Maven artifact. Generate AMD in-memory from POM.
+      //    The POM is fetched from ~/.m2 or downloaded from Maven Central.
+      //    Mappings from the current build file are applied fresh (never stale).
+      POM pom = loadPOM(artifact);
+      if (pom == null) {
         throw new ArtifactMetaDataMissingException(artifact);
       }
 
-      return ArtifactTools.parseArtifactMetaData(file, mappings);
+      ArtifactMetaData amd = translatePOM(pom);
+      amdCache.put(cacheKey, amd);
+      return amd;
+      // NOTE: No publishWorkflow.publish() for Maven-generated AMDs -- they are in-memory only.
+      // This eliminates the stale AMD cache problem where changing semanticVersions mappings
+      // in the build file would require manually deleting .savant/cache.
     } catch (IllegalArgumentException | NullPointerException | SAXException | ParserConfigurationException |
              IOException | VersionException e) {
       throw new ProcessFailureException(item, e);
@@ -193,6 +215,14 @@ public class Workflow {
   }
 
   private POM loadPOM(Artifact artifact) {
+    String cacheKey = artifact.id.group + ":" + artifact.id.project + ":" + artifact.version;
+
+    // Check in-memory POM cache first (parent POMs and BOM POMs are shared across siblings)
+    POM cachedPom = pomCache.get(cacheKey);
+    if (cachedPom != null) {
+      return cachedPom;
+    }
+
     // Maven doesn't use artifact names (via classifiers) when resolving POMs. Therefore, we need to use the project id twice for the item
     ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.project, artifact.version.toString(), artifact.getArtifactPOMFile());
     Path file = fetchWorkflow.fetchItem(item, publishWorkflow);
@@ -248,6 +278,12 @@ public class Workflow {
     // Fill in variables again in case there are new ones. This also fills out any missing dependencies
     pom.replaceKnownVariablesAndFillInDependencies();
     pom.replaceRangeValuesWithMappings(rangeMappings);
+
+    // Cache the fully resolved POM for reuse (parent POMs, BOM POMs shared across siblings).
+    // IMPORTANT: POM is mutable -- all mutations (variable replacement, parent resolution, import loading)
+    // must be complete before this point. If multi-threaded resolution is ever introduced, cached POMs
+    // could be read while still being modified, breaking the cache.
+    pomCache.put(cacheKey, pom);
 
     return pom;
   }
