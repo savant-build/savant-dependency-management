@@ -773,11 +773,17 @@ A markdown file `specs/mapping-strategy-audit.md` documenting findings, with a t
 
 4. ~~**Should the IDEA plugin be updated?**~~ No. After code review, the IDEA plugin consumes the resolved artifact graph and doesn't read `.savant/cache` directly. It will transparently receive paths pointing to `~/.m2`.
 
-5. **Should AMD files include a schema version?** To handle future format changes gracefully. **Recommendation**: Deferred. With in-memory AMD generation, there is no persisted AMD format to version (except for integration and release publishes).
+5. ~~**Should AMD files include a schema version?**~~ No. The AMD XML schema is not changing. We're only changing where AMDs come from (in-memory generation vs disk read) and where they're cached. The format itself is untouched.
 
 6. **Is `maven-bridge` still needed?** If Savant dynamically maps Maven artifacts via POM-to-AMD on every build, the manual bridge tool may be unnecessary. **Recommendation**: Evaluate after the new strategy is working. Likely to be deprecated.
 
-7. **Should we add in-memory POM caching?** Parent POMs and BOM POMs are often shared across sibling dependencies. Caching loaded POM objects in a `Map<String, POM>` on the Workflow would avoid re-parsing the same parent POM. **Recommendation**: Yes, add this in Phase 1 as a performance optimization.
+7. ~~**Should we add in-memory POM caching?**~~ Yes, add this in Phase 1 as a performance optimization. Parent POMs and BOM POMs are shared across sibling dependencies.
+
+8. ~~**`CacheProcess` default directory change**~~ Resolved. Change the default `dir` in `CacheProcess` from `.savant/cache` (per-project) to `~/.savant/cache` (global per-user). This converges `dir` and `integrationDir` to the same global directory, which is correct:
+   - Integration JARs have always been in `~/.savant/cache` (must be global so other projects can use them during local dev)
+   - Regular Savant-native artifacts now join them there (no collision -- version strings differ)
+   - The path is still overridable via constructor arg or `cache(dir: "/custom/path")` in build files
+   - Since users must upgrade the library version to pick up these changes, the default change is expected
 
 ---
 
