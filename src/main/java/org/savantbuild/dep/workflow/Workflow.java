@@ -56,10 +56,12 @@ public class Workflow {
 
   // In-memory AMD cache for the duration of this build. Keyed by "group:project:name:version".
   // Prevents re-parsing the same artifact's AMD/POM multiple times during a single build invocation.
+  // HashMap is safe here -- the resolution pipeline is single-threaded (no parallel streams or executors).
   private final Map<String, ArtifactMetaData> amdCache = new HashMap<>();
 
   // In-memory POM cache for the duration of this build. Keyed by "group:project:version".
   // Parent POMs and BOM POMs are shared across sibling dependencies -- this avoids re-parsing them.
+  // HashMap is safe here -- the resolution pipeline is single-threaded (no parallel streams or executors).
   private final Map<String, POM> pomCache = new HashMap<>();
 
   public Workflow(FetchWorkflow fetchWorkflow, PublishWorkflow publishWorkflow, Output output) {
@@ -277,7 +279,10 @@ public class Workflow {
     pom.replaceKnownVariablesAndFillInDependencies();
     pom.replaceRangeValuesWithMappings(rangeMappings);
 
-    // Cache the fully resolved POM for reuse (parent POMs, BOM POMs shared across siblings)
+    // Cache the fully resolved POM for reuse (parent POMs, BOM POMs shared across siblings).
+    // IMPORTANT: POM is mutable -- all mutations (variable replacement, parent resolution, import loading)
+    // must be complete before this point. If multi-threaded resolution is ever introduced, cached POMs
+    // could be read while still being modified, breaking the cache.
     pomCache.put(cacheKey, pom);
 
     return pom;
