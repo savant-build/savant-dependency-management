@@ -327,4 +327,71 @@ public class WorkflowTest extends BaseUnitTest {
     Artifact nettyCommon2 = amd2.dependencies.groups.get("compile").dependencies.get(0);
     assertEquals(nettyCommon2.version, new Version("4.1.100"));
   }
+
+  /**
+   * Performance test: verifies that in-memory AMD generation from POMs is fast enough.
+   * <p>
+   * Resolves io.vertx:vertx-core:3.9.8 which exercises:
+   * - Parent POM resolution (vertx-parent)
+   * - BOM imports (vertx-dependencies with 100+ entries)
+   * - 11 dependency mappings (netty artifacts)
+   * - Property variable replacement
+   * <p>
+   * This is a representative "complex artifact" case. The test asserts:
+   * 1. First call (POM parse + translate) completes in < 2 seconds
+   * 2. Second call (in-memory cache hit) completes in < 5 milliseconds
+   */
+  @Test
+  public void fetchMetaData_performance() throws Exception {
+    Path cache = projectDir.resolve("build/test/cache");
+    PathTools.prune(cache);
+
+    Workflow workflow = new Workflow(
+        new FetchWorkflow(
+            output,
+            new CacheProcess(output, cache.toString(), cache.toString()),
+            new MavenProcess(output, "https://repo1.maven.org/maven2", null, null)
+        ),
+        new PublishWorkflow(
+            new CacheProcess(output, cache.toString(), cache.toString())
+        ),
+        output
+    );
+    workflow.mappings.put("io.netty:netty-all:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-buffer:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-codec-http:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-codec-http2:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-common:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-handler:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-handler-proxy:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-resolver:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-resolver-dns:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-tcnative-boringssl-static:2.0.39.Final", new Version("2.0.39"));
+    workflow.mappings.put("io.netty:netty-transport:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-transport-native-epoll:4.1.65.Final", new Version("4.1.65"));
+    workflow.mappings.put("io.netty:netty-transport-native-kqueue:4.1.65.Final", new Version("4.1.65"));
+
+    Artifact artifact = new ReifiedArtifact("io.vertx:vertx-core:3.9.8", License.Licenses.get("Apache-2.0"));
+
+    // First call: POM parse + parent resolution + BOM imports + translation
+    long startFirst = System.nanoTime();
+    ArtifactMetaData amd1 = workflow.fetchMetaData(artifact);
+    long firstCallMs = (System.nanoTime() - startFirst) / 1_000_000;
+
+    assertNotNull(amd1);
+    // Complex artifact with parent chain + BOM should still resolve in < 2 seconds
+    assertTrue(firstCallMs < 2000,
+        "First fetchMetaData (POM parse + translate) took " + firstCallMs + "ms, expected < 2000ms");
+
+    // Second call: in-memory cache hit -- should be near-instant
+    long startSecond = System.nanoTime();
+    ArtifactMetaData amd2 = workflow.fetchMetaData(artifact);
+    long secondCallMs = (System.nanoTime() - startSecond) / 1_000_000;
+
+    assertSame(amd1, amd2);
+    assertTrue(secondCallMs < 5,
+        "Second fetchMetaData (cache hit) took " + secondCallMs + "ms, expected < 5ms");
+
+    System.out.println("[Performance] vertx-core fetchMetaData: first call = " + firstCallMs + "ms, cached call = " + secondCallMs + "ms");
+  }
 }

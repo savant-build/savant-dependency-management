@@ -54,7 +54,7 @@ public class Workflow {
 
   public final Map<String, String> rangeMappings = new HashMap<>();
 
-  // In-memory AMD cache for the duration of this build. Keyed by "group:project:version".
+  // In-memory AMD cache for the duration of this build. Keyed by "group:project:name:version".
   // Prevents re-parsing the same artifact's AMD/POM multiple times during a single build invocation.
   private final Map<String, ArtifactMetaData> amdCache = new HashMap<>();
 
