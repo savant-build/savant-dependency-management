@@ -2,10 +2,10 @@
 
 ## Specification Document
 
-**Date:** 2026-02-11
-**Status:** DRAFT
+**Date:** 2026-02-11 (updated 2026-02-13)
+**Status:** DRAFT v2
 **Branch:** `new_cache_strat`
-**Affected Repos:** `savant-dependency-management`, `savant-core` (WorkflowDelegate), `dependency-plugin`
+**Affected Repos:** `savant-dependency-management`, `savant-core`
 
 ---
 
@@ -48,6 +48,8 @@ When a dependency is first resolved:
 
 5. **Cache coherence complexity**: Having the same artifact in two locations (.savant/cache and ~/.m2) creates the potential for stale or inconsistent copies.
 
+6. **Stale AMD mappings**: When a developer adds or changes a `semanticVersions` mapping in their build file, the previously-cached AMD files still contain the old mapping (because `MavenTools.toSavantDependencies(pom, mappings)` bakes mappings into the AMD XML at generation time). The developer must manually delete `.savant/cache` to pick up the change.
+
 ### 1.3 What's Actually Valuable in `.savant/cache`
 
 The **only Savant-specific artifact** is the `.amd` file (Artifact Meta Data). This is the file Savant generates when translating a Maven POM into Savant's format. It captures:
@@ -67,17 +69,21 @@ Everything else in `.savant/cache` (JARs, POMs, source JARs, MD5s) is a duplicat
 
 1. **Global cache is the single source of truth for binaries**: `~/.m2/repository` stores all JARs, POMs, source JARs, and MD5 files. This is shared across all projects and all build tools (Maven, Gradle, Savant).
 
-2. **Project cache stores only AMD mappings**: `.savant/cache` stores only `.amd` files and their `.amd.md5` checksums. These are the Savant-specific metadata that bridges Savant's semantic versioning to Maven's artifact layout.
+2. **AMD generation is done in-memory on every build**: Rather than persisting AMD files to `.savant/cache`, Savant generates `ArtifactMetaData` objects in memory by reading POMs from `~/.m2/repository`. This eliminates the stale-cache problem entirely -- mappings from the current build file are always applied fresh.
 
-3. **JARs are resolved from `~/.m2` on every build**: Rather than caching JARs locally, Savant resolves the path to each JAR in `~/.m2/repository` at build time. This is a simple path computation (not a file copy) and adds negligible overhead.
+3. **In-process caching during a single build**: A `Map<String, ArtifactMetaData>` within the `Workflow` instance prevents re-processing the same artifact's POM multiple times during a single build invocation. This map lives only for the duration of the build.
 
-4. **Simplicity over optimization**: The design prioritizes simplicity and compatibility with the Maven ecosystem over micro-optimizations for cold-start performance.
+4. **JARs are resolved from `~/.m2` on every build**: Rather than caching JARs locally, Savant resolves the path to each JAR in `~/.m2/repository` at build time. This is a simple path computation (not a file copy) and adds negligible overhead.
+
+5. **Simplicity over optimization**: The design prioritizes simplicity and compatibility with the Maven ecosystem over micro-optimizations for cold-start performance.
+
+6. **No local project cache (`.savant/cache`) for non-integration builds**: The `.savant/cache` directory is eliminated entirely for regular builds. Integration builds continue to use `~/.savant/cache/` (global).
 
 ### 2.2 New Architecture
 
 | Level | Location | Contents | Scope |
 |-------|----------|----------|-------|
-| 1. Project AMD cache | `.savant/cache/` | AMD files + AMD MD5s only | Per-project |
+| 1. In-memory AMD cache | JVM heap during build | `ArtifactMetaData` objects generated from POMs | Per-build |
 | 2. Global artifact cache | `~/.m2/repository/` | JARs, POMs, source JARs, MD5s | Global (user) |
 | 3. Integration cache | `~/.savant/cache/` | Integration build artifacts (full) | Global (user) |
 | 4. Remote repos | Savant repo + Maven Central | Everything | Network |
@@ -85,34 +91,36 @@ Everything else in `.savant/cache` (JARs, POMs, source JARs, MD5s) is a duplicat
 ### 2.3 New Standard Workflow
 
 ```
-Fetch AMD:       AmdCacheProcess(.savant/cache) -> [generate from POM if missing]
-Fetch POM:       MavenCacheProcess(~/.m2) -> MavenProcess(maven central)
-Fetch JAR:       MavenCacheProcess(~/.m2) -> MavenProcess(maven central)
-Fetch Source:    MavenCacheProcess(~/.m2) -> MavenProcess(maven central)
+Fetch AMD:       [generate in-memory from POM on every build]
+Fetch POM:       MavenCacheProcess(~/.m2) -> URLProcess(savantbuild.org) -> MavenProcess(maven central)
+Fetch JAR:       MavenCacheProcess(~/.m2) -> URLProcess(savantbuild.org) -> MavenProcess(maven central)
+Fetch Source:    MavenCacheProcess(~/.m2) -> URLProcess(savantbuild.org) -> MavenProcess(maven central)
 
-Publish AMD:     AmdCacheProcess(.savant/cache)
-Publish Others:  MavenCacheProcess(~/.m2)
+Publish POM:     MavenCacheProcess(~/.m2)
+Publish JAR:     MavenCacheProcess(~/.m2)
+Publish Source:  MavenCacheProcess(~/.m2)
 ```
 
 ### 2.4 Detailed Flow: Dependency Resolution
 
-#### Step 1: Fetch Metadata (AMD)
+#### Step 1: Fetch Metadata (AMD) -- In-Memory
 
 ```
 fetchMetaData("org.apache.groovy:groovy:4.0.5"):
-  1. Check .savant/cache/org/apache/groovy/groovy/4.0.5/groovy-4.0.5.jar.amd
-     -> If found: parse and return ArtifactMetaData
+  1. Check in-memory cache (Map<String, ArtifactMetaData>)
+     -> If found: return cached ArtifactMetaData
   2. If not found:
      a. Fetch POM from ~/.m2 or Maven Central (download to ~/.m2 if needed)
-     b. Parse POM, resolve parent POMs and imports
-     c. Translate POM -> ArtifactMetaData (apply semver mappings, licenses, groups)
-     d. Serialize AMD to .savant/cache/org/apache/groovy/groovy/4.0.5/groovy-4.0.5.jar.amd
+     b. Parse POM, resolve parent POMs and imports (also from ~/.m2)
+     c. Translate POM -> ArtifactMetaData (apply CURRENT semver mappings from build file)
+     d. Store in in-memory cache
      e. Return ArtifactMetaData
+  3. (No disk write for AMD files)
 ```
 
 #### Step 2: Build Dependency Graph
 
-No change from current behavior. The `DependencyGraph` is built by recursively fetching AMD files for all transitive dependencies.
+No change from current behavior. The `DependencyGraph` is built by recursively fetching AMD (now in-memory) for all transitive dependencies.
 
 #### Step 3: Reduce Graph
 
@@ -130,79 +138,140 @@ fetchArtifact("org.apache.groovy:groovy:4.0.5"):
   3. (No copy to .savant/cache)
 ```
 
-### 2.5 Key Code Changes
+### 2.5 In-Memory AMD: Cost/Benefit Analysis
 
-#### 2.5.1 `Workflow.java` (savant-dependency-management)
+#### Performance Cost
 
-The `Workflow` class needs to be refactored to use **separate workflow chains** for different item types:
+For each dependency, the in-memory approach must:
+1. **Read POM from disk** (`~/.m2`): ~1-50KB per POM, local I/O, ~0.1-1ms
+2. **Parse POM XML**: DOM parsing + variable replacement, ~1-5ms
+3. **Resolve parent POMs**: Recursive POM loading, typically 1-3 parents per artifact
+4. **Resolve imports**: BOM imports add more POM loads
+5. **Translate to ArtifactMetaData**: Mapping application, ~0.1ms
 
-- **AMD workflow**: Fetch from `.savant/cache` -> Generate from POM if missing; Publish to `.savant/cache` only
-- **Artifact workflow**: Fetch from `~/.m2` -> Download from remote; Publish to `~/.m2` only
-- **POM workflow**: Fetch from `~/.m2` -> Download from remote; Publish to `~/.m2` only
-- **Source workflow**: Fetch from `~/.m2` -> Download from remote; Publish to `~/.m2` only
+**Estimated cost for a project with 100 dependencies:**
+- ~100 unique artifacts * ~2.5 parent/import POMs each = ~350 POM parses
+- At ~2ms each = ~700ms total for AMD generation
+- With in-process caching (parent POMs reused across siblings): ~300-500ms
 
-The current design has a single `FetchWorkflow` and `PublishWorkflow` for all item types. The refactoring introduces type-awareness.
+**Compared to disk-cached AMD approach:**
+- ~100 AMD file reads + XML parses = ~100-200ms
+- Delta: **~200-400ms additional per build** for in-memory approach
 
-**Approach A (Recommended): Modify Workflow to route by item type**
+**Verdict**: For most builds (which take seconds to minutes), 200-400ms is negligible. The build is typically dominated by compilation, testing, and network I/O for downloading JARs on cold builds.
+
+#### Benefits
+
+1. **No stale AMD cache**: Mappings from the current build file are always applied fresh. No need to delete `.savant/cache` when changing `semanticVersions` mappings.
+2. **Zero disk footprint for project cache**: `.savant/cache` is completely eliminated for non-integration builds.
+3. **Simpler architecture**: No AMD disk caching logic, no AMD publish workflow, no AMD negative caching.
+4. **One fewer thing to break**: No risk of corrupted/malformed AMD files on disk.
+
+#### Risks
+
+1. **Offline builds**: Without cached AMDs, offline builds require POMs to be in `~/.m2`. However, POMs are already downloaded to `~/.m2` during normal builds, so this is only a problem on a truly fresh machine (same as Maven/Gradle).
+2. **Memory usage**: For 100 dependencies, ArtifactMetaData objects are small (a few KB each). 100 objects = ~100KB-1MB. Negligible.
+3. **Repeated work across builds**: Each `savant` invocation re-generates all AMDs. For projects with very large dependency trees (500+), this could become noticeable. Can be revisited later if needed.
+
+### 2.6 Key Code Changes
+
+#### 2.6.1 `Workflow.java` (savant-dependency-management)
+
+The `Workflow` class needs two major changes:
+
+**A. Remove AMD disk caching from `fetchMetaData()`**:
 
 ```java
 public class Workflow {
-  // AMD-specific workflows
-  public final FetchWorkflow amdFetchWorkflow;
-  public final PublishWorkflow amdPublishWorkflow;
+  // NEW: In-memory AMD cache for the duration of this build
+  private final Map<String, ArtifactMetaData> amdCache = new HashMap<>();
 
-  // Artifact/POM/Source workflows (global cache)
-  public final FetchWorkflow artifactFetchWorkflow;
-  public final PublishWorkflow artifactPublishWorkflow;
-
-  // ... existing fields (mappings, rangeMappings, output)
+  // Existing fields
+  public final FetchWorkflow fetchWorkflow;    // Now used for POMs, JARs, sources only
+  public final PublishWorkflow publishWorkflow; // Now used for POMs, JARs, sources only
+  public final Map<String, Version> mappings = new HashMap<>();
+  public final Map<String, String> rangeMappings = new HashMap<>();
+  public final Output output;
 }
 ```
 
-**Approach B (Alternative): Keep single workflow, change CacheProcess behavior**
+**B. `fetchMetaData()` generates AMD in-memory**:
 
-Modify `CacheProcess` to only cache AMD files, and pass all other items through without caching locally. This is simpler but less explicit.
+```java
+public ArtifactMetaData fetchMetaData(Artifact artifact) {
+  String cacheKey = artifact.id.group + ":" + artifact.id.project + ":" + artifact.version;
 
-#### 2.5.2 `CacheProcess.java` (savant-dependency-management)
+  // Check in-memory cache first
+  ArtifactMetaData cached = amdCache.get(cacheKey);
+  if (cached != null) {
+    return cached;
+  }
 
-Under Approach A, create a new `AmdCacheProcess` that:
-- Only handles `.amd` and `.amd.md5` files
-- Uses `.savant/cache` as its directory
-- Rejects (passes through) non-AMD items
+  // Load POM from ~/.m2 or download from remote
+  POM pom = loadPOM(artifact);
+  if (pom == null) {
+    throw new ArtifactMetaDataMissingException(artifact);
+  }
 
-Under Approach B, modify existing `CacheProcess` to filter by item type.
+  // Translate POM to AMD using CURRENT mappings (always fresh)
+  ArtifactMetaData amd = translatePOM(pom);
 
-#### 2.5.3 `WorkflowDelegate.java` (savant-core)
+  // Cache in memory for this build
+  amdCache.put(cacheKey, amd);
+  return amd;
+}
+```
 
-Update the `standard()` method and the DSL to reflect the new workflow structure:
+**C. `fetchArtifact()` -- Remove local cache republishing**:
+
+The current code re-publishes non-semantic-versioned JARs to `.savant/cache` under the semantic name. With the new approach, we simply return the path from `~/.m2` with the original Maven version name. The `nonSemanticVersion` field on `Artifact` already tracks the original version for path construction.
+
+**D. `fetchSource()` -- Simplify**:
+
+Remove the republishing of `-sources.jar` as `-src.jar` into the local cache. Instead, just return the path to the source JAR in `~/.m2`. The source file naming (`-sources.jar` vs `-src.jar`) can be resolved at lookup time rather than by renaming on disk.
+
+#### 2.6.2 `WorkflowDelegate.java` (savant-core)
+
+Update the `standard()` method:
 
 ```java
 public void standard() {
-    // AMD fetch: project cache only
-    workflow.amdFetchWorkflow.processes.add(new CacheProcess(output, null, null));
+    // Fetch: Maven cache then Savant repo then Maven Central
+    // (AMDs are generated in-memory, so no CacheProcess needed for fetch)
+    workflow.fetchWorkflow.processes.add(new MavenCacheProcess(output, null, null));
+    workflow.fetchWorkflow.processes.add(new URLProcess(output, "https://repository.savantbuild.org", null, null));
+    workflow.fetchWorkflow.processes.add(new MavenProcess(output, "https://repo1.maven.org/maven2", null, null));
 
-    // Artifact fetch: Maven cache then Maven Central
-    workflow.artifactFetchWorkflow.processes.add(new MavenCacheProcess(output, null, null));
-    workflow.artifactFetchWorkflow.processes.add(new MavenProcess(output, "https://repo1.maven.org/maven2", null, null));
-
-    // Savant repo for Savant-native artifacts
-    workflow.artifactFetchWorkflow.processes.add(new URLProcess(output, "https://repository.savantbuild.org", null, null));
-
-    // AMD publish: project cache only
-    workflow.amdPublishWorkflow.processes.add(new CacheProcess(output, null, null));
-
-    // Artifact publish: Maven cache only
-    workflow.artifactPublishWorkflow.processes.add(new MavenCacheProcess(output, null, null));
+    // Publish: Maven cache only
+    // (No CacheProcess -- no local project cache)
+    workflow.publishWorkflow.processes.add(new MavenCacheProcess(output, null, null));
 }
 ```
 
-#### 2.5.4 `DefaultDependencyService.java` (savant-dependency-management)
+**Note**: The `fetch {}` and `publish {}` DSL methods continue to work unchanged for custom workflows. Only `standard()` changes.
 
-Minimal changes. The service delegates to `Workflow` for fetching; the routing logic lives in `Workflow`.
+#### 2.6.3 `DefaultDependencyService.java` (savant-dependency-management)
 
-#### 2.5.5 `DependencyPlugin.groovy` (dependency-plugin)
+**`publish()` method**: Currently publishes AMD to the publish workflow. With in-memory AMDs, the `publish()` method should still write the AMD when explicitly publishing a release (the AMD goes to the remote publish target like SVN), but NOT to a local disk cache.
 
-Update the `integrate()` method and any workflow construction to use the new workflow structure.
+Integration builds continue to use `~/.savant/cache/` via the existing `CacheProcess` integration dir.
+
+#### 2.6.4 No Changes Required: `dependency-plugin`, `idea-plugin`
+
+Both plugins are **consumers** of the resolved dependency graph. They receive `ResolvedArtifact` objects with `.file` and `.sourceFile` paths from `Workflow.fetchArtifact()` / `Workflow.fetchSource()`. The plugins don't know or care where on disk those files live. The paths will now point to `~/.m2` instead of `.savant/cache`, but the plugins work with whatever paths the Workflow provides.
+
+**dependency-plugin**: `DependencyPlugin.groovy` calls `dependencyService.buildGraph()` and `dependencyService.reduce()` using `project.workflow`. Classpath, copy, integrate, and resolve operations all flow through the Workflow's artifact resolution. No code changes needed.
+
+**idea-plugin**: `IDEAPlugin.groovy` uses `dependencyPlugin.resolve {}` to get a `ResolvedArtifactGraph`, then writes IML entries using `destination.file` paths. These paths will transparently point to `~/.m2`. No code changes needed.
+
+#### 2.6.5 Out of Scope: `maven-bridge`
+
+The `SavantBridge` in `maven-bridge` is a standalone CLI tool for one-time conversion of Maven artifacts into a Savant repository. It uses a non-standard `CacheProcess` API and operates independently. If the new cache strategy eliminates the need for pre-converting Maven artifacts (since Savant now dynamically maps Maven artifacts via POM-to-AMD translation on every build), this tool may become unnecessary. Deferred to a separate evaluation.
+
+#### 2.6.6 Out of Scope: `pom-plugin`, `savant-utils`
+
+- **pom-plugin**: Generates `pom.xml` from Savant dependencies. No cache interaction.
+- **savant-utils**: Utility classes (Classpath, MD5, Graph). No cache interaction.
 
 ---
 
@@ -212,7 +281,7 @@ Update the `integrate()` method and any workflow construction to use the new wor
 
 Some artifacts are published to `https://repository.savantbuild.org` in Savant's format (not Maven format). These artifacts already have AMD files in the repository. For these:
 
-- The AMD is fetched from the Savant repo and cached in `.savant/cache`
+- The AMD is downloaded but **not persisted locally** -- it's parsed directly into an in-memory `ArtifactMetaData`
 - The JAR is fetched from the Savant repo and stored in `~/.m2/repository` (normalized to Maven layout)
 
 This works because the directory layout for both Savant and Maven is identical: `group/project/version/name-version.type`. The only difference is the file naming, which Savant already handles via `getArtifactFile()` vs `getArtifactNonSemanticFile()`.
@@ -221,9 +290,8 @@ This works because the directory layout for both Savant and Maven is identical: 
 
 When a Maven artifact has a non-semantic version (e.g., `4.1.65.Final`), Savant:
 1. Downloads the POM using the original version from `~/.m2` or Maven Central
-2. Creates the AMD with the semantic version mapping
-3. Stores the AMD in `.savant/cache` using the **semantic version** path
-4. The JAR in `~/.m2` uses the **original Maven version** path
+2. Generates the ArtifactMetaData **in memory** with the semantic version mapping applied from the current build file
+3. The JAR in `~/.m2` uses the **original Maven version** path
 
 The `fetchArtifact` method in `Workflow` already handles this dual-lookup (semantic first, then non-semantic fallback) -- see `Workflow.java:77-97`. The change is that instead of re-publishing a semantic-named copy to `.savant/cache`, it returns the path to the JAR in `~/.m2` using the original version path.
 
@@ -238,15 +306,15 @@ Negative cache markers (`.neg` files) are currently used for:
 - POMs that don't exist
 
 Under the new strategy:
-- Negative markers for source JARs should be stored in `~/.m2/repository` (since that's where sources live)
-- Negative markers for AMDs can be stored in `.savant/cache`
-- Negative markers for POMs can be stored in `~/.m2/repository`
+- **Source JAR negatives**: Stored in `~/.m2/repository` (since that's where sources live). This prevents repeated network requests for non-existent source JARs.
+- **AMD negatives**: Not needed. With in-memory generation, if a POM doesn't exist, we simply don't generate an AMD. No `.neg` file needed.
+- **POM negatives**: Could be stored in `~/.m2/repository`, but for released artifacts this is uncommon. If a POM doesn't exist for a declared dependency, it's a hard error (`ArtifactMetaDataMissingException`).
 
 ### 3.5 Offline Builds
 
 **Current behavior**: Offline builds work if `.savant/cache` is populated (everything is local to the project).
 
-**New behavior**: Offline builds work if `~/.m2/repository` is populated (JARs are there) AND `.savant/cache` has AMDs. Since `~/.m2` is shared across all tools, it's more likely to be populated than a per-project cache.
+**New behavior**: Offline builds work if `~/.m2/repository` is populated (JARs AND POMs are there). Since `~/.m2` is shared across all tools and populated during normal builds, it's more likely to be complete than a per-project cache.
 
 **Risk**: If a developer clones a project and has never built any Java project on their machine, `~/.m2` will be empty and the first build will require network access. This is the same behavior as Maven/Gradle and is acceptable.
 
@@ -254,13 +322,13 @@ Under the new strategy:
 
 MD5 verification for JARs happens at download time (in `URLProcess.fetch()`). This does not change. The verified JAR is written to `~/.m2/repository` and the MD5 file accompanies it.
 
-For AMD files, the MD5 is generated when Savant creates the AMD from a POM translation. The AMD and its MD5 are stored together in `.savant/cache`.
+For AMD files, since they are generated in-memory and never written to disk, MD5 verification is not applicable. The integrity is guaranteed by the POM source (which has its own MD5 in `~/.m2`).
 
 ### 3.7 Publishing Artifacts
 
 When a project publishes its own artifacts (`DependencyService.publish()`), the behavior depends on context:
-- **Integration builds**: Published to `~/.savant/cache/` (unchanged)
-- **Release builds**: Published to the configured publish workflow (e.g., SVN repo). The local AMD cache in `.savant/cache` is updated. The JAR is published to the remote repo and `~/.m2`.
+- **Integration builds**: Published to `~/.savant/cache/` (unchanged). This includes the AMD file, JAR, source, and MD5s.
+- **Release builds**: Published to the configured publish workflow (e.g., SVN repo). The AMD is generated and published to the remote target. JARs are published to the remote target and `~/.m2`.
 
 ---
 
@@ -271,22 +339,23 @@ When a project publishes its own artifacts (`DependencyService.publish()`), the 
 | Benefit | Description |
 |---------|-------------|
 | **Reduced disk usage** | Eliminates JAR duplication across N projects. Typical savings: 100-500 MB per project. |
+| **No stale cache** | Semantic version mappings are always applied fresh from the current build file. No need to manually delete `.savant/cache`. |
 | **Faster initial setup** | New Savant projects immediately benefit from any JARs already in `~/.m2` from Maven/Gradle builds. |
-| **Simpler mental model** | "AMDs are local, JARs are global" is easy to understand. |
+| **Simpler mental model** | "JARs are in `~/.m2`, AMDs are generated on the fly" is easy to understand. |
 | **Better Maven ecosystem compatibility** | Savant becomes a better citizen in the Maven ecosystem by sharing the same local cache. |
-| **Smaller project directories** | `.savant/cache` shrinks from hundreds of MB to a few KB (AMD XML files). |
-| **Easier CI/CD caching** | CI pipelines already cache `~/.m2`. No need to additionally cache `.savant/cache` for JARs. |
+| **No project directory pollution** | `.savant/cache` is eliminated entirely for non-integration builds. |
+| **Easier CI/CD caching** | CI pipelines already cache `~/.m2`. No need to additionally cache `.savant/cache`. |
 | **Reduced redundancy** | Eliminates the "same JAR in two places" problem that can lead to coherence issues. |
+| **Fewer repos to change** | Only `savant-dependency-management` and `savant-core` need code changes. |
 
 ### 4.2 Cons
 
 | Drawback | Description | Mitigation |
 |----------|-------------|------------|
-| **JAR resolution overhead per build** | Every build resolves JAR paths from `~/.m2` instead of `.savant/cache`. | This is a path computation (string concatenation + file existence check), not I/O. Negligible overhead. |
+| **POM parsing on every build** | Every build must parse POMs to generate AMDs (~300-500ms for 100 deps). | Acceptable for most builds. Can add opt-in disk caching later if needed. |
 | **Dependency on `~/.m2` integrity** | If `~/.m2` is corrupted or cleared, all projects need to re-download. | This is the standard Maven/Gradle behavior. Users are accustomed to this. |
-| **Cross-repo changes** | The change touches `savant-dependency-management`, `savant-core`, and `dependency-plugin`. | Phased implementation with backwards compatibility in transition. |
+| **Cross-repo changes** | The change touches `savant-dependency-management` and `savant-core`. | Only 2 repos, well-scoped changes. |
 | **Migration for existing projects** | Existing projects have populated `.savant/cache` directories that become stale. | Provide a migration guide. Old `.savant/cache` can be safely deleted. |
-| **Savant-native artifacts** | Artifacts only in the Savant repository (not in Maven Central) still need to be cached somewhere. | Store in `~/.m2/repository` using the same layout. |
 
 ---
 
@@ -296,41 +365,35 @@ When a project publishes its own artifacts (`DependencyService.publish()`), the 
 
 **Approach**: Instead of copying JARs to `.savant/cache`, create symlinks pointing to `~/.m2/repository`.
 
-**Pros**: Zero additional disk usage; `.savant/cache` still "looks" populated; minimal code changes.
-
-**Cons**: Windows compatibility issues (symlinks require admin privileges); breaks if `~/.m2` is on a different filesystem; adds complexity for a marginal benefit over the proposed solution; doesn't fundamentally simplify the mental model.
-
-**Verdict**: Rejected. The proposed solution is simpler and more portable.
+**Verdict**: Rejected. Windows compatibility issues; doesn't simplify the mental model.
 
 ### 5.2 Alternative B: Global Savant Cache (No Project Cache)
 
 **Approach**: Move everything to `~/.savant/cache` (global) and eliminate the project-level cache entirely.
 
-**Pros**: Simplest model; one cache location; no project directory pollution.
-
-**Cons**: AMDs encode project-specific decisions (semver mappings, license choices). Different projects may need different AMDs for the same artifact. Global AMDs would create conflicts. Also, AMD files are the core value Savant adds and committing them to VCS with the project is a useful option.
-
-**Verdict**: Rejected. Per-project AMD caching is necessary because AMD content depends on per-project configuration (semver mappings, license overrides).
+**Verdict**: Rejected. AMDs encode project-specific decisions (semver mappings). Different projects may need different AMDs for the same artifact. Global AMDs would create conflicts.
 
 ### 5.3 Alternative C: Keep Current Architecture, Add Cache Cleanup
 
-**Approach**: Keep `.savant/cache` storing everything but add a `savant clean-cache` command to reduce disk usage.
-
-**Pros**: No architecture changes; simple to implement.
-
-**Cons**: Doesn't solve the fundamental duplication problem; requires manual cleanup; doesn't improve Maven ecosystem integration.
+**Approach**: Keep `.savant/cache` storing everything but add a `savant clean-cache` command.
 
 **Verdict**: Rejected. Doesn't address the root cause.
 
 ### 5.4 Alternative D: Content-Addressable Cache
 
-**Approach**: Store all artifacts in a content-addressable store (like Git's object store) and use hard links from project caches.
-
-**Pros**: Zero duplication regardless of number of projects; integrity built in.
-
-**Cons**: Significant engineering effort; unfamiliar model for Java developers; doesn't leverage existing `~/.m2` cache; overkill for the problem.
+**Approach**: Store all artifacts in a content-addressable store and use hard links.
 
 **Verdict**: Rejected. Over-engineered for the use case.
+
+### 5.5 Alternative E: Disk-Cached AMDs Only (Original Spec v1 Approach)
+
+**Approach**: Keep `.savant/cache` but store only AMD files there. JARs go to `~/.m2`.
+
+**Pros**: Avoids POM re-parsing on every build (~200-400ms savings). Allows offline builds if AMDs are cached.
+
+**Cons**: Still has the stale-mapping problem (changing `semanticVersions` requires deleting `.savant/cache`). Still requires AMD publish workflow, AMD negative caching, and disk I/O logic.
+
+**Verdict**: Deferred as a fallback. If the performance cost of in-memory AMD generation proves unacceptable for large projects, we can add an opt-in disk cache for AMDs later. The in-memory approach is simpler and should be tried first.
 
 ---
 
@@ -346,6 +409,7 @@ When a project publishes its own artifacts (`DependencyService.publish()`), the 
 | **CI/CD environment differences** | Low | Medium | Document that `~/.m2` must be writable. Most CI systems already support this via Maven cache configuration. |
 | **Race conditions in shared `~/.m2`** | Low | Low | Maven itself has this issue and handles it via file locking. Savant currently does no locking; consider adding advisory locks for writes. |
 | **Integration build isolation** | Low | Medium | Integration builds already use `~/.savant/cache`. No change needed. Ensure the new workflow doesn't accidentally route integration artifacts to `~/.m2`. |
+| **In-memory AMD performance for large projects** | Low | Medium | Benchmark with 200+ dependency project. If > 1s overhead, add opt-in AMD disk cache as Alternative E. |
 
 ### 6.2 Compatibility Risks
 
@@ -353,237 +417,339 @@ When a project publishes its own artifacts (`DependencyService.publish()`), the 
 |------|-------------|------------|
 | **Older Savant versions** | Projects using older savant-core with the new savant-dependency-management. | The new library should be backwards compatible. Old `WorkflowDelegate.standard()` can create the new workflow structure. |
 | **Custom workflows** | Projects with custom fetch/publish workflows defined in build files. | Support the existing DSL. Custom workflows continue to work; only the `standard()` shortcut changes. |
-| **Third-party tools** | Tools that read `.savant/cache` directly. | Document the change. The IDEA plugin and any other tooling that reads from `.savant/cache` for JARs needs updating. |
+| **Third-party tools reading `.savant/cache`** | Tools that read `.savant/cache` directly for JARs. | Document the change. After review, we've confirmed that `dependency-plugin` and `idea-plugin` do NOT read `.savant/cache` directly -- they consume the resolved artifact graph. |
 
 ---
 
 ## 7. Phased Implementation Plan
 
-### Phase 1: Refactor Workflow Internals (savant-dependency-management)
+### Phase 1: Refactor `Workflow.fetchMetaData()` to In-Memory (savant-dependency-management)
 
-**Goal**: Introduce the concept of type-specific workflows without changing external behavior.
-
-**Changes**:
-
-1. **Create `AmdCacheProcess`**: A new `Process` implementation that only handles AMD files. It extends `CacheProcess` but filters to only `.amd` and `.amd.md5` items.
-
-2. **Refactor `Workflow` class**: Add separate workflow chains for AMD vs artifact resolution. The constructor accepts separate fetch/publish workflows for each type. Maintain backward-compatible constructor that creates the old behavior.
-
-3. **Update `Workflow.fetchMetaData()`**: Route AMD fetches through the AMD workflow chain.
-
-4. **Update `Workflow.fetchArtifact()`**: Route JAR fetches through the artifact workflow chain.
-
-5. **Update `Workflow.fetchSource()`**: Route source fetches through the artifact workflow chain.
-
-6. **Update `Workflow.loadPOM()`**: Route POM fetches through the artifact workflow chain.
-
-**Tests**: All existing tests must continue to pass with no behavioral change.
-
-### Phase 2: Implement New Cache Strategy (savant-dependency-management)
-
-**Goal**: Implement the new cache routing so AMDs go to `.savant/cache` and everything else goes to `~/.m2`.
+**Goal**: Generate AMDs in-memory from POMs instead of reading/writing AMD files to disk.
 
 **Changes**:
 
-1. **Create new `Workflow` factory method**: `Workflow.standard(Output output)` that creates the new workflow with:
-   - AMD fetch: `CacheProcess(.savant/cache)` then generate from POM
-   - AMD publish: `CacheProcess(.savant/cache)`
-   - Artifact fetch: `MavenCacheProcess(~/.m2)` then `MavenProcess(maven central)`
-   - Artifact publish: `MavenCacheProcess(~/.m2)`
+1. **Add in-memory AMD cache to `Workflow`**: A `Map<String, ArtifactMetaData> amdCache` field that persists for the lifetime of the `Workflow` instance.
 
-2. **Handle non-semantic version JAR resolution**: When `fetchArtifact()` falls back to non-semantic version, it should look in `~/.m2/repository` using the Maven version path rather than re-publishing to `.savant/cache`.
+2. **Rewrite `Workflow.fetchMetaData()`**: Check in-memory cache first. On miss, load POM (from `~/.m2` via `fetchWorkflow` or network), translate POM to AMD with current mappings, cache in memory, return.
 
-3. **Update negative caching**: Route negative markers to the appropriate cache (AMD negatives to `.savant/cache`, source negatives to `~/.m2`).
+3. **Remove AMD disk write**: Stop calling `publishWorkflow.publish()` for AMD items and their MD5s in `fetchMetaData()`.
 
-4. **Handle source JAR republishing**: Currently, when a Maven-style source JAR (`-sources.jar`) is found, it's republished as a Savant-style source (`-src.jar`). Under the new strategy, consider whether to maintain this renaming in `~/.m2` or handle it as a name resolution at build time.
+4. **Remove AMD disk read**: Stop calling `fetchWorkflow.fetchItem()` for AMD items. The in-memory cache replaces this.
 
-**Tests**: New tests verifying the separation of concerns. Existing tests refactored to validate new behavior.
+**Tests**: All existing tests must be updated to validate the new in-memory behavior. See Test Plan (Section 8).
 
-### Phase 3: Update Build File DSL (savant-core)
+### Phase 2: Simplify `fetchArtifact()` and `fetchSource()` (savant-dependency-management)
 
-**Goal**: Update the standard workflow and DSL in savant-core to use the new cache strategy.
+**Goal**: Stop republishing JARs/sources to `.savant/cache`. Return paths from `~/.m2` directly.
 
 **Changes**:
 
-1. **Update `WorkflowDelegate.standard()`**: Use the new workflow factory.
+1. **`fetchArtifact()`**: When a non-semantic version JAR is found in `~/.m2`, return its path directly instead of republishing under the semantic version name. The semantic-to-non-semantic mapping is already tracked on the `Artifact` object.
 
-2. **Update `ProcessDelegate`**: If the DSL needs new methods for configuring AMD-specific vs artifact-specific processes, add them.
+2. **`fetchSource()`**: When a Maven-style `-sources.jar` is found, return its path directly instead of republishing as `-src.jar`. Consumers that need the path just use whatever is returned.
 
-3. **Maintain backward compatibility**: Custom `fetch {}` and `publish {}` blocks should continue to work for projects that override the standard workflow.
+3. **Negative caching for sources**: Continue writing `.neg` markers, but to `~/.m2/repository` instead of `.savant/cache`.
 
-**Tests**: Build file parsing tests in savant-core.
+**Tests**: New tests validating paths point to `~/.m2`. Source tests updated for new naming behavior.
 
-### Phase 4: Update Dependency Plugin (dependency-plugin)
+### Phase 3: Update `WorkflowDelegate.standard()` (savant-core)
 
-**Goal**: Ensure the dependency plugin works correctly with the new workflow.
+**Goal**: Update the standard workflow to remove `CacheProcess` from fetch and publish.
 
 **Changes**:
 
-1. **Update `integrate()`**: Ensure integration builds still publish to `~/.savant/cache`.
+1. **Update `WorkflowDelegate.standard()`**: Remove `CacheProcess` from both fetch and publish chains. Only use `MavenCacheProcess`, `URLProcess`, and `MavenProcess`.
 
-2. **Update classpath construction**: Classpath paths now point to `~/.m2/repository` instead of `.savant/cache`. Verify the `Classpath` object returns correct paths.
+2. **Keep DSL backward-compatible**: `fetch { cache() }` and `publish { cache() }` continue to work for projects with custom workflows.
 
-3. **Update `copy()`**: The copy target should still work (copying from `~/.m2` to the target directory).
+**Tests**: Update `GroovyBuildFileParserTest` to verify the new standard workflow configuration.
 
-**Tests**: End-to-end tests with the dependency plugin.
+### Phase 4: Mapping Strategy Audit (savant-dependency-management)
 
-### Phase 5: Migration and Cleanup
+**Goal**: Review the current POM-to-AMD mapping strategy for bugs, performance issues, and gaps that could prevent reliable dynamic mapping of Maven artifacts.
+
+**Investigation Areas**:
+
+1. **Version mapping correctness**: Are there edge cases where `MavenTools.toSavantDependencies(pom, mappings)` produces incorrect results? What happens with version ranges, SNAPSHOT versions, classifiers?
+
+2. **POM parsing performance**: Profile the POM parsing path (`MavenTools.parsePOM()`, parent/import resolution). Identify any hotspots or redundant work.
+
+3. **Parent POM resolution depth**: Some Maven artifacts have deeply nested parent POM hierarchies. Is there a risk of excessive network calls or stack depth?
+
+4. **BOM import handling**: Test with complex BOM imports (e.g., Spring Boot, AWS SDK). Are all dependencies correctly resolved?
+
+5. **Error handling**: When a POM is malformed or a parent POM is missing, are the error messages helpful? Are there silent failures?
+
+6. **Range mapping coverage**: The `rangeMappings` feature was recently added. Verify it handles all edge cases.
+
+**Deliverable**: A list of identified issues with severity and recommended fixes. These can be addressed as part of this work or tracked separately.
+
+### Phase 5: Performance Benchmarking
+
+**Goal**: Quantify the actual performance cost of in-memory AMD generation vs disk-cached AMDs.
+
+**Approach**:
+
+1. Create a test project with 50, 100, and 200 dependencies (mix of simple and complex POM hierarchies).
+2. Measure time for `buildGraph()` with in-memory AMD generation.
+3. Compare to baseline (current disk-cached approach).
+4. If delta > 1 second for 200 deps, evaluate adding opt-in disk caching as Alternative E.
+5. Measure memory usage for in-memory AMD cache.
+
+### Phase 6: Migration and Cleanup
 
 **Goal**: Help existing users migrate.
 
 **Changes**:
 
-1. **Add migration documentation**: Guide for deleting old `.savant/cache` contents.
+1. **Version bump**: Release new versions of `savant-dependency-management` and `savant-core` with coordinated version numbers.
 
-2. **Version bump**: Release new versions of all three libraries with coordinated version numbers.
+2. **Migration guide**: Document that `.savant/cache` can be safely deleted after upgrading.
 
-3. **Update savantbuild.org docs**: Reflect the new cache strategy.
+3. **Update build files**: Projects using `workflow { standard() }` get the new behavior automatically. Projects with custom `fetch { cache() }` workflows continue to work unchanged.
 
 ---
 
 ## 8. Comprehensive Test Plan
 
-### 8.1 Unit Tests: Cache Process Behavior
+### 8.1 Testing Patterns (Existing Conventions)
+
+All tests follow these established patterns from the codebase:
+
+- **Framework**: TestNG with `@Test`, `@BeforeSuite`, `@BeforeMethod`, `@AfterMethod`, `@DataProvider`
+- **Base class**: `BaseUnitTest` provides `projectDir`, `cache`, `integration`, `mavenCache`, `output`, and a shared `workflow`
+- **Fixtures**: Pre-seeded artifacts in `test-deps/savant/`, `test-deps/maven/`, and `test-deps/integration/`
+- **Cleanup**: `PathTools.prune(path)` to clean test directories before each test
+- **HTTP mocking**: `BaseUnitTest.makeFileServer()` creates a local HTTP server on port 7042 for testing URL/Maven processes
+- **Assertions**: TestNG assertions (`assertNotNull`, `assertTrue`, `assertEquals`, `assertNull`)
+- **Path validation**: `file.toAbsolutePath().toString().replace('\\', '/').endsWith(expected)` pattern for cross-platform path checks
+
+### 8.2 Unit Tests: In-Memory AMD Generation (WorkflowTest.java)
 
 | # | Test Case | Expected Behavior |
 |---|-----------|-------------------|
-| 1 | `AmdCacheProcess.fetch()` for an AMD file that exists | Returns the path to the cached AMD file |
-| 2 | `AmdCacheProcess.fetch()` for an AMD file that doesn't exist | Returns null |
-| 3 | `AmdCacheProcess.publish()` for an AMD file | Writes AMD to `.savant/cache` directory |
-| 4 | `AmdCacheProcess.fetch()` for a non-AMD file (JAR) | Returns null (should not cache JARs) |
-| 5 | `AmdCacheProcess.publish()` for a non-AMD file | No-op or returns null (should not cache JARs) |
-| 6 | `MavenCacheProcess.fetch()` for a JAR in `~/.m2` | Returns the path in `~/.m2` |
-| 7 | `MavenCacheProcess.fetch()` for a JAR not in `~/.m2` | Returns null |
-| 8 | `MavenCacheProcess.publish()` for a JAR | Writes JAR to `~/.m2/repository` |
-| 9 | Negative cache marker in `.savant/cache` for AMD | Throws `NegativeCacheException` |
-| 10 | Negative cache marker in `~/.m2` for source JAR | Throws `NegativeCacheException` |
+| 1 | `fetchMetaData()` with POM in `~/.m2` (test dir) | ArtifactMetaData generated in-memory from POM; no AMD file written to disk |
+| 2 | `fetchMetaData()` called twice for same artifact | Second call returns cached in-memory ArtifactMetaData; POM not re-parsed |
+| 3 | `fetchMetaData()` with POM not in `~/.m2` but available on remote | POM downloaded to `~/.m2`, AMD generated in-memory |
+| 4 | `fetchMetaData()` with no POM anywhere | `ArtifactMetaDataMissingException` thrown |
+| 5 | `fetchMetaData()` with semantic version mapping | Mapping applied from `workflow.mappings`; resulting AMD has correct semver dependencies |
+| 6 | `fetchMetaData()` after changing mappings mid-build | New mapping reflected immediately (no stale cache) |
+| 7 | `fetchMetaData()` with parent POM | Parent POM resolved from `~/.m2`; AMD includes parent-defined dependencies |
+| 8 | `fetchMetaData()` with BOM import | BOM POM resolved; imported dependency definitions included |
 
-### 8.2 Unit Tests: Workflow Routing
+### 8.3 Unit Tests: Artifact Fetching Without Local Cache (WorkflowTest.java)
 
 | # | Test Case | Expected Behavior |
 |---|-----------|-------------------|
-| 11 | `Workflow.fetchMetaData()` routes through AMD workflow | AMD fetched from `.savant/cache`, not `~/.m2` |
-| 12 | `Workflow.fetchArtifact()` routes through artifact workflow | JAR fetched from `~/.m2`, not `.savant/cache` |
-| 13 | `Workflow.fetchSource()` routes through artifact workflow | Source JAR fetched from `~/.m2` |
-| 14 | `Workflow.loadPOM()` routes through artifact workflow | POM fetched from `~/.m2` |
-| 15 | AMD generated from POM is published to `.savant/cache` only | AMD file appears in `.savant/cache`, not `~/.m2` |
-| 16 | JAR downloaded from Maven Central is published to `~/.m2` only | JAR appears in `~/.m2`, not `.savant/cache` |
-| 17 | POM downloaded from Maven Central is published to `~/.m2` only | POM appears in `~/.m2`, not `.savant/cache` |
+| 9 | `fetchArtifact()` for JAR in `~/.m2` (test dir) | Returns path in `~/.m2`; no copy to `.savant/cache` |
+| 10 | `fetchArtifact()` for JAR not in `~/.m2` | Downloads to `~/.m2`; returns path in `~/.m2` |
+| 11 | `fetchArtifact()` with non-semantic version | Falls back to Maven version path in `~/.m2`; does NOT republish under semantic name |
+| 12 | `fetchArtifact()` for missing artifact | Throws `ArtifactMissingException` |
 
-### 8.3 Integration Tests: End-to-End Resolution
+### 8.4 Unit Tests: Source Fetching Without Local Cache (WorkflowTest.java)
 
 | # | Test Case | Expected Behavior |
 |---|-----------|-------------------|
-| 18 | Resolve a simple dependency (e.g., `commons-collections:3.2.1`) cold | JAR in `~/.m2`, AMD in `.savant/cache`, no JAR in `.savant/cache` |
-| 19 | Resolve same dependency again (warm cache) | AMD from `.savant/cache`, JAR from `~/.m2`, no network calls |
-| 20 | Resolve dependency already in `~/.m2` (from Maven build) | No download needed; AMD generated and cached locally |
-| 21 | Resolve dependency with non-semantic version (e.g., `netty:4.1.65.Final`) | AMD uses semantic version; JAR resolved from `~/.m2` using Maven version path |
-| 22 | Resolve dependency with transitive dependencies | All transitive AMDs in `.savant/cache`; all transitive JARs in `~/.m2` |
-| 23 | Resolve dependency with parent POM | Parent POM fetched to `~/.m2`; parent not in `.savant/cache` |
-| 24 | Resolve dependency with BOM import | BOM POM in `~/.m2`; AMD generated correctly from imported dependency definitions |
-| 25 | Resolve Savant-native artifact (from savantbuild.org, not Maven Central) | AMD in `.savant/cache`; JAR in `~/.m2` |
+| 13 | `fetchSource()` for `-sources.jar` in `~/.m2` | Returns path to `-sources.jar` in `~/.m2`; does NOT republish as `-src.jar` |
+| 14 | `fetchSource()` for `-src.jar` in `~/.m2` | Returns path to `-src.jar` directly |
+| 15 | `fetchSource()` with non-semantic version | Falls back to Maven version source path; returns `~/.m2` path |
+| 16 | `fetchSource()` for non-existent source | Creates `.neg` marker in `~/.m2` (test dir); returns null |
+| 17 | `fetchSource()` with existing `.neg` marker | Returns null immediately (short-circuit) |
 
-### 8.4 Integration Tests: Version Mapping
+### 8.5 Unit Tests: CacheProcess Behavior (CacheProcessTest.java)
 
-| # | Test Case | Expected Behavior |
-|---|-----------|-------------------|
-| 26 | Resolve artifact where Maven version == semantic version (e.g., `3.2.1`) | Direct resolution, no mapping needed |
-| 27 | Resolve artifact where Maven version needs mapping (e.g., `4.1.65.Final`) | Mapping applied; AMD stores semantic version; JAR found via non-semantic path |
-| 28 | Resolve artifact where Maven version is simple (e.g., `1.0` -> `1.0.0`) | Auto-fixed to 3-part semver |
-| 29 | Resolve artifact with range version mapping | Range mapping resolved to concrete version |
-| 30 | Resolve artifact with missing version mapping for non-semantic version | Throws `VersionException` with helpful error message |
-
-### 8.5 Integration Tests: Negative Caching
+Existing tests continue to pass for `CacheProcess` (still used by custom workflows and integration builds):
 
 | # | Test Case | Expected Behavior |
 |---|-----------|-------------------|
-| 31 | Source JAR doesn't exist; negative marker created | `.neg` file in `~/.m2`; subsequent fetches short-circuit |
-| 32 | AMD negative marker present | `NegativeCacheException` thrown; no network request |
-| 33 | Clear negative marker and retry | Negative marker deleted; fresh fetch attempted |
+| 18 | `CacheProcess.fetch()` for existing artifact | Returns path (unchanged behavior) |
+| 19 | `CacheProcess.fetch()` for integration build artifact | Routes to integration dir (unchanged behavior) |
+| 20 | `CacheProcess.publish()` to cache dir | Copies file to cache (unchanged behavior) |
+| 21 | `CacheProcess.publish()` for integration build | Copies to integration dir (unchanged behavior) |
 
-### 8.6 Integration Tests: Integration Builds
-
-| # | Test Case | Expected Behavior |
-|---|-----------|-------------------|
-| 34 | Publish integration build | Artifact published to `~/.savant/cache/` with integration version |
-| 35 | Resolve integration build dependency | Fetched from `~/.savant/cache/`, not `.savant/cache` |
-| 36 | Integration version doesn't pollute `~/.m2` | No integration artifacts in `~/.m2` |
-
-### 8.7 Integration Tests: Publishing
+### 8.6 Integration Tests: End-to-End with Maven Central (WorkflowTest.java)
 
 | # | Test Case | Expected Behavior |
 |---|-----------|-------------------|
-| 37 | Publish a release artifact | AMD published; JAR published; source published; all to configured publish targets |
-| 38 | Publish with no source file | Negative marker created for source |
+| 22 | Resolve `org.apache.groovy:groovy:4.0.5` cold | POM downloaded to `~/.m2` (test dir); AMD generated in-memory; JAR downloaded to `~/.m2`; no `.savant/cache` files |
+| 23 | Resolve `io.vertx:vertx-core:3.9.8` with netty version mappings | All mapped dependencies in AMD use semantic versions; JARs in `~/.m2` use original Maven versions |
+| 24 | Resolve same dependency twice in one build | Second resolve uses in-memory cached AMD; only one POM parse |
+| 25 | Resolve dependency with transitive dependencies | All transitive AMDs generated in-memory; all JARs in `~/.m2` |
+| 26 | Resolve dependency with parent POM | Parent POM in `~/.m2`; no parent POM in `.savant/cache` |
 
-### 8.8 Edge Case Tests
+### 8.7 Integration Tests: DefaultDependencyService (DefaultDependencyServiceTest.java)
+
+| # | Test Case | Expected Behavior |
+|---|-----------|-------------------|
+| 27 | `buildGraph()` + `reduce()` + `resolve()` full pipeline | Complete dependency resolution with all JARs from `~/.m2`; no `.savant/cache` involvement |
+| 28 | `publish()` for integration build | AMD, JAR, source, MD5s all published to `~/.savant/cache` |
+| 29 | `publish()` for release build | AMD generated and published to remote; JAR published to remote and `~/.m2` |
+| 30 | `resolve()` with `fetchSource: true` | Source JARs resolved from `~/.m2` |
+
+### 8.8 Integration Tests: Integration Builds
+
+| # | Test Case | Expected Behavior |
+|---|-----------|-------------------|
+| 31 | Publish integration build | Artifact published to `~/.savant/cache/` with integration version |
+| 32 | Resolve integration build dependency | Fetched from `~/.savant/cache/`, not `~/.m2` |
+| 33 | Integration version doesn't pollute `~/.m2` | No integration artifacts in `~/.m2` |
+
+### 8.9 Integration Tests: Savant-Core WorkflowDelegate (GroovyBuildFileParserTest.java)
+
+| # | Test Case | Expected Behavior |
+|---|-----------|-------------------|
+| 34 | `standard()` produces workflow without CacheProcess in fetch chain | Only MavenCacheProcess, URLProcess, MavenProcess in fetch |
+| 35 | `standard()` produces workflow without CacheProcess in publish chain | Only MavenCacheProcess in publish |
+| 36 | Custom `fetch { cache() }` still works | CacheProcess added to fetch chain as before |
+| 37 | Custom `publish { cache() }` still works | CacheProcess added to publish chain as before |
+| 38 | `semanticVersions {}` block still works | Mappings populated on workflow |
+
+### 8.10 Edge Case Tests
 
 | # | Test Case | Expected Behavior |
 |---|-----------|-------------------|
 | 39 | `~/.m2/repository` doesn't exist on first build | Directory created automatically |
-| 40 | `.savant/cache` doesn't exist on first build | Directory created automatically |
-| 41 | JAR exists in `~/.m2` but is corrupted (MD5 mismatch) | Re-downloaded from remote; old file replaced |
-| 42 | AMD exists in `.savant/cache` but is malformed XML | Error thrown with clear message |
-| 43 | Network unavailable but `~/.m2` has all JARs and `.savant/cache` has all AMDs | Build succeeds (offline mode) |
-| 44 | Network unavailable and `~/.m2` is empty | Build fails with clear error message indicating which artifact is missing |
-| 45 | Two projects with different semver mappings for the same artifact | Each project has its own AMD in its `.savant/cache`; no conflict |
-| 46 | Artifact with classifier (e.g., `snappy-java:1.1.10.5`) | Correctly resolved from `~/.m2` using original version path |
-| 47 | Concurrent builds writing to `~/.m2` | No corruption (file copy is atomic enough for this use case, or add advisory locking) |
-| 48 | Very deep transitive dependency tree (10+ levels) | All AMDs cached; all JARs resolved; no stack overflow |
-| 49 | Circular dependency detected | `CyclicException` thrown (unchanged behavior) |
-| 50 | Incompatible versions in dependency graph (e.g., major version mismatch) | `CompatibilityException` thrown (unchanged behavior) |
-| 51 | `skipCompatibilityCheck` flag honored | Incompatible versions allowed when flag is set |
-| 52 | Delete `.savant/cache` between builds | AMDs re-generated from POMs in `~/.m2`; build succeeds with network |
-| 53 | Delete `~/.m2/repository` between builds | JARs re-downloaded from Maven Central; AMDs still in `.savant/cache`; build succeeds with network |
-| 54 | Artifact with exclusions | Exclusions honored in dependency graph; excluded artifacts not resolved |
-| 55 | Custom workflow overrides in build file | Custom `fetch {}` / `publish {}` blocks override standard behavior |
+| 40 | JAR exists in `~/.m2` but is corrupted (MD5 mismatch) | Re-downloaded from remote; old file replaced |
+| 41 | Network unavailable but `~/.m2` has all JARs and POMs | Build succeeds |
+| 42 | Network unavailable and `~/.m2` is empty | Build fails with clear error message indicating which artifact is missing |
+| 43 | Two projects with different semver mappings for the same artifact | Each build generates its own in-memory AMD with project-specific mappings; no conflict |
+| 44 | Artifact with classifier (e.g., `snappy-java:1.1.10.5`) | Correctly resolved from `~/.m2` using original version path |
+| 45 | Very deep transitive dependency tree (10+ levels) | All AMDs generated; all JARs resolved; no stack overflow |
+| 46 | Circular dependency detected | `CyclicException` thrown (unchanged behavior) |
+| 47 | Incompatible versions in dependency graph | `CompatibilityException` thrown (unchanged behavior) |
+| 48 | `skipCompatibilityCheck` flag honored | Incompatible versions allowed when flag is set |
+| 49 | Artifact with exclusions | Exclusions honored in dependency graph; excluded artifacts not resolved |
+| 50 | Custom workflow overrides in build file | Custom `fetch {}` / `publish {}` blocks override standard behavior |
+| 51 | Delete `~/.m2/repository` between builds | JARs and POMs re-downloaded; AMDs re-generated in-memory; build succeeds with network |
 
-### 8.9 Performance Tests
+### 8.11 Performance Tests
 
 | # | Test Case | Expected Behavior |
 |---|-----------|-------------------|
-| 56 | Cold build (empty caches) | Performance comparable to current behavior (network-bound) |
-| 57 | Warm build (all caches populated) | Equal or faster than current behavior (fewer cache checks) |
-| 58 | Re-build after deleting `.savant/cache` only | Slightly slower (AMD regeneration) but no network for JARs |
-| 59 | Build with 200+ dependencies | Completes in reasonable time; no excessive memory usage |
+| 52 | Cold build (empty `~/.m2`) | Performance comparable to current behavior (network-bound) |
+| 53 | Warm build (`~/.m2` populated) | Equal or faster than current behavior (fewer disk writes) |
+| 54 | Warm build AMD generation time for 50 deps | Measure POM parse + translate time; document baseline |
+| 55 | Warm build AMD generation time for 100 deps | Measure POM parse + translate time; document baseline |
+| 56 | Warm build AMD generation time for 200 deps | Measure POM parse + translate time; document baseline |
+| 57 | Memory usage for in-memory AMD cache | Measure heap impact; should be < 5MB for 200 deps |
+| 58 | Build with 200+ dependencies | Completes in reasonable time; no excessive memory usage |
 
-### 8.10 Backward Compatibility Tests
+### 8.12 Backward Compatibility Tests
 
 | # | Test Case | Expected Behavior |
 |---|-----------|-------------------|
-| 60 | Old-style `Workflow` constructor still works | Backward-compatible; old behavior preserved |
-| 61 | Custom `fetch {}` with explicit `cache()` process | Works as before; project cache stores all items |
-| 62 | Workflow with only `cache()` (no Maven) | Savant-only resolution works |
-| 63 | Workflow with only `maven()` (no cache) | Direct Maven resolution works |
+| 59 | Old-style `Workflow` constructor still works | Backward-compatible; old behavior preserved |
+| 60 | Custom `fetch {}` with explicit `cache()` process | Works as before; project cache stores all items |
+| 61 | Workflow with only `cache()` (no Maven) | Savant-only resolution works |
+| 62 | Workflow with only `maven()` (no cache) | Direct Maven resolution works |
 
 ---
 
-## 9. Migration Guide (Draft)
+## 9. Mapping Strategy Audit Plan
+
+### 9.1 Goal
+
+With the new in-memory approach, every build dynamically maps Maven artifacts to Savant format via POM parsing. This makes the mapping strategy a critical path. We need to identify and fix any issues that could cause incorrect or slow mapping.
+
+### 9.2 Investigation Checklist
+
+1. **`MavenTools.parsePOM()`**: Review for correctness. Test with POMs that use:
+   - `${project.version}`, `${parent.version}`, custom properties
+   - BOMs (`<scope>import</scope>`)
+   - Deeply nested parent hierarchies (3+ levels)
+   - `<dependencyManagement>` sections
+   - `<optional>true</optional>` and `<exclusions>`
+
+2. **`MavenTools.toSavantDependencies()`**: Review mapping logic:
+   - Are Maven scopes correctly mapped to Savant groups?
+   - Are optional dependencies handled correctly?
+   - Are exclusions properly translated?
+   - What happens when a transitive dependency has a version that needs mapping but no mapping is configured?
+
+3. **`MavenTools.toArtifact()`**: Review version resolution:
+   - How are version ranges handled?
+   - What happens with SNAPSHOT versions?
+   - What about classifier-based artifacts?
+
+4. **Performance hotspots**:
+   - Is `POM.replaceKnownVariablesAndFillInDependencies()` called multiple times unnecessarily?
+   - Are parent POMs being re-loaded for sibling dependencies? (Should be addressed by in-memory POM caching within the Workflow)
+   - Is there any O(n^2) behavior in the variable replacement logic?
+
+5. **Error messages**: When mapping fails, are the error messages actionable?
+   - Missing version mapping for non-semantic version: does it tell the user exactly what to add to `semanticVersions {}`?
+   - Missing parent POM: does it say which artifact triggered the lookup?
+
+### 9.3 Deliverable
+
+A markdown file `specs/mapping-strategy-audit.md` documenting findings, with a table of issues and recommended fixes.
+
+---
+
+## 10. Migration Guide (Draft)
 
 ### For Existing Users
 
-1. Update `savant-dependency-management`, `savant-core`, and `dependency-plugin` to the new versions.
+1. Update `savant-dependency-management` and `savant-core` to the new versions.
 2. If using `workflow { standard() }` in your build file, the new cache strategy is automatic.
 3. Delete your old `.savant/cache` directory to reclaim disk space: `rm -rf .savant/cache`
-4. Your `~/.m2/repository` will be populated on the next build.
-5. If using custom workflows, review the updated documentation.
+4. Your `~/.m2/repository` will be populated on the next build (POMs and JARs).
+5. If using custom workflows, no changes needed -- custom `fetch { cache() }` blocks continue to work.
 
 ### For CI/CD Pipelines
 
 1. Cache `~/.m2/repository` between builds (most CI systems already do this for Maven).
-2. Optionally cache `.savant/cache` for faster AMD resolution (small, low priority).
-3. No other changes needed.
+2. No other changes needed (`.savant/cache` is no longer used).
 
 ---
 
-## 10. Open Questions
+## 11. Open Questions
 
-1. **Should `.savant/cache` be committable to VCS?** AMD files are small and deterministic. Committing them would allow fully offline builds without even needing `~/.m2`. However, this may cause merge conflicts and adds noise to the repo. **Recommendation**: Don't commit by default, but support it as an option.
+1. ~~**Should `.savant/cache` be committable to VCS?**~~ No longer applicable. `.savant/cache` is eliminated for non-integration builds.
 
-2. **Should we add a `savant cache clean` command?** For cleaning `.savant/cache` and/or `~/.m2` Savant-related artifacts. **Recommendation**: Yes, in a future release.
+2. **Should we add a `savant cache clean` command?** For cleaning `~/.m2` of Savant-related artifacts. **Recommendation**: Low priority; `~/.m2` is shared with Maven/Gradle and has its own cleanup patterns.
 
 3. **How to handle the Savant repository (`repository.savantbuild.org`)?** Artifacts here use Savant's format and may not exist in Maven Central. They should be stored in `~/.m2/repository` as well. **Recommendation**: The URLProcess already writes to the publish workflow, which now targets `~/.m2`. This should work without special handling.
 
-4. **Should the IDEA plugin be updated?** If there's a Savant IDEA plugin that reads from `.savant/cache` for JARs, it needs to be updated to read from `~/.m2`. **Recommendation**: Yes, in a coordinated release.
+4. ~~**Should the IDEA plugin be updated?**~~ No. After code review, the IDEA plugin consumes the resolved artifact graph and doesn't read `.savant/cache` directly. It will transparently receive paths pointing to `~/.m2`.
 
-5. **Should AMD files include a schema version?** To handle future format changes gracefully. **Recommendation**: Consider adding a version attribute to the `<artifact-meta-data>` root element.
+5. **Should AMD files include a schema version?** To handle future format changes gracefully. **Recommendation**: Deferred. With in-memory AMD generation, there is no persisted AMD format to version (except for integration and release publishes).
+
+6. **Is `maven-bridge` still needed?** If Savant dynamically maps Maven artifacts via POM-to-AMD on every build, the manual bridge tool may be unnecessary. **Recommendation**: Evaluate after the new strategy is working. Likely to be deprecated.
+
+7. **Should we add in-memory POM caching?** Parent POMs and BOM POMs are often shared across sibling dependencies. Caching loaded POM objects in a `Map<String, POM>` on the Workflow would avoid re-parsing the same parent POM. **Recommendation**: Yes, add this in Phase 1 as a performance optimization.
+
+---
+
+## Appendix A: Repository Analysis
+
+### Repos Reviewed
+
+| Repo | Relevance | Changes Needed | Testing Framework |
+|------|-----------|---------------|-------------------|
+| `savant-dependency-management` | Primary | Yes (Workflow, WorkflowDelegate is downstream) | TestNG, BaseUnitTest, test-deps fixtures, HTTP mock |
+| `savant-core` | Secondary | Yes (WorkflowDelegate.standard()) | TestNG, BaseUnitTest |
+| `dependency-plugin` | Consumer only | No code changes needed | TestNG, Groovy tests |
+| `idea-plugin` | Consumer only | No code changes needed | TestNG, Groovy tests |
+| `maven-bridge` | Out of scope | May be deprecated | TestNG |
+| `pom-plugin` | No interaction | No changes | TestNG, Groovy tests |
+| `savant-utils` | No interaction | No changes | TestNG |
+
+### Key Source Files by Repo
+
+**savant-dependency-management** (changes needed):
+- `src/main/java/org/savantbuild/dep/workflow/Workflow.java` -- Main refactoring target
+- `src/main/java/org/savantbuild/dep/workflow/FetchWorkflow.java` -- No API change, but behavior changes
+- `src/main/java/org/savantbuild/dep/workflow/PublishWorkflow.java` -- Reduced usage (no AMD publishing)
+- `src/main/java/org/savantbuild/dep/workflow/process/CacheProcess.java` -- Unchanged (still used by custom workflows)
+- `src/main/java/org/savantbuild/dep/workflow/process/MavenCacheProcess.java` -- Unchanged
+- `src/main/java/org/savantbuild/dep/DefaultDependencyService.java` -- Minor changes to `publish()`
+- `src/main/java/org/savantbuild/dep/maven/MavenTools.java` -- Audit target for mapping strategy
+- `src/test/java/org/savantbuild/dep/workflow/process/WorkflowTest.java` -- Major test updates
+- `src/test/java/org/savantbuild/dep/DefaultDependencyServiceTest.java` -- Test updates
+- `src/test/java/org/savantbuild/dep/workflow/process/CacheProcessTest.java` -- Tests unchanged
+
+**savant-core** (changes needed):
+- `src/main/java/org/savantbuild/parser/groovy/WorkflowDelegate.java` -- Update `standard()`
+- `src/test/java/org/savantbuild/parser/groovy/GroovyBuildFileParserTest.java` -- Test updates
