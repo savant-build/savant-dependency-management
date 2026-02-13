@@ -399,18 +399,10 @@ public class WorkflowTest extends BaseUnitTest {
     System.out.println("[Performance] vertx-core fetchMetaData: first call = " + firstCallMs + "ms, cached call = " + secondCallMs + "ms");
   }
 
-  // ---------------------------------------------------------------------------
-  // Savant-native AMD path tests
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Tests the Savant-native AMD path: when a pre-built AMD file exists in the Savant repo,
-   * fetchMetaData should parse it directly (not fall through to POM loading).
-   * Verifies that the AMD file is cached on disk via the publish workflow and that the
-   * in-memory cache returns the same instance on subsequent calls.
-   */
   @Test
   public void fetchMetaData_savantNativeAmd() throws Exception {
+    // Savant-native AMD path: pre-built AMD file exists in the Savant repo,
+    // fetchMetaData parses it directly (no POM loading fallback)
     Path cache = projectDir.resolve("build/test/cache");
     PathTools.prune(cache);
 
@@ -440,7 +432,7 @@ public class WorkflowTest extends BaseUnitTest {
       assertTrue(Files.isRegularFile(cache.resolve("org/savantbuild/test/leaf1/1.0.0/leaf1-1.0.0.jar.amd")));
       assertTrue(Files.isRegularFile(cache.resolve("org/savantbuild/test/leaf1/1.0.0/leaf1-1.0.0.jar.amd.md5")));
 
-      // In-memory cache should return the same instance
+      // In-memory cache should return the same instance on second call
       ArtifactMetaData amd2 = workflow.fetchMetaData(artifact);
       assertSame(amd, amd2);
     } finally {
@@ -448,12 +440,9 @@ public class WorkflowTest extends BaseUnitTest {
     }
   }
 
-  /**
-   * Tests the Savant-native AMD path with a more complex artifact that has dependencies
-   * in its AMD file. Verifies the dependencies are correctly parsed from the pre-built AMD.
-   */
   @Test
   public void fetchMetaData_savantNativeAmd_withDependencies() throws Exception {
+    // Savant-native AMD with compile and runtime dependency groups
     Path cache = projectDir.resolve("build/test/cache");
     PathTools.prune(cache);
 
@@ -471,7 +460,7 @@ public class WorkflowTest extends BaseUnitTest {
           output
       );
 
-      // intermediate has dependencies in its AMD file (multiple-versions + multiple-versions-different-dependencies)
+      // intermediate AMD has compile dep (multiple-versions) and runtime dep (multiple-versions-different-dependencies)
       Artifact artifact = new ReifiedArtifact(
           new ArtifactID("org.savantbuild.test", "intermediate", "intermediate", "jar"),
           new Version("1.0.0"),
@@ -480,7 +469,6 @@ public class WorkflowTest extends BaseUnitTest {
       assertNotNull(amd);
       assertNotNull(amd.dependencies);
 
-      // The intermediate AMD has compile and runtime dependency groups
       assertNotNull(amd.dependencies.groups.get("compile"));
       assertEquals(amd.dependencies.groups.get("compile").dependencies.size(), 1);
       assertEquals(amd.dependencies.groups.get("compile").dependencies.get(0).id.project, "multiple-versions");
@@ -493,21 +481,13 @@ public class WorkflowTest extends BaseUnitTest {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Error path tests
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Tests that ArtifactMetaDataMissingException is thrown when neither a Savant AMD file
-   * nor a Maven POM can be found for an artifact.
-   */
   @Test
   public void fetchMetaData_missingAmdAndPom() throws Exception {
+    // Neither a Savant AMD file nor a Maven POM can be found -- should throw
     Path cache = projectDir.resolve("build/test/cache");
     PathTools.prune(cache);
 
     // Workflow with only CacheProcess pointing at an empty cache -- no remote processes
-    // that could serve an AMD or POM
     Workflow workflow = new Workflow(
         new FetchWorkflow(
             output,
@@ -528,20 +508,15 @@ public class WorkflowTest extends BaseUnitTest {
     }
   }
 
-  /**
-   * Tests that ArtifactMetaDataMissingException is thrown when a Savant repo serves the JAR
-   * but has no AMD file, and there is no Maven POM either. This exercises the missing-amd
-   * test fixture.
-   */
   @Test
   public void fetchMetaData_missingAmdInSavantRepo_noPomFallback() throws Exception {
+    // Savant repo serves the JAR but has no AMD file, and there is no Maven POM either.
+    // Uses the missing-amd test fixture which has a JAR + MD5 but no .amd file.
     Path cache = projectDir.resolve("build/test/cache");
     PathTools.prune(cache);
 
     HttpServer server = makeFileServer(null, null);
     try {
-      // Workflow with Savant repo (serves JARs but missing-amd has no .amd file)
-      // and NO Maven process (so no POM fallback)
       Workflow workflow = new Workflow(
           new FetchWorkflow(
               output,
@@ -569,19 +544,11 @@ public class WorkflowTest extends BaseUnitTest {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // POM cache tests
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Tests that the in-memory POM cache prevents re-parsing shared parent POMs.
-   * Two different artifacts that share the same parent POM chain should result in
-   * the parent being parsed once and reused. We verify this by resolving two vertx
-   * artifacts that both descend from vertx-parent, and checking that both produce
-   * correct results (proving the shared parent was correctly cached and reused).
-   */
   @Test
   public void fetchMetaData_pomCacheSharesParents() throws Exception {
+    // Two artifacts sharing the same parent POM chain should both resolve correctly.
+    // vertx-core and vertx-web both descend from vertx-parent -> oss-parent and import
+    // the vertx-dependencies BOM. The POM cache should parse each parent once and reuse.
     Path cache = projectDir.resolve("build/test/cache");
     PathTools.prune(cache);
 
@@ -606,122 +573,35 @@ public class WorkflowTest extends BaseUnitTest {
     workflow.mappings.put("io.netty:netty-resolver:4.1.65.Final", new Version("4.1.65"));
     workflow.mappings.put("io.netty:netty-resolver-dns:4.1.65.Final", new Version("4.1.65"));
 
-    // First artifact: vertx-core (parent: vertx-parent -> oss-parent, imports: vertx-dependencies)
     Artifact vertxCore = new ReifiedArtifact("io.vertx:vertx-core:3.9.8", License.Licenses.get("Apache-2.0"));
     ArtifactMetaData amd1 = workflow.fetchMetaData(vertxCore);
     assertNotNull(amd1);
     assertNotNull(amd1.dependencies.groups.get("compile"));
 
-    // Second artifact: vertx-web shares the same parent chain (vertx-parent -> oss-parent)
-    // and imports vertx-dependencies BOM. The POM cache should reuse the parent and BOM POMs.
     Artifact vertxWeb = new ReifiedArtifact("io.vertx:vertx-web:3.9.8", License.Licenses.get("Apache-2.0"));
     ArtifactMetaData amd2 = workflow.fetchMetaData(vertxWeb);
     assertNotNull(amd2);
 
-    // vertx-web should have vertx-core as a compile dependency (verifies correct parent resolution)
+    // vertx-web should have vertx-core as a compile dependency
     boolean hasVertxCore = amd2.dependencies.groups.get("compile").dependencies.stream()
         .anyMatch(d -> d.id.project.equals("vertx-core"));
     assertTrue(hasVertxCore, "vertx-web should have vertx-core as a compile dependency");
 
-    // Both should be different AMD instances (different artifacts)
+    // Different artifacts, different AMD instances
     assertNotSame(amd1, amd2);
   }
 
-  // ---------------------------------------------------------------------------
-  // Negative source cache tests
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Tests the negative source cache mechanism: when a source JAR doesn't exist,
-   * a .neg marker file is created. On subsequent calls, the .neg file short-circuits
-   * the fetch and returns null immediately without attempting remote lookups.
-   */
   @Test
-  public void fetchSource_negativeCacheShortCircuit() throws Exception {
-    Path cache = projectDir.resolve("build/test/cache");
-    PathTools.prune(cache);
-
-    Workflow workflow = new Workflow(
-        new FetchWorkflow(
-            output,
-            new CacheProcess(output, cache.toString(), cache.toString()),
-            new MavenProcess(output, "https://repo1.maven.org/maven2", null, null)
-        ),
-        new PublishWorkflow(
-            new CacheProcess(output, cache.toString(), cache.toString())
-        ),
-        output
-    );
-
-    // Use an artifact that has no source JAR on Maven Central
-    // We fabricate a non-existent artifact to guarantee no source exists
-    Artifact artifact = new ReifiedArtifact("org.apache.groovy:groovy:4.0.5", License.Licenses.get("Apache-2.0"));
-
-    // First call -- searches Maven Central, finds source, publishes to cache
-    Path sourcePath1 = workflow.fetchSource(artifact);
-    // groovy 4.0.5 does have sources, so this should succeed
-    assertNotNull(sourcePath1);
-
-    // Now test with an artifact whose source truly doesn't exist.
-    // Use a Savant test artifact via the file server -- it has no -sources.jar on Maven Central
-    // and no -src.jar in the Savant repo.
-    HttpServer server = makeFileServer(null, null);
-    try {
-      Path cache2 = projectDir.resolve("build/test/cache2");
-      PathTools.prune(cache2);
-
-      Workflow workflow2 = new Workflow(
-          new FetchWorkflow(
-              output,
-              new CacheProcess(output, cache2.toString(), cache2.toString()),
-              new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null)
-          ),
-          new PublishWorkflow(
-              new CacheProcess(output, cache2.toString(), cache2.toString())
-          ),
-          output
-      );
-
-      // leaf1 has no source JAR in the test fixtures
-      Artifact leaf1 = new ReifiedArtifact(
-          new ArtifactID("org.savantbuild.test", "leaf1", "leaf1", "jar"),
-          new Version("1.0.0"),
-          List.of(License.parse("Commercial", "Commercial license")));
-
-      // First call -- searches, doesn't find source, creates .neg marker
-      Path sourceResult1 = workflow2.fetchSource(leaf1);
-      assertNull(sourceResult1);
-
-      // Verify .neg file was created
-      Path negMarker = cache2.resolve("org/savantbuild/test/leaf1/1.0.0/leaf1-1.0.0-src.jar.neg");
-      assertTrue(Files.isRegularFile(negMarker),
-          "Negative cache marker should exist at " + negMarker);
-
-      // Second call -- should hit the .neg marker and return null immediately
-      Path sourceResult2 = workflow2.fetchSource(leaf1);
-      assertNull(sourceResult2);
-    } finally {
-      server.stop(0);
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Workflow configuration variant tests
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Tests a workflow with only CacheProcess (no Maven processes). This represents
-   * a Savant-only setup where all artifacts come from the Savant repo/cache.
-   * Verifies that Savant-native AMD resolution works without any Maven fallback.
-   */
-  @Test
-  public void fetchMetaData_cacheOnlyWorkflow() throws Exception {
+  public void fetchMetaData_amdCacheKeyIncludesName() throws Exception {
+    // Regression test: two artifacts sharing group:project:version but with different names
+    // must produce different AMD results. The AMD cache key must include the artifact name.
+    // leaf:leaf1 (GPL-2.0) and leaf:leaf2 (LGPL-2.1) share group=org.savantbuild.test,
+    // project=leaf, version=1.0.0 but have different AMD files with different licenses.
     Path cache = projectDir.resolve("build/test/cache");
     PathTools.prune(cache);
 
     HttpServer server = makeFileServer(null, null);
     try {
-      // Workflow with CacheProcess + URLProcess (Savant repo), but no MavenProcess
       Workflow workflow = new Workflow(
           new FetchWorkflow(
               output,
@@ -734,7 +614,95 @@ public class WorkflowTest extends BaseUnitTest {
           output
       );
 
-      // Fetch a Savant-native artifact -- should work via the URLProcess
+      Artifact leaf1 = new ReifiedArtifact(
+          new ArtifactID("org.savantbuild.test", "leaf", "leaf1", "jar"),
+          new Version("1.0.0"),
+          List.of(License.Licenses.get("GPLV2_0")));
+      Artifact leaf2 = new ReifiedArtifact(
+          new ArtifactID("org.savantbuild.test", "leaf", "leaf2", "jar"),
+          new Version("1.0.0"),
+          List.of(License.Licenses.get("LGPLV2_1")));
+
+      ArtifactMetaData amd1 = workflow.fetchMetaData(leaf1);
+      ArtifactMetaData amd2 = workflow.fetchMetaData(leaf2);
+
+      assertNotNull(amd1);
+      assertNotNull(amd2);
+      // Must be different instances with different licenses (not a cache collision)
+      assertNotSame(amd1, amd2);
+      assertFalse(amd1.licenses.equals(amd2.licenses),
+          "leaf1 and leaf2 should have different licenses but got the same AMD (cache key collision)");
+    } finally {
+      server.stop(0);
+    }
+  }
+
+  @Test
+  public void fetchSource_negativeCacheShortCircuit() throws Exception {
+    // When a source JAR doesn't exist, a .neg marker file is created.
+    // On subsequent calls, the .neg file short-circuits the fetch and returns null
+    // immediately without attempting remote lookups.
+    HttpServer server = makeFileServer(null, null);
+    try {
+      Path cache = projectDir.resolve("build/test/cache");
+      PathTools.prune(cache);
+
+      Workflow workflow = new Workflow(
+          new FetchWorkflow(
+              output,
+              new CacheProcess(output, cache.toString(), cache.toString()),
+              new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null)
+          ),
+          new PublishWorkflow(
+              new CacheProcess(output, cache.toString(), cache.toString())
+          ),
+          output
+      );
+
+      // leaf1 has no source JAR in the test fixtures
+      Artifact leaf1 = new ReifiedArtifact(
+          new ArtifactID("org.savantbuild.test", "leaf1", "leaf1", "jar"),
+          new Version("1.0.0"),
+          List.of(License.parse("Commercial", "Commercial license")));
+
+      // First call -- searches, doesn't find source, creates .neg marker
+      Path sourceResult1 = workflow.fetchSource(leaf1);
+      assertNull(sourceResult1);
+
+      // Verify .neg file was created
+      Path negMarker = cache.resolve("org/savantbuild/test/leaf1/1.0.0/leaf1-1.0.0-src.jar.neg");
+      assertTrue(Files.isRegularFile(negMarker),
+          "Negative cache marker should exist at " + negMarker);
+
+      // Second call -- hits the .neg marker and returns null immediately
+      Path sourceResult2 = workflow.fetchSource(leaf1);
+      assertNull(sourceResult2);
+    } finally {
+      server.stop(0);
+    }
+  }
+
+  @Test
+  public void fetchMetaData_cacheOnlyWorkflow() throws Exception {
+    // Savant-only workflow (CacheProcess + URLProcess, no Maven processes).
+    // Verifies Savant-native AMD resolution works without any Maven fallback.
+    Path cache = projectDir.resolve("build/test/cache");
+    PathTools.prune(cache);
+
+    HttpServer server = makeFileServer(null, null);
+    try {
+      Workflow workflow = new Workflow(
+          new FetchWorkflow(
+              output,
+              new CacheProcess(output, cache.toString(), cache.toString()),
+              new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null)
+          ),
+          new PublishWorkflow(
+              new CacheProcess(output, cache.toString(), cache.toString())
+          ),
+          output
+      );
+
       Artifact artifact = new ReifiedArtifact(
           new ArtifactID("org.savantbuild.test", "multiple-versions", "multiple-versions", "jar"),
           new Version("1.0.0"),
@@ -755,17 +723,13 @@ public class WorkflowTest extends BaseUnitTest {
     }
   }
 
-  /**
-   * Tests a workflow with only Maven processes (no Savant CacheProcess or URLProcess).
-   * This verifies the POM-to-AMD translation works when the fetch chain only has
-   * MavenCacheProcess + MavenProcess -- no Savant-native AMD check occurs.
-   */
   @Test
   public void fetchMetaData_mavenOnlyWorkflow() throws Exception {
+    // Maven-only workflow (MavenCacheProcess + MavenProcess, no Savant CacheProcess or URLProcess).
+    // Verifies POM-to-AMD translation works without Savant-native AMD check.
     Path mavenCache = projectDir.resolve("build/test/maven-only-cache");
     PathTools.prune(mavenCache);
 
-    // No CacheProcess or URLProcess -- only Maven cache + Maven Central
     Workflow workflow = new Workflow(
         new FetchWorkflow(
             output,
@@ -797,13 +761,10 @@ public class WorkflowTest extends BaseUnitTest {
     assertSame(amd, amd2);
   }
 
-  /**
-   * Tests a workflow with both Savant repo and Maven Central. When a Savant-native AMD
-   * exists, it should be used. When no AMD exists, it should fall through to POM loading
-   * from Maven Central. This exercises the full two-path resolution in a single workflow.
-   */
   @Test
   public void fetchMetaData_twoPathResolution_savantThenMaven() throws Exception {
+    // Full two-path resolution in a single workflow: Savant-native artifact uses pre-built AMD
+    // (cached to disk), Maven artifact falls through to POM-to-AMD translation (in-memory only).
     Path cache = projectDir.resolve("build/test/cache");
     PathTools.prune(cache);
 
@@ -846,6 +807,45 @@ public class WorkflowTest extends BaseUnitTest {
       // POM should exist on disk (fetched and cached normally)
       assertTrue(Files.isRegularFile(cache.resolve(
           "org/apache/groovy/groovy/4.0.5/groovy-4.0.5.pom")));
+    } finally {
+      server.stop(0);
+    }
+  }
+
+  @Test
+  public void fetchMetaData_nonSemanticVersionPom() throws Exception {
+    // Non-semantic version POM resolution: loadPOM falls back to the non-semantic version
+    // when the semantic version POM is not found. Uses the badver test fixture which has
+    // version 1.0.0.Final (non-semantic) mapped to 1.0.0 (semantic).
+    Path cache = projectDir.resolve("build/test/cache");
+    PathTools.prune(cache);
+
+    HttpServer server = makeFileServer(null, null);
+    try {
+      Workflow workflow = new Workflow(
+          new FetchWorkflow(
+              output,
+              new CacheProcess(output, cache.toString(), cache.toString()),
+              new URLProcess(output, "http://localhost:7042/test-deps/maven", null, null)
+          ),
+          new PublishWorkflow(
+              new CacheProcess(output, cache.toString(), cache.toString())
+          ),
+          output
+      );
+
+      // badver:1.0.0.Final is mapped to semantic version 1.0.0
+      Artifact artifact = new ReifiedArtifact(
+          new ArtifactID("org.savantbuild.test:badver:badver:jar"),
+          new Version("1.0.0"),
+          "1.0.0.Final",
+          List.of(License.Licenses.get("Apache-2.0")));
+      ArtifactMetaData amd = workflow.fetchMetaData(artifact);
+      assertNotNull(amd);
+
+      // In-memory cache should work for non-semantic version artifacts too
+      ArtifactMetaData amd2 = workflow.fetchMetaData(artifact);
+      assertSame(amd, amd2);
     } finally {
       server.stop(0);
     }
