@@ -319,10 +319,12 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     workflow = new Workflow(
         new FetchWorkflow(
             output,
+            new CacheProcess(output, cache.toString()),
             new MavenCacheProcess(output, mavenCache.toString()),
             new MavenProcess(output, "https://repo1.maven.org/maven2", null, null)
         ),
         new PublishWorkflow(
+            new CacheProcess(output, cache.toString()),
             new MavenCacheProcess(output, mavenCache.toString())
         ),
         output

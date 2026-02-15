@@ -27,6 +27,7 @@ import org.savantbuild.dep.domain.ResolvableItem;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 
 /**
@@ -73,6 +74,49 @@ public class CacheProcessTest extends BaseUnitTest {
     assertNotNull(file);
     assertTrue(file.toAbsolutePath().toString().replace('\\', '/').endsWith("build/test/deps/org/savantbuild/test/multiple-versions/1.0.0/multiple-versions-1.0.0.jar"));
     assertTrue(Files.isRegularFile(file));
+  }
+
+  @Test
+  public void store_rejectsMaven() throws Exception {
+    Path cache = projectDir.resolve("build/test/deps");
+    PathTools.prune(cache);
+
+    CacheProcess process = new CacheProcess(output, cache.toString());
+    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:multiple-versions:multiple-versions:1.0.0:jar", License.Licenses.get("ApacheV2_0"));
+
+    Path artFile = projectDir.resolve("test-deps/savant/org/savantbuild/test/multiple-versions/1.0.0/multiple-versions-1.0.0.jar");
+    ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile());
+    Path result = process.publish(new FetchResult(artFile, ItemSource.MAVEN, item));
+    assertNull(result);
+  }
+
+  @Test
+  public void mavenCache_store_rejectsSavant() throws Exception {
+    Path mavenCache = projectDir.resolve("build/test/maven-deps");
+    PathTools.prune(mavenCache);
+
+    MavenCacheProcess process = new MavenCacheProcess(output, mavenCache.toString());
+    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:multiple-versions:multiple-versions:1.0.0:jar", License.Licenses.get("ApacheV2_0"));
+
+    Path artFile = projectDir.resolve("test-deps/savant/org/savantbuild/test/multiple-versions/1.0.0/multiple-versions-1.0.0.jar");
+    ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile());
+    Path result = process.publish(new FetchResult(artFile, ItemSource.SAVANT, item));
+    assertNull(result);
+  }
+
+  @Test
+  public void mavenCache_store_acceptsMaven() throws Exception {
+    Path mavenCache = projectDir.resolve("build/test/maven-deps");
+    PathTools.prune(mavenCache);
+
+    MavenCacheProcess process = new MavenCacheProcess(output, mavenCache.toString());
+    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:multiple-versions:multiple-versions:1.0.0:jar", License.Licenses.get("ApacheV2_0"));
+
+    Path artFile = projectDir.resolve("test-deps/savant/org/savantbuild/test/multiple-versions/1.0.0/multiple-versions-1.0.0.jar");
+    ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile());
+    Path result = process.publish(new FetchResult(artFile, ItemSource.MAVEN, item));
+    assertNotNull(result);
+    assertTrue(Files.isRegularFile(result));
   }
 
   @Test

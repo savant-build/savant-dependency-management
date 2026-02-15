@@ -54,6 +54,10 @@ public class CacheProcess implements Process {
 
   @Override
   public Path publish(FetchResult fetchResult) throws ProcessFailureException {
+    if (fetchResult.source() != itemSource) {
+      return null;
+    }
+
     ResolvableItem item = fetchResult.item();
     Path itemFile = fetchResult.file();
 
