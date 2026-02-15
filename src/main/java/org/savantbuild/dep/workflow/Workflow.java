@@ -55,6 +55,8 @@ public class Workflow {
 
   public final Map<String, String> rangeMappings = new HashMap<>();
 
+  private final Map<String, POM> pomCache = new HashMap<>();
+
   public Workflow(FetchWorkflow fetchWorkflow, PublishWorkflow publishWorkflow, Output output) {
     this.fetchWorkflow = fetchWorkflow;
     this.publishWorkflow = publishWorkflow;
@@ -166,6 +168,12 @@ public class Workflow {
   }
 
   private POM loadPOM(Artifact artifact) {
+    String cacheKey = artifact.id.group + ":" + artifact.id.project + ":" + artifact.version;
+    POM cached = pomCache.get(cacheKey);
+    if (cached != null) {
+      return cached;
+    }
+
     // Maven doesn't use artifact names (via classifiers) when resolving POMs. Therefore, we need to use the project id twice for the item
     ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.project, artifact.version.toString(), artifact.getArtifactPOMFile());
     FetchResult result = fetchWorkflow.fetchItem(item, publishWorkflow);
@@ -224,6 +232,7 @@ public class Workflow {
     pom.replaceKnownVariablesAndFillInDependencies();
     pom.replaceRangeValuesWithMappings(rangeMappings);
 
+    pomCache.put(cacheKey, pom);
     return pom;
   }
 
