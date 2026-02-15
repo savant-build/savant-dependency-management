@@ -78,16 +78,8 @@ public class Workflow {
     ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile());
     FetchResult result = fetchWorkflow.fetchItem(item, publishWorkflow);
     if (result == null && artifact.nonSemanticVersion != null) {
-      // Try the bad version
       item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.nonSemanticVersion, artifact.getArtifactNonSemanticFile());
-      // Don't write out non-semantic versioned artifacts, we will re-publish below using the semantic version
-      result = fetchWorkflow.fetchItem(item, new PublishWorkflow(new DoNotPublishProcess()));
-      // Publish the Savant named JAR to prevent going back out to remote repositories next time we want to load JARs
-      if (result != null) {
-        item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile());
-        Path file = publishWorkflow.publish(new FetchResult(result.file(), result.source(), item));
-        result = new FetchResult(file, result.source(), item);
-      }
+      result = fetchWorkflow.fetchItem(item, publishWorkflow);
     }
 
     if (result == null) {
