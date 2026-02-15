@@ -50,8 +50,8 @@ import static org.testng.Assert.assertTrue;
  */
 public class WorkflowTest extends BaseUnitTest {
   @Test
-  public void fetchSource_publish_source_file_does_not_exist() throws Exception {
-    // arrange
+  public void fetchSource_empty_publish_workflow() throws Exception {
+    // arrange — publish workflow is empty, so fetched files won't be cached
     Path cache = projectDir.resolve("build/test/cache");
     Path mvnCache = projectDir.resolve("build/test/maven-cache");
     PathTools.prune(cache);
@@ -74,8 +74,8 @@ public class WorkflowTest extends BaseUnitTest {
     // act
     var sourcePath = workflow.fetchSource(artifact);
 
-    // assert
-    assertNull(sourcePath);
+    // assert — source is found from Maven Central even though it can't be cached
+    assertNotNull(sourcePath);
   }
 
   @Test
@@ -106,8 +106,8 @@ public class WorkflowTest extends BaseUnitTest {
     var sourcePath = workflow.fetchSource(artifact);
 
     // assert
-    // Source file is fetched from Maven (tagged MAVEN) and published to the Maven cache
-    assertEquals(sourcePath.toString(), "../savant-dependency-management/build/test/maven-cache/org/apache/groovy/groovy/4.0.5/groovy-4.0.5-src.jar");
+    // Source file is fetched from Maven (tagged MAVEN) and published to the Maven cache — no renaming
+    assertEquals(sourcePath.toString(), "../savant-dependency-management/build/test/maven-cache/org/apache/groovy/groovy/4.0.5/groovy-4.0.5-sources.jar");
   }
 
   @Test
@@ -141,8 +141,8 @@ public class WorkflowTest extends BaseUnitTest {
     var sourcePath = workflow.fetchSource(artifact);
 
     // assert
-    // Source file is fetched from Maven (tagged MAVEN) and published to the Maven cache
-    assertEquals(sourcePath.toString(), "../savant-dependency-management/build/test/maven-cache/org/xerial/snappy/snappy-java/1.1.10+5/snappy-java-1.1.10+5-src.jar");
+    // Source file is fetched from Maven using non-semantic version — no renaming
+    assertEquals(sourcePath.toString(), "../savant-dependency-management/build/test/maven-cache/org/xerial/snappy/snappy-java/1.1.10.5/snappy-java-1.1.10.5-sources.jar");
   }
 
   @Test

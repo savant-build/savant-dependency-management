@@ -29,7 +29,6 @@ import org.savantbuild.dep.domain.ResolvableItem;
 import org.savantbuild.dep.maven.MavenDependency;
 import org.savantbuild.dep.maven.MavenTools;
 import org.savantbuild.dep.maven.POM;
-import org.savantbuild.dep.workflow.process.DoNotPublishProcess;
 import org.savantbuild.dep.workflow.process.FetchResult;
 import org.savantbuild.dep.workflow.process.ItemSource;
 import org.savantbuild.dep.workflow.process.NegativeCacheException;
@@ -136,34 +135,23 @@ public class Workflow {
    */
   public Path fetchSource(Artifact artifact) throws ProcessFailureException, MD5Exception {
     try {
+      // Try Savant-style source (-src.jar)
       ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactSourceFile());
       FetchResult result = fetchWorkflow.fetchItem(item, publishWorkflow);
+
+      // Try Maven-style source (-sources.jar) — no renaming
       if (result == null) {
         item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactAlternativeSourceFile());
         result = fetchWorkflow.fetchItem(item, publishWorkflow);
-
-        // Publish the Savant named source JAR to prevent going back out to remote repositories next time we want to load source JARs
-        if (result != null) {
-          item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactSourceFile());
-          // we should be returning our locally cached/published source path, not the remote source path
-          Path file = publishWorkflow.publish(new FetchResult(result.file(), result.source(), item));
-          result = new FetchResult(file, result.source(), item);
-        }
       }
 
+      // Try non-semantic version (-sources.jar with original version) — no renaming
       if (result == null && artifact.nonSemanticVersion != null) {
         item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.nonSemanticVersion, artifact.getArtifactNonSemanticAlternativeSourceFile());
-        // Don't write out non-semantic versioned source artifacts, we will re-publish below using the semantic version
-        result = fetchWorkflow.fetchItem(item, new PublishWorkflow(new DoNotPublishProcess()));
-
-        // Publish the Savant named source JAR to prevent going back out to remote repositories next time we want to load source JARs
-        if (result != null) {
-          item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactSourceFile());
-          Path file = publishWorkflow.publish(new FetchResult(result.file(), result.source(), item));
-          result = new FetchResult(file, result.source(), item);
-        }
+        result = fetchWorkflow.fetchItem(item, publishWorkflow);
       }
 
+      // Negative cache if not found
       if (result == null) {
         item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactSourceFile());
         publishWorkflow.publishNegative(item, ItemSource.SAVANT);
