@@ -438,6 +438,98 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
   }
 
   @Test
+  public void nonSemanticVersions_publishRouting() {
+    // Resolves the same mixed Savant + Maven dependency tree as nonSemanticVersions,
+    // then verifies publish routing: Maven-sourced items only in maven cache,
+    // Savant-sourced items only in savant cache, no re-published semantic-version copies.
+
+    dependencies = new Dependencies(
+        new DependencyGroup("compile", true,
+            new Artifact("org.savantbuild.test:has-non-semantic-versioned-dep:1.0.0")
+        )
+    );
+
+    workflow = new Workflow(
+        new FetchWorkflow(
+            output,
+            new CacheProcess(output, cache.toString()),
+            new CacheProcess(output, integration.toString()),
+            new MavenCacheProcess(output, mavenCache.toString()),
+            new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null),
+            new MavenProcess(output, "http://localhost:7042/test-deps/maven", null, null)
+        ),
+        new PublishWorkflow(
+            new CacheProcess(output, cache.toString()),
+            new MavenCacheProcess(output, mavenCache.toString())
+        ),
+        output
+    );
+    workflow.mappings.put("org.savantbuild.test:badver:1.0.0.Final", new Version("1.0.0"));
+
+    buildAndResolve();
+
+    // Maven-sourced "badver" JAR and POM should be in maven cache only
+    assertTrue(Files.isRegularFile(mavenCache.resolve("org/savantbuild/test/badver/1.0.0.Final/badver-1.0.0.Final.jar")));
+    assertTrue(Files.isRegularFile(mavenCache.resolve("org/savantbuild/test/badver/1.0.0.Final/badver-1.0.0.Final.pom")));
+    // No re-published copy at the semantic version path
+    assertFalse(Files.exists(mavenCache.resolve("org/savantbuild/test/badver/1.0.0/badver-1.0.0.jar")));
+    assertFalse(Files.exists(cache.resolve("org/savantbuild/test/badver/1.0.0/badver-1.0.0.jar")));
+    // Maven-sourced items should NOT be in savant cache
+    assertFalse(Files.exists(cache.resolve("org/savantbuild/test/badver/1.0.0.Final/badver-1.0.0.Final.jar")));
+    assertFalse(Files.exists(cache.resolve("org/savantbuild/test/badver/1.0.0.Final/badver-1.0.0.Final.pom")));
+
+    // Savant-sourced "has-non-semantic-versioned-dep" should be in savant cache only
+    assertTrue(Files.isRegularFile(cache.resolve("org/savantbuild/test/has-non-semantic-versioned-dep/1.0.0/has-non-semantic-versioned-dep-1.0.0.jar")));
+    assertTrue(Files.isRegularFile(cache.resolve("org/savantbuild/test/has-non-semantic-versioned-dep/1.0.0/has-non-semantic-versioned-dep-1.0.0.jar.amd")));
+    assertFalse(Files.exists(mavenCache.resolve("org/savantbuild/test/has-non-semantic-versioned-dep/1.0.0/has-non-semantic-versioned-dep-1.0.0.jar")));
+
+    // Savant-sourced "leaf1" should be in savant cache only
+    assertTrue(Files.isRegularFile(cache.resolve("org/savantbuild/test/leaf1/1.0.0/leaf1-1.0.0.jar")));
+    assertFalse(Files.exists(mavenCache.resolve("org/savantbuild/test/leaf1/1.0.0/leaf1-1.0.0.jar")));
+
+    // No AMD files generated for Maven-sourced "badver"
+    assertFalse(Files.exists(cache.resolve("org/savantbuild/test/badver/1.0.0/badver-1.0.0.jar.amd")));
+    assertFalse(Files.exists(mavenCache.resolve("org/savantbuild/test/badver/1.0.0.Final/badver-1.0.0.Final.jar.amd")));
+  }
+
+  @Test
+  public void publishRouting_savantOnly() {
+    // Resolves a Savant-only dependency tree and verifies all items go to savant cache,
+    // nothing goes to maven cache.
+
+    dependencies = new Dependencies(
+        new DependencyGroup("compile", true,
+            new Artifact("org.savantbuild.test:leaf1:1.0.0")
+        )
+    );
+
+    workflow = new Workflow(
+        new FetchWorkflow(
+            output,
+            new CacheProcess(output, cache.toString()),
+            new CacheProcess(output, integration.toString()),
+            new MavenCacheProcess(output, mavenCache.toString()),
+            new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null),
+            new MavenProcess(output, "http://localhost:7042/test-deps/maven", null, null)
+        ),
+        new PublishWorkflow(
+            new CacheProcess(output, cache.toString()),
+            new MavenCacheProcess(output, mavenCache.toString())
+        ),
+        output
+    );
+
+    buildAndResolve();
+
+    // Savant-sourced items in savant cache
+    assertTrue(Files.isRegularFile(cache.resolve("org/savantbuild/test/leaf1/1.0.0/leaf1-1.0.0.jar")));
+    assertTrue(Files.isRegularFile(cache.resolve("org/savantbuild/test/leaf1/1.0.0/leaf1-1.0.0.jar.amd")));
+    // Nothing in maven cache
+    assertFalse(Files.exists(mavenCache.resolve("org/savantbuild/test/leaf1/1.0.0/leaf1-1.0.0.jar")));
+    assertFalse(Files.exists(mavenCache.resolve("org/savantbuild/test/leaf1/1.0.0/leaf1-1.0.0.jar.amd")));
+  }
+
+  @Test
   public void publishMissingFile() {
     Artifact artifact = new Artifact("org.savantbuild.test:publication-with-source:1.0.0");
     ArtifactMetaData amd = new ArtifactMetaData(dependencies, License.Licenses.get("BSD_2_Clause"));
