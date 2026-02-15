@@ -50,10 +50,10 @@ public class URLProcessTest extends BaseUnitTest {
     Artifact artifact = new ReifiedArtifact("org.savantbuild.test:" + name + ":" + name + ":" + version + ":jar", License.Licenses.get("ApacheV2_0"));
     URLProcess ufp = new URLProcess(output, url, null, null);
     ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile());
-    Path file = ufp.fetch(item, new PublishWorkflow(new CacheProcess(output, cache.toString(), integration.toString())));
-    assertNotNull(file);
+    FetchResult fetchResult = ufp.fetch(item, new PublishWorkflow(new CacheProcess(output, cache.toString(), integration.toString())));
+    assertNotNull(fetchResult);
 
-    assertEquals((Object) file.toAbsolutePath(), Paths.get(result).toAbsolutePath());
+    assertEquals((Object) fetchResult.file().toAbsolutePath(), Paths.get(result).toAbsolutePath());
   }
 
   @DataProvider(name = "fetchData")
@@ -78,7 +78,7 @@ public class URLProcessTest extends BaseUnitTest {
 
     URLProcess ufp = new URLProcess(output, url, null, null);
     ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactMetaDataFile());
-    Path amd = ufp.fetch(item, pw);
+    FetchResult amd = ufp.fetch(item, pw);
     assertNotNull(amd);
   }
 
@@ -94,8 +94,8 @@ public class URLProcessTest extends BaseUnitTest {
 
     URLProcess ufp = new URLProcess(output, url, null, null);
     ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactMetaDataFile());
-    Path file = ufp.fetch(item, pw);
-    assertNull(file);
+    FetchResult result = ufp.fetch(item, pw);
+    assertNull(result);
   }
 
   @Test(dataProvider = "urls")
@@ -110,8 +110,8 @@ public class URLProcessTest extends BaseUnitTest {
 
     URLProcess ufp = new URLProcess(output, url, null, null);
     ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile());
-    Path file = ufp.fetch(item, pw);
-    assertNull(file);
+    FetchResult result = ufp.fetch(item, pw);
+    assertNull(result);
   }
 
   @Test
@@ -126,8 +126,8 @@ public class URLProcessTest extends BaseUnitTest {
 
     URLProcess ufp = new URLProcess(output, makeLocalURL(), null, null);
     ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile());
-    Path file = ufp.fetch(item, pw);
-    assertNull(file);
+    FetchResult result = ufp.fetch(item, pw);
+    assertNull(result);
   }
 
   @BeforeMethod

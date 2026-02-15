@@ -37,36 +37,30 @@ public class CacheProcess implements Process {
 
   public final Output output;
 
+  protected final ItemSource itemSource;
+
   public CacheProcess(Output output, String dir, String integrationDir) {
+    this(output, dir, integrationDir, ItemSource.SAVANT);
+  }
+
+  protected CacheProcess(Output output, String dir, String integrationDir, ItemSource itemSource) {
     this.output = output;
     this.dir = dir != null ? dir : ".savant/cache";
     this.integrationDir = integrationDir != null ? integrationDir : System.getProperty("user.home") + "/.savant/cache";
+    this.itemSource = itemSource;
   }
 
-  /**
-   * Checks the cache directory for the item. If it exists it is returned. If not, null is returned.
-   *
-   * @param item            The item being fetched.
-   * @param publishWorkflow The PublishWorkflow that is used to store the item if it can be found.
-   * @return The File from the cache or null if it doesn't exist.
-   * @throws NegativeCacheException If there is a negative cache record of the file, meaning it doesn't exist
-   *     anywhere in the world.
-   */
   @Override
-  public Path fetch(ResolvableItem item, PublishWorkflow publishWorkflow) throws NegativeCacheException {
-    return (item.version.endsWith(Version.INTEGRATION)) ? _fetch(item, integrationDir) : _fetch(item, dir);
+  public FetchResult fetch(ResolvableItem item, PublishWorkflow publishWorkflow) throws NegativeCacheException {
+    Path file = (item.version.endsWith(Version.INTEGRATION)) ? _fetch(item, integrationDir) : _fetch(item, dir);
+    return file != null ? new FetchResult(file, itemSource, item) : null;
   }
 
-  /**
-   * Publishes the given artifact item into the cache.
-   *
-   * @param item     The item to publish.
-   * @param itemFile The path to the item.
-   * @return Always null.
-   * @throws ProcessFailureException If the publish fails.
-   */
   @Override
-  public Path publish(ResolvableItem item, Path itemFile) throws ProcessFailureException {
+  public Path publish(FetchResult fetchResult) throws ProcessFailureException {
+    ResolvableItem item = fetchResult.item();
+    Path itemFile = fetchResult.file();
+
     String cacheDir = dir;
     if (item.version.endsWith(Version.INTEGRATION)) {
       cacheDir = integrationDir;

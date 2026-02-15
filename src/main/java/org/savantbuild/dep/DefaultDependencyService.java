@@ -48,6 +48,8 @@ import org.savantbuild.dep.workflow.ArtifactMetaDataMissingException;
 import org.savantbuild.dep.workflow.ArtifactMissingException;
 import org.savantbuild.dep.workflow.PublishWorkflow;
 import org.savantbuild.dep.workflow.Workflow;
+import org.savantbuild.dep.workflow.process.FetchResult;
+import org.savantbuild.dep.workflow.process.ItemSource;
 import org.savantbuild.dep.workflow.process.ProcessFailureException;
 import org.savantbuild.domain.Version;
 import org.savantbuild.output.Output;
@@ -110,7 +112,7 @@ public class DefaultDependencyService implements DependencyService {
         item = new ResolvableItem(item, publication.artifact.getArtifactSourceFile());
         publishItem(item, publication.sourceFile, workflow);
       } else {
-        workflow.publishNegative(item);
+        workflow.publishNegative(item, ItemSource.SAVANT);
       }
     } catch (IOException e) {
       throw new PublishException(publication, e);
@@ -350,9 +352,9 @@ public class DefaultDependencyService implements DependencyService {
     Path md5File = tempFile.toPath();
     MD5.writeMD5(md5, md5File);
     ResolvableItem md5Item = new ResolvableItem(item, item.item + ".md5");
-    workflow.publish(md5Item, md5File);
+    workflow.publish(new FetchResult(md5File, ItemSource.SAVANT, md5Item));
 
     // Now publish the item itself
-    workflow.publish(item, file);
+    workflow.publish(new FetchResult(file, ItemSource.SAVANT, item));
   }
 }

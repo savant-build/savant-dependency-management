@@ -64,10 +64,10 @@ public class SVNProcessTest extends BaseUnitTest {
 
     SVNProcess process = new SVNProcess(output, "file:///" + projectDir.resolve("build/test/svn-repository").toRealPath(), null, null);
     ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile() + ".md5");
-    process.publish(item, md5File);
+    process.publish(new FetchResult(md5File, ItemSource.SAVANT, item));
 
     item = new ResolvableItem(item, artifact.getArtifactFile());
-    process.publish(item, file);
+    process.publish(new FetchResult(file, ItemSource.SAVANT, item));
 
     process.fetch(item, new PublishWorkflow(new CacheProcess(output, cache.toString(), cache.toString())));
     assertTrue(Files.isRegularFile(projectDir.resolve("build/test/cache/org/savantbuild/test/svn-process-test/1.0.0/svn-process-test-1.0.0.jar")));

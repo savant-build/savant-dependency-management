@@ -27,12 +27,12 @@ import org.savantbuild.dep.workflow.PublishWorkflow;
  */
 public class DoNotPublishProcess implements Process {
   @Override
-  public Path fetch(ResolvableItem item, PublishWorkflow publishWorkflow) throws ProcessFailureException {
+  public FetchResult fetch(ResolvableItem item, PublishWorkflow publishWorkflow) throws ProcessFailureException {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public Path publish(ResolvableItem item, Path itemFile) throws ProcessFailureException {
-    return itemFile;
+  public Path publish(FetchResult fetchResult) throws ProcessFailureException {
+    return fetchResult.file();
   }
 }

@@ -31,6 +31,8 @@ import org.savantbuild.dep.maven.MavenDependency;
 import org.savantbuild.dep.maven.MavenTools;
 import org.savantbuild.dep.maven.POM;
 import org.savantbuild.dep.workflow.process.DoNotPublishProcess;
+import org.savantbuild.dep.workflow.process.FetchResult;
+import org.savantbuild.dep.workflow.process.ItemSource;
 import org.savantbuild.dep.workflow.process.NegativeCacheException;
 import org.savantbuild.dep.workflow.process.ProcessFailureException;
 import org.savantbuild.domain.Version;
@@ -76,24 +78,25 @@ public class Workflow {
    */
   public Path fetchArtifact(Artifact artifact) throws ArtifactMissingException, ProcessFailureException, MD5Exception {
     ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile());
-    Path file = fetchWorkflow.fetchItem(item, publishWorkflow);
-    if (file == null && artifact.nonSemanticVersion != null) {
+    FetchResult result = fetchWorkflow.fetchItem(item, publishWorkflow);
+    if (result == null && artifact.nonSemanticVersion != null) {
       // Try the bad version
       item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.nonSemanticVersion, artifact.getArtifactNonSemanticFile());
       // Don't write out non-semantic versioned artifacts, we will re-publish below using the semantic version
-      file = fetchWorkflow.fetchItem(item, new PublishWorkflow(new DoNotPublishProcess()));
+      result = fetchWorkflow.fetchItem(item, new PublishWorkflow(new DoNotPublishProcess()));
       // Publish the Savant named JAR to prevent going back out to remote repositories next time we want to load JARs
-      if (file != null) {
+      if (result != null) {
         item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile());
-        file = publishWorkflow.publish(item, file);
+        Path file = publishWorkflow.publish(new FetchResult(result.file(), result.source(), item));
+        result = new FetchResult(file, result.source(), item);
       }
     }
 
-    if (file == null) {
+    if (result == null) {
       throw new ArtifactMissingException(artifact);
     }
 
-    return file;
+    return result.file();
   }
 
   /**
@@ -111,20 +114,21 @@ public class Workflow {
   public ArtifactMetaData fetchMetaData(Artifact artifact) throws ArtifactMetaDataMissingException, ProcessFailureException, MD5Exception {
     ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactMetaDataFile());
     try {
-      Path file = fetchWorkflow.fetchItem(item, publishWorkflow);
+      FetchResult result = fetchWorkflow.fetchItem(item, publishWorkflow);
+      Path file = result != null ? result.file() : null;
       if (file == null) {
         POM pom = loadPOM(artifact);
         if (pom != null) {
           ArtifactMetaData amd = translatePOM(pom);
           Path amdFile = ArtifactTools.generateXML(amd);
-          file = publishWorkflow.publish(item, amdFile);
+          file = publishWorkflow.publish(new FetchResult(amdFile, ItemSource.SAVANT, item));
 
           // Write the MD5
           MD5 amdMD5 = MD5.forPath(amdFile);
           Path amdMD5File = Files.createTempFile("savant", "amd-md5");
           MD5.writeMD5(amdMD5, amdMD5File);
           ResolvableItem md5Item = new ResolvableItem(item, item.item + ".md5");
-          publishWorkflow.publish(md5Item, amdMD5File);
+          publishWorkflow.publish(new FetchResult(amdMD5File, ItemSource.SAVANT, md5Item));
           Files.delete(amdMD5File);
         }
       }
@@ -154,37 +158,39 @@ public class Workflow {
   public Path fetchSource(Artifact artifact) throws ProcessFailureException, MD5Exception {
     try {
       ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactSourceFile());
-      Path file = fetchWorkflow.fetchItem(item, publishWorkflow);
-      if (file == null) {
+      FetchResult result = fetchWorkflow.fetchItem(item, publishWorkflow);
+      if (result == null) {
         item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactAlternativeSourceFile());
-        file = fetchWorkflow.fetchItem(item, publishWorkflow);
+        result = fetchWorkflow.fetchItem(item, publishWorkflow);
 
         // Publish the Savant named source JAR to prevent going back out to remote repositories next time we want to load source JARs
-        if (file != null) {
+        if (result != null) {
           item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactSourceFile());
           // we should be returning our locally cached/published source path, not the remote source path
-          file = publishWorkflow.publish(item, file);
+          Path file = publishWorkflow.publish(new FetchResult(result.file(), result.source(), item));
+          result = new FetchResult(file, result.source(), item);
         }
       }
 
-      if (file == null && artifact.nonSemanticVersion != null) {
+      if (result == null && artifact.nonSemanticVersion != null) {
         item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.nonSemanticVersion, artifact.getArtifactNonSemanticAlternativeSourceFile());
         // Don't write out non-semantic versioned source artifacts, we will re-publish below using the semantic version
-        file = fetchWorkflow.fetchItem(item, new PublishWorkflow(new DoNotPublishProcess()));
+        result = fetchWorkflow.fetchItem(item, new PublishWorkflow(new DoNotPublishProcess()));
 
         // Publish the Savant named source JAR to prevent going back out to remote repositories next time we want to load source JARs
-        if (file != null) {
+        if (result != null) {
           item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactSourceFile());
-          file = publishWorkflow.publish(item, file);
+          Path file = publishWorkflow.publish(new FetchResult(result.file(), result.source(), item));
+          result = new FetchResult(file, result.source(), item);
         }
       }
 
-      if (file == null) {
+      if (result == null) {
         item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactSourceFile());
-        publishWorkflow.publishNegative(item);
+        publishWorkflow.publishNegative(item, ItemSource.SAVANT);
       }
 
-      return file;
+      return result != null ? result.file() : null;
     } catch (NegativeCacheException e) {
       // This is a short-circuit exit from the workflow. It is only thrown by the CacheProcess and indicates that the
       // search for the source JAR should stop immediately.
@@ -195,13 +201,15 @@ public class Workflow {
   private POM loadPOM(Artifact artifact) {
     // Maven doesn't use artifact names (via classifiers) when resolving POMs. Therefore, we need to use the project id twice for the item
     ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.project, artifact.version.toString(), artifact.getArtifactPOMFile());
-    Path file = fetchWorkflow.fetchItem(item, publishWorkflow);
+    FetchResult result = fetchWorkflow.fetchItem(item, publishWorkflow);
+    Path file = result != null ? result.file() : null;
 
     // Try the POM with the non-semantic (bad) version
     if (file == null && artifact.nonSemanticVersion != null) {
       output.debugln("[Looking for POM using non-semantic version]");
       item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.project, artifact.nonSemanticVersion, artifact.getArtifactNonSemanticPOMFile());
-      file = fetchWorkflow.fetchItem(item, publishWorkflow);
+      result = fetchWorkflow.fetchItem(item, publishWorkflow);
+      file = result != null ? result.file() : null;
     }
 
     if (file == null) {
