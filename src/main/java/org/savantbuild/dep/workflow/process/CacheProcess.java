@@ -22,7 +22,6 @@ import java.nio.file.Paths;
 
 import org.savantbuild.dep.domain.ResolvableItem;
 import org.savantbuild.dep.workflow.PublishWorkflow;
-import org.savantbuild.domain.Version;
 import org.savantbuild.output.Output;
 
 /**
@@ -33,26 +32,23 @@ import org.savantbuild.output.Output;
 public class CacheProcess implements Process {
   public final String dir;
 
-  public final String integrationDir;
-
   public final Output output;
 
   protected final ItemSource itemSource;
 
-  public CacheProcess(Output output, String dir, String integrationDir) {
-    this(output, dir, integrationDir, ItemSource.SAVANT);
+  public CacheProcess(Output output, String dir) {
+    this(output, dir, ItemSource.SAVANT);
   }
 
-  protected CacheProcess(Output output, String dir, String integrationDir, ItemSource itemSource) {
+  protected CacheProcess(Output output, String dir, ItemSource itemSource) {
     this.output = output;
-    this.dir = dir != null ? dir : ".savant/cache";
-    this.integrationDir = integrationDir != null ? integrationDir : System.getProperty("user.home") + "/.savant/cache";
+    this.dir = dir != null ? dir : System.getProperty("user.home") + "/.savant/cache";
     this.itemSource = itemSource;
   }
 
   @Override
   public FetchResult fetch(ResolvableItem item, PublishWorkflow publishWorkflow) throws NegativeCacheException {
-    Path file = (item.version.endsWith(Version.INTEGRATION)) ? _fetch(item, integrationDir) : _fetch(item, dir);
+    Path file = _fetch(item, dir);
     return file != null ? new FetchResult(file, itemSource, item) : null;
   }
 
@@ -61,12 +57,7 @@ public class CacheProcess implements Process {
     ResolvableItem item = fetchResult.item();
     Path itemFile = fetchResult.file();
 
-    String cacheDir = dir;
-    if (item.version.endsWith(Version.INTEGRATION)) {
-      cacheDir = integrationDir;
-    }
-
-    String cachePath = String.join("/", cacheDir, item.group.replace('.', '/'), item.project, item.version, item.item);
+    String cachePath = String.join("/", dir, item.group.replace('.', '/'), item.project, item.version, item.item);
     Path cacheFile = Paths.get(cachePath);
     if (Files.isDirectory(cacheFile)) {
       throw new ProcessFailureException("Your local artifact cache location is a directory [" + cacheFile.toAbsolutePath() + "]");

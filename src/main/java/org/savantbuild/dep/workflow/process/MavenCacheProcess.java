@@ -23,8 +23,8 @@ import org.savantbuild.output.Output;
  * @author Brian Pontarelli
  */
 public class MavenCacheProcess extends CacheProcess {
-  public MavenCacheProcess(Output output, String dir, String integrationDir) {
-    super(output, dir != null ? dir : System.getProperty("user.home") + "/.m2/repository", integrationDir, ItemSource.MAVEN);
+  public MavenCacheProcess(Output output, String dir) {
+    super(output, dir != null ? dir : System.getProperty("user.home") + "/.m2/repository", ItemSource.MAVEN);
   }
 
   @Override
