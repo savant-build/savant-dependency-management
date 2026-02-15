@@ -38,6 +38,7 @@ import org.savantbuild.domain.Version;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
@@ -177,9 +178,9 @@ public class WorkflowTest extends BaseUnitTest {
     assertTrue(Files.isRegularFile(mvnCache.resolve("org/apache/groovy/groovy/4.0.5/groovy-4.0.5.pom")));
     assertTrue(Files.isRegularFile(mvnCache.resolve("org/apache/groovy/groovy/4.0.5/groovy-4.0.5.pom.md5")));
 
-    // AMDs are generated from POMs and published as SAVANT to the Savant cache
-    assertTrue(Files.isRegularFile(cache.resolve("org/apache/groovy/groovy/4.0.5/groovy-4.0.5.jar.amd")));
-    assertTrue(Files.isRegularFile(cache.resolve("org/apache/groovy/groovy/4.0.5/groovy-4.0.5.jar.amd.md5")));
+    // AMDs are no longer written to disk — POM is translated in memory
+    assertFalse(Files.exists(cache.resolve("org/apache/groovy/groovy/4.0.5/groovy-4.0.5.jar.amd")));
+    assertFalse(Files.exists(cache.resolve("org/apache/groovy/groovy/4.0.5/groovy-4.0.5.jar.amd.md5")));
   }
 
   @Test
@@ -241,8 +242,8 @@ public class WorkflowTest extends BaseUnitTest {
     assertTrue(Files.isRegularFile(mvnCache.resolve("io/vertx/vertx-core/3.9.8/vertx-core-3.9.8.pom")));
     assertTrue(Files.isRegularFile(mvnCache.resolve("io/vertx/vertx-core/3.9.8/vertx-core-3.9.8.pom.md5")));
 
-    // AMDs are generated from POMs and published as SAVANT to the Savant cache
-    assertTrue(Files.isRegularFile(cache.resolve("io/vertx/vertx-core/3.9.8/vertx-core-3.9.8.jar.amd")));
-    assertTrue(Files.isRegularFile(cache.resolve("io/vertx/vertx-core/3.9.8/vertx-core-3.9.8.jar.amd.md5")));
+    // AMDs are no longer written to disk — POM is translated in memory
+    assertFalse(Files.exists(cache.resolve("io/vertx/vertx-core/3.9.8/vertx-core-3.9.8.jar.amd")));
+    assertFalse(Files.exists(cache.resolve("io/vertx/vertx-core/3.9.8/vertx-core-3.9.8.jar.amd.md5")));
   }
 }

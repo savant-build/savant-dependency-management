@@ -17,7 +17,6 @@ package org.savantbuild.dep.workflow;
 
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
@@ -38,7 +37,6 @@ import org.savantbuild.dep.workflow.process.ProcessFailureException;
 import org.savantbuild.domain.Version;
 import org.savantbuild.domain.VersionException;
 import org.savantbuild.output.Output;
-import org.savantbuild.security.MD5;
 import org.savantbuild.security.MD5Exception;
 import org.xml.sax.SAXException;
 
@@ -114,30 +112,19 @@ public class Workflow {
   public ArtifactMetaData fetchMetaData(Artifact artifact) throws ArtifactMetaDataMissingException, ProcessFailureException, MD5Exception {
     ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactMetaDataFile());
     try {
+      // Try to find a Savant AMD file
       FetchResult result = fetchWorkflow.fetchItem(item, publishWorkflow);
-      Path file = result != null ? result.file() : null;
-      if (file == null) {
-        POM pom = loadPOM(artifact);
-        if (pom != null) {
-          ArtifactMetaData amd = translatePOM(pom);
-          Path amdFile = ArtifactTools.generateXML(amd);
-          file = publishWorkflow.publish(new FetchResult(amdFile, ItemSource.SAVANT, item));
-
-          // Write the MD5
-          MD5 amdMD5 = MD5.forPath(amdFile);
-          Path amdMD5File = Files.createTempFile("savant", "amd-md5");
-          MD5.writeMD5(amdMD5, amdMD5File);
-          ResolvableItem md5Item = new ResolvableItem(item, item.item + ".md5");
-          publishWorkflow.publish(new FetchResult(amdMD5File, ItemSource.SAVANT, md5Item));
-          Files.delete(amdMD5File);
-        }
+      if (result != null) {
+        return ArtifactTools.parseArtifactMetaData(result.file(), mappings);
       }
 
-      if (file == null) {
-        throw new ArtifactMetaDataMissingException(artifact);
+      // No AMD found — try Maven POM and translate in memory
+      POM pom = loadPOM(artifact);
+      if (pom != null) {
+        return translatePOM(pom);
       }
 
-      return ArtifactTools.parseArtifactMetaData(file, mappings);
+      throw new ArtifactMetaDataMissingException(artifact);
     } catch (IllegalArgumentException | NullPointerException | SAXException | ParserConfigurationException |
              IOException | VersionException e) {
       throw new ProcessFailureException(item, e);
