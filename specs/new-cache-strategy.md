@@ -4,8 +4,8 @@
 
 **Date:** 2026-02-11
 **Status:** DRAFT
-**Branch:** `new_cache_strat`
-**Affected Repos:** `savant-dependency-management`, `savant-core` (WorkflowDelegate), `dependency-plugin`
+**Branch:** `voidmain/cache-performance`
+**Affected Repos:** `savant-dependency-management`
 
 ---
 
