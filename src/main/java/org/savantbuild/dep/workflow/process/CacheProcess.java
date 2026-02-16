@@ -46,12 +46,29 @@ public class CacheProcess implements Process {
     this.itemSource = itemSource;
   }
 
+  /**
+   * Checks the cache directory for the item. If it exists it is returned. If not, null is returned.
+   *
+   * @param item            The item being fetched.
+   * @param publishWorkflow The PublishWorkflow that is used to store the item if it can be found.
+   * @return The FetchResult from the cache or null if it doesn't exist.
+   * @throws NegativeCacheException If there is a negative cache record of the file, meaning it doesn't exist
+   *     anywhere in the world.
+   */
   @Override
   public FetchResult fetch(ResolvableItem item, PublishWorkflow publishWorkflow) throws NegativeCacheException {
     Path file = _fetch(item, dir);
     return file != null ? new FetchResult(file, itemSource, item) : null;
   }
 
+  /**
+   * Publishes the given artifact item into the cache. Items are only accepted if their source matches this cache's
+   * itemSource (e.g. CacheProcess only accepts SAVANT, MavenCacheProcess only accepts MAVEN).
+   *
+   * @param fetchResult The fetch result containing the item, file, and source.
+   * @return The path to the published file, or null if the source doesn't match.
+   * @throws ProcessFailureException If the publish fails.
+   */
   @Override
   public Path publish(FetchResult fetchResult) throws ProcessFailureException {
     if (fetchResult.source() != itemSource) {

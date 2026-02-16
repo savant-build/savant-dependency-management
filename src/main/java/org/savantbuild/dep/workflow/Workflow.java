@@ -78,6 +78,7 @@ public class Workflow {
   public Path fetchArtifact(Artifact artifact) throws ArtifactMissingException, ProcessFailureException, MD5Exception {
     ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile());
     FetchResult result = fetchWorkflow.fetchItem(item, publishWorkflow);
+    // Try the non-semantic version
     if (result == null && artifact.nonSemanticVersion != null) {
       item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.nonSemanticVersion, artifact.getArtifactNonSemanticFile());
       result = fetchWorkflow.fetchItem(item, publishWorkflow);
