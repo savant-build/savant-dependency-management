@@ -59,7 +59,7 @@ public class CacheProcess implements Process {
    */
   @Override
   public FetchResult fetch(ResolvableItem item, PublishWorkflow publishWorkflow) throws NegativeCacheException {
-    CacheHit hit = _fetch(item, dir);
+    CacheHit hit = tryFetchCandidate(item, dir);
     if (hit == null) {
       return null;
     }
@@ -129,7 +129,7 @@ public class CacheProcess implements Process {
     return "Cache(" + dir + ")";
   }
 
-  private CacheHit _fetch(ResolvableItem item, String cacheDir) {
+  private CacheHit tryFetchCandidate(ResolvableItem item, String cacheDir) {
     // Try primary item
     String path = String.join("/", cacheDir, item.group.replace('.', '/'), item.project, item.version, item.item);
     output.debugln("      - File [" + path + "]");
