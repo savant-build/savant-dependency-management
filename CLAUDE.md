@@ -2,10 +2,6 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Workflow
-
-Code must be reviewed before it is committed to a feature branch. Always present changes for review and wait for approval before committing.
-
 ## Code Style
 
 Never delete existing comments when modifying code. If method signatures change, update the comment parameters accordingly rather than removing the comment.

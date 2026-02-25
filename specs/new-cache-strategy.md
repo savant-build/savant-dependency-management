@@ -108,39 +108,46 @@ On cold builds, the full fetch chain is tried for all item types — URLProcess 
 
 ```
 fetchMetaData("org.apache.groovy:groovy:4.0.5"):
-  1. fetchWorkflow.fetchItem(amdItem, publishWorkflow) — tries all processes in order:
+  1. fetchWorkflow.fetchItem(amdOrPomItem, publishWorkflow)
+     — ResolvableItem has primary=".jar.amd" with alternative=".pom"
+     — Each process checks AMD first, then POM, before moving to next process:
+
      a. CacheProcess: check ~/.savant/cache/.../groovy-4.0.5.jar.amd
-        -> If found: return FetchResult(path, SAVANT, item)
+        -> If found: return FetchResult(path, SAVANT, amdItem)
+        -> If not found: check ~/.savant/cache/.../groovy-4.0.5.pom (alternative)
+        -> If not found: return null
      b. MavenCacheProcess: check ~/.m2/.../groovy-4.0.5.jar.amd
-        -> AMDs don't exist in ~/.m2, return null
-     c. URLProcess: try savantbuild.org for AMD
-        -> If found: publish FetchResult(temp, SAVANT, item) to publishWorkflow
+        -> Not found (AMDs don't exist in ~/.m2)
+        -> Check ~/.m2/.../groovy-4.0.5.pom (alternative)
+        -> If found: return FetchResult(path, MAVEN, pomItem)
+     c. URLProcess: try savantbuild.org for AMD, then POM
+        -> If AMD found: publish FetchResult(temp, SAVANT, amdItem) to publishWorkflow
            - CacheProcess.publish: source=SAVANT, accept -> copy to ~/.savant/cache
            - MavenCacheProcess.publish: source=SAVANT, reject -> null
-           -> return FetchResult(cachedPath, SAVANT, item)
-     d. MavenProcess: try maven central for AMD
-        -> AMDs don't exist on Maven Central, return null
+           -> return FetchResult(cachedPath, SAVANT, amdItem)
+     d. MavenProcess: try maven central for AMD, then POM
+        -> AMD not found; POM found as alternative
+        -> publish FetchResult(temp, MAVEN, pomItem) to publishWorkflow
+           - CacheProcess.publish: source=MAVEN, reject -> null
+           - MavenCacheProcess.publish: source=MAVEN, accept -> copy to ~/.m2
+        -> return FetchResult(cachedPath, MAVEN, pomItem)
 
-  2. If fetchWorkflow returned a FetchResult:
-     -> Record artifactSources[groovy] = SAVANT
-     -> Parse AMD file and return ArtifactMetaData
+  2. If FetchResult.item ends with ".amd":
+     -> Savant-sourced: parse AMD file and return ArtifactMetaData
 
-  3. If fetchWorkflow returned null (no AMD found — Maven-sourced artifact):
-     a. loadPOM(artifact) — fetches POM via fetchWorkflow:
-        - CacheProcess: no POMs in ~/.savant/cache, return null
-        - MavenCacheProcess: check ~/.m2, return FetchResult(path, MAVEN, item) if found
-        - URLProcess: no POMs on savantbuild.org, return null
-        - MavenProcess: download POM from Maven Central
-          -> publish FetchResult(temp, MAVEN, item) to publishWorkflow
-             - CacheProcess.publish: source=MAVEN, reject -> null
-             - MavenCacheProcess.publish: source=MAVEN, accept -> copy to ~/.m2
-          -> return FetchResult(cachedPath, MAVEN, item)
-     b. Parse POM, resolve parent POMs and imports
-     c. Apply semantic version mappings from build.savant
-     d. Apply license information from build.savant
-     e. Translate POM dependencies into Savant dependency groups
-     f. Record artifactSources[groovy] = MAVEN
-     g. Return in-memory ArtifactMetaData (no AMD file written to disk)
+  3. If FetchResult.item ends with ".pom":
+     -> Maven-sourced: process POM through loadPOM(artifact, preloadedFile)
+     a. Parse POM, resolve parent POMs and imports
+     b. Apply semantic version mappings from build.savant
+     c. Apply license information from build.savant
+     d. Translate POM dependencies into Savant dependency groups
+     e. Return in-memory ArtifactMetaData (no AMD file written to disk)
+
+  4. If fetchWorkflow returned null (neither AMD nor POM found via alternatives):
+     -> Fall back to loadPOM(artifact) which handles non-semantic version POM lookup
+        (different version directory, e.g., "4.0.5.Final" instead of "4.0.5")
+     -> If POM found: translate and return in-memory ArtifactMetaData
+     -> If still null: throw ArtifactMetaDataMissingException
 ```
 
 #### Step 2: Build Dependency Graph
@@ -211,6 +218,28 @@ public record FetchResult(Path file, ItemSource source, ResolvableItem item) {}
 
 `FetchResult` is the return type of `Process.fetch()` and the sole parameter of `Process.publish()`. It carries everything a publish process needs: the file to copy, the item identity (for path construction), and the source domain (for routing).
 
+#### 2.5.1a Alternative Items on `ResolvableItem` (savant-dependency-management)
+
+`ResolvableItem` has an `alternativeItems` field (`List<String>`, immutable, never null) that allows a single `fetchWorkflow.fetchItem()` call to check multiple item names within each Process. This reduces unnecessary HTTP calls by letting local cache processes find files under alternative names before remote processes are tried.
+
+```java
+public class ResolvableItem {
+    public final List<String> alternativeItems;
+    // ... group, project, name, version, item fields ...
+
+    // 5-arg constructor — no alternatives
+    public ResolvableItem(String group, String project, String name, String version, String item) { ... }
+
+    // 6-arg constructor — with alternatives
+    public ResolvableItem(String group, String project, String name, String version, String item, List<String> alternativeItems) { ... }
+
+    // Copy constructor — drops alternatives (used for MD5, neg markers, matched items)
+    public ResolvableItem(ResolvableItem other, String item) { ... }
+}
+```
+
+Each `Process.fetch()` implementation tries the primary `item` first, then iterates `alternativeItems`. When an alternative matches, the `FetchResult` contains a copy of the `ResolvableItem` with the matched item name (via the copy constructor, which drops alternatives). This ensures publish workflows receive the correct filename.
+
 #### 2.5.2 `Process` Interface Changes (savant-dependency-management)
 
 The `Process` interface changes from:
@@ -264,25 +293,33 @@ public Path publish(FetchResult fetchResult) {
 
 #### 2.5.4 Process Implementation Changes (savant-dependency-management)
 
+All `Process.fetch()` implementations support alternative items (see Section 2.5.1a). Each tries the primary `item` first, then iterates `item.alternativeItems`. When an alternative matches, the `FetchResult` contains a `ResolvableItem` copy with the matched item name.
+
 **`CacheProcess`** (`~/.savant/cache`):
 
-- `fetch()`: Checks the local Savant cache. Returns `FetchResult(path, ItemSource.SAVANT, item)` if found; `null` if not.
+- `fetch()`: Checks the local Savant cache for the primary item. If not found, checks for a `.neg` marker (throws `NegativeCacheException` if found — negative markers are only checked for the primary item). Then iterates `item.alternativeItems`, checking each in the cache. Returns a `FetchResult` with the matched item name, or `null` if none found. Uses an internal `CacheHit` record to bundle the file path and matched item name from `_fetch()`.
 - `publish()`: Checks `fetchResult.source()` — if `MAVEN`, returns `null` (rejects). Otherwise copies the file to `~/.savant/cache` and returns the cached path.
 - **Default `dir` changes** from `.savant/cache` (project-level) to `~/.savant/cache` (global). This is an intentional **breaking change**. Projects using the default `CacheProcess()` constructor will now read/write from the global Savant cache instead of a project-local directory. The `integrationDir` field is no longer needed since both regular and integration builds use the same global directory.
 
 **`MavenCacheProcess`** (`~/.m2/repository`):
 
+- Extends `CacheProcess` — inherits alternative item checking automatically.
 - `fetch()`: Checks the local Maven cache. Returns `FetchResult(path, ItemSource.MAVEN, item)` if found; `null` if not.
 - `publish()`: Checks `fetchResult.source()` — if `SAVANT`, returns `null` (rejects). Otherwise copies the file to `~/.m2/repository` and returns the cached path.
 
 **`URLProcess`** (Savant remote repositories):
 
-- `fetch()`: Downloads item from URL. On success, wraps the downloaded file in `FetchResult(tempFile, ItemSource.SAVANT, item)`, publishes via `publishWorkflow.publish(fetchResult)`, and returns `FetchResult(cachedPath, ItemSource.SAVANT, item)`. Returns `null` on 404.
+- `fetch()`: Delegates to `tryFetchCandidate()` for the primary item, then for each alternative. `tryFetchCandidate(item, candidateItem, publishWorkflow)` downloads `candidateItem.md5` — if 404, returns null. Otherwise downloads `candidateItem` with MD5 verification, publishes both, and returns a `FetchResult` with the matched item name. Returns `null` if no candidate is found.
 - `publish()`: Unchanged — throws `ProcessFailureException` (URL processes don't accept publishes).
 
 **`MavenProcess`** (Maven remote repositories):
 
-- Extends `URLProcess` but uses `ItemSource.MAVEN` instead of `ItemSource.SAVANT`. When it downloads an item, the `FetchResult` is tagged `MAVEN`, so the publish workflow routes it to `~/.m2` via `MavenCacheProcess`.
+- Extends `URLProcess` but uses `ItemSource.MAVEN` instead of `ItemSource.SAVANT`. When it downloads an item, the `FetchResult` is tagged `MAVEN`, so the publish workflow routes it to `~/.m2` via `MavenCacheProcess`. Does NOT override `fetch()` — inherits alternative item support from `URLProcess`.
+
+**`SVNProcess`** (SubVersion repositories):
+
+- `fetch()`: Same pattern as `URLProcess` — delegates to `tryFetchCandidate()` for the primary item, then for each alternative. Each candidate is exported from the SVN repository with MD5 verification. Returns a `FetchResult` with the matched item name, or `null` if no candidate is found.
+- `publish()`: Imports the file into the SVN repository (unchanged).
 
 #### 2.5.5 `Workflow.java` Changes (savant-dependency-management)
 
@@ -292,13 +329,17 @@ The `Workflow` class retains its `fetchWorkflow` and `publishWorkflow` fields. N
 
 The method changes:
 
-- **`fetchMetaData()`**: Tries the fetch workflow for an AMD. If found, the artifact is Savant-sourced. If not found, calls `loadPOM()` + `translatePOM()` and returns the in-memory `ArtifactMetaData` directly — no AMD file is generated or published for Maven-sourced artifacts. The `ArtifactMetaData` is not cached because each artifact is only fetched once during the `buildGraph` phase.
+- **`fetchMetaData()`**: Uses a single `fetchWorkflow.fetchItem()` call with the AMD file as the primary item and the POM file as an alternative (via `ResolvableItem.alternativeItems`). If the result's item name ends in `.amd`, the artifact is Savant-sourced and the AMD is parsed directly. If the POM is found as the alternative, it is processed through `loadPOM(artifact, preloadedFile)` and translated to in-memory `ArtifactMetaData`. If neither is found via alternatives, falls back to `loadPOM(artifact)` which handles non-semantic version POM lookups (different version directory). No AMD file is generated or published for Maven-sourced artifacts.
 
 - **`fetchArtifact()`**: Uses the fetch workflow. The process chain tries all processes in order. Each remote process tags its `FetchResult` with the appropriate `ItemSource`; the publish workflow routes to the correct cache. For Maven artifacts with non-semantic versions (e.g., `4.1.65.Final`), the JAR is resolved from `~/.m2` using the original Maven version path and the path is returned directly — **no re-publishing** of a semantic-named copy occurs. The semantic version mapping is applied in memory only.
 
-- **`fetchSource()`**: Uses the fetch workflow to find source JARs. Tries the Savant naming convention (`-src.jar`) first, then falls back to the Maven naming convention (`-sources.jar`). **No renaming or re-publishing** occurs — whichever file is found, its path is returned directly. On subsequent builds, both naming conventions are tried again (the lookup is fast since it's a local file check). If no source JAR is found anywhere, a negative cache marker is published to the appropriate cache based on the artifact's source domain.
+- **`fetchSource()`**: Uses a single `fetchWorkflow.fetchItem()` call with the Savant-style source (`-src.jar`) as the primary item and the Maven-style source (`-sources.jar`) as an alternative. Each Process in the fetch chain checks both names before returning null, so local caches find `-sources.jar` files without triggering unnecessary remote lookups for `-src.jar`. If the first call returns null and the artifact has a `nonSemanticVersion`, a second call tries the non-semantic alternative source file (different version directory). If nothing is found, a negative cache marker is published for the primary item. **No renaming or re-publishing** occurs — whichever file is found, its path is returned directly.
 
-- **`loadPOM()`**: Checks `pomCache` first. If miss, uses the fetch workflow to find POMs. `CacheProcess` and `URLProcess` will return `null` for POM items (they don't exist in Savant caches/repos). `MavenCacheProcess` and `MavenProcess` will handle them. The parsed POM is stored in `pomCache` before returning.
+- **`loadPOM()`**: Refactored into four methods:
+  - `loadPOM(artifact)` — checks `pomCache`, then calls `fetchPOMFile(artifact)` + `processPOM(artifact, cacheKey, file)`.
+  - `loadPOM(artifact, preloadedFile)` — checks `pomCache`, then calls `processPOM` directly with the preloaded file (used when POM was found as an alternative to AMD in `fetchMetaData`).
+  - `fetchPOMFile(artifact)` — fetches the POM via `fetchWorkflow.fetchItem()`, with non-semantic version fallback.
+  - `processPOM(artifact, cacheKey, file)` — parses the POM, recursively resolves parent POMs and BOM imports, caches in `pomCache`, and returns the result.
 
 #### 2.5.6 POM-to-ArtifactMetaData Translation (savant-dependency-management)
 
