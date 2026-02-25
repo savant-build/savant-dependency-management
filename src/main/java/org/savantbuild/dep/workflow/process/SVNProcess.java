@@ -71,9 +71,28 @@ public class SVNProcess implements Process {
   @Override
   public FetchResult fetch(ResolvableItem item, PublishWorkflow publishWorkflow)
       throws ProcessFailureException {
+    // Try primary item first
+    FetchResult result = tryFetchCandidate(item, item.item, publishWorkflow);
+    if (result != null) {
+      return result;
+    }
+
+    // Try alternatives
+    for (String alt : item.alternativeItems) {
+      result = tryFetchCandidate(item, alt, publishWorkflow);
+      if (result != null) {
+        return result;
+      }
+    }
+
+    return null;
+  }
+
+  private FetchResult tryFetchCandidate(ResolvableItem item, String candidateItem, PublishWorkflow publishWorkflow)
+      throws ProcessFailureException {
     try {
       Path md5File = PathTools.createTempPath("savant-svn-process", "export", true);
-      URI md5URI = NetTools.build(repository, item.group.replace('.', '/'), item.project, item.version, item.item + ".md5");
+      URI md5URI = NetTools.build(repository, item.group.replace('.', '/'), item.project, item.version, candidateItem + ".md5");
       if (!export(md5URI, md5File)) {
         return null;
       }
@@ -87,7 +106,7 @@ public class SVNProcess implements Process {
       }
 
       Path itemFile = PathTools.createTempPath("savant-svn-process", "export", true);
-      URI itemURI = NetTools.build(repository, item.group.replace('.', '/'), item.project, item.version, item.item);
+      URI itemURI = NetTools.build(repository, item.group.replace('.', '/'), item.project, item.version, candidateItem);
       output.debugln("      - Download [" + itemURI + "]");
       if (!export(itemURI, itemFile)) {
         output.debugln("      - Not found [" + itemURI + "]");
@@ -101,11 +120,12 @@ public class SVNProcess implements Process {
 
       output.infoln("Downloaded from SubVersion at [%s]", itemURI);
 
-      ResolvableItem md5Item = new ResolvableItem(item, item.item + ".md5");
+      ResolvableItem matchedItem = candidateItem.equals(item.item) ? item : new ResolvableItem(item, candidateItem);
+      ResolvableItem md5Item = new ResolvableItem(item, candidateItem + ".md5");
       publishWorkflow.publish(new FetchResult(md5File, ItemSource.SAVANT, md5Item));
       try {
-        Path publishedFile = publishWorkflow.publish(new FetchResult(itemFile, ItemSource.SAVANT, item));
-        return new FetchResult(publishedFile != null ? publishedFile : itemFile, ItemSource.SAVANT, item);
+        Path publishedFile = publishWorkflow.publish(new FetchResult(itemFile, ItemSource.SAVANT, matchedItem));
+        return new FetchResult(publishedFile != null ? publishedFile : itemFile, ItemSource.SAVANT, matchedItem);
       } catch (ProcessFailureException e) {
         throw new ProcessFailureException(item, e);
       }

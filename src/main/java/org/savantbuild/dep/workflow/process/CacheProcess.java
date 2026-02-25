@@ -36,6 +36,8 @@ public class CacheProcess implements Process {
 
   protected final ItemSource itemSource;
 
+  private record CacheHit(Path file, String matchedItem) {}
+
   public CacheProcess(Output output, String dir) {
     this(output, dir, ItemSource.SAVANT);
   }
@@ -57,8 +59,12 @@ public class CacheProcess implements Process {
    */
   @Override
   public FetchResult fetch(ResolvableItem item, PublishWorkflow publishWorkflow) throws NegativeCacheException {
-    Path file = _fetch(item, dir);
-    return file != null ? new FetchResult(file, itemSource, item) : null;
+    CacheHit hit = _fetch(item, dir);
+    if (hit == null) {
+      return null;
+    }
+    ResolvableItem matchedItem = hit.matchedItem.equals(item.item) ? item : new ResolvableItem(item, hit.matchedItem);
+    return new FetchResult(hit.file, itemSource, matchedItem);
   }
 
   /**
@@ -123,25 +129,35 @@ public class CacheProcess implements Process {
     return "Cache(" + dir + ")";
   }
 
-  private Path _fetch(ResolvableItem item, String cacheDir) {
+  private CacheHit _fetch(ResolvableItem item, String cacheDir) {
+    // Try primary item
     String path = String.join("/", cacheDir, item.group.replace('.', '/'), item.project, item.version, item.item);
     output.debugln("      - File [" + path + "]");
     Path file = Paths.get(path);
-    if (!Files.isRegularFile(file)) {
-      file = Paths.get(path + ".neg");
-      if (Files.isRegularFile(file)) {
-        output.debugln("      - Found negative marker");
-        throw new NegativeCacheException(item);
-      } else {
-        output.debugln("      - Not found");
-        file = null;
+    if (Files.isRegularFile(file)) {
+      output.debugln("      - Found");
+      return new CacheHit(file, item.item);
+    }
+
+    // Check negative cache marker (only for primary item)
+    Path negFile = Paths.get(path + ".neg");
+    if (Files.isRegularFile(negFile)) {
+      output.debugln("      - Found negative marker");
+      throw new NegativeCacheException(item);
+    }
+
+    // Try alternative items
+    for (String alt : item.alternativeItems) {
+      String altPath = String.join("/", cacheDir, item.group.replace('.', '/'), item.project, item.version, alt);
+      output.debugln("      - File [" + altPath + "] (alternative)");
+      Path altFile = Paths.get(altPath);
+      if (Files.isRegularFile(altFile)) {
+        output.debugln("      - Found (alternative)");
+        return new CacheHit(altFile, alt);
       }
     }
 
-    if (file != null) {
-      output.debugln("      - Found");
-    }
-
-    return file;
+    output.debugln("      - Not found");
+    return null;
   }
 }

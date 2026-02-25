@@ -79,8 +79,27 @@ public class URLProcess implements Process {
    */
   @Override
   public FetchResult fetch(ResolvableItem item, PublishWorkflow publishWorkflow) throws ProcessFailureException {
+    // Try primary item first
+    FetchResult result = tryFetchCandidate(item, item.item, publishWorkflow);
+    if (result != null) {
+      return result;
+    }
+
+    // Try alternatives
+    for (String alt : item.alternativeItems) {
+      result = tryFetchCandidate(item, alt, publishWorkflow);
+      if (result != null) {
+        return result;
+      }
+    }
+
+    return null;
+  }
+
+  private FetchResult tryFetchCandidate(ResolvableItem item, String candidateItem, PublishWorkflow publishWorkflow)
+      throws ProcessFailureException {
     try {
-      URI md5URI = NetTools.build(url, item.group.replace('.', '/'), item.project, item.version, item.item + ".md5");
+      URI md5URI = NetTools.build(url, item.group.replace('.', '/'), item.project, item.version, candidateItem + ".md5");
       output.debugln("      - Download [" + md5URI + "]");
       Path md5File = downloadToPath(md5URI, username, password, null);
       if (md5File == null) {
@@ -96,7 +115,7 @@ public class URLProcess implements Process {
         throw new ProcessFailureException(item, e);
       }
 
-      URI itemURI = NetTools.build(url, item.group.replace('.', '/'), item.project, item.version, item.item);
+      URI itemURI = NetTools.build(url, item.group.replace('.', '/'), item.project, item.version, candidateItem);
       output.debugln("      - Download [" + itemURI + "]");
       Path itemFile;
       try {
@@ -107,11 +126,12 @@ public class URLProcess implements Process {
 
       if (itemFile != null) {
         output.infoln("Downloaded [%s]", itemURI);
-        ResolvableItem md5Item = new ResolvableItem(item, item.item + ".md5");
+        ResolvableItem matchedItem = candidateItem.equals(item.item) ? item : new ResolvableItem(item, candidateItem);
+        ResolvableItem md5Item = new ResolvableItem(item, candidateItem + ".md5");
         publishWorkflow.publish(new FetchResult(md5File, itemSource, md5Item));
         try {
-          Path publishedFile = publishWorkflow.publish(new FetchResult(itemFile, itemSource, item));
-          return new FetchResult(publishedFile != null ? publishedFile : itemFile, itemSource, item);
+          Path publishedFile = publishWorkflow.publish(new FetchResult(itemFile, itemSource, matchedItem));
+          return new FetchResult(publishedFile != null ? publishedFile : itemFile, itemSource, matchedItem);
         } catch (ProcessFailureException e) {
           throw new ProcessFailureException(item, e);
         }

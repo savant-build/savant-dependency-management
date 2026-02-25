@@ -104,15 +104,28 @@ public class Workflow {
    * @throws MD5Exception If the item's MD5 file did not match the item.
    */
   public ArtifactMetaData fetchMetaData(Artifact artifact) throws ArtifactMetaDataMissingException, ProcessFailureException, MD5Exception {
-    ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactMetaDataFile());
+    // Try AMD (primary) with POM as alternative — both live in the same group/project/version/ directory
+    ResolvableItem item = new ResolvableItem(
+        artifact.id.group, artifact.id.project, artifact.id.name,
+        artifact.version.toString(), artifact.getArtifactMetaDataFile(),
+        List.of(artifact.getArtifactPOMFile())
+    );
     try {
-      // Try to find a Savant AMD file
       FetchResult result = fetchWorkflow.fetchItem(item, publishWorkflow);
       if (result != null) {
-        return ArtifactTools.parseArtifactMetaData(result.file(), mappings);
+        if (result.item().item.endsWith(".amd")) {
+          return ArtifactTools.parseArtifactMetaData(result.file(), mappings);
+        } else {
+          // POM was found as alternative — process it through the POM pipeline
+          POM pom = loadPOM(artifact, result.file());
+          if (pom != null) {
+            return translatePOM(pom);
+          }
+        }
       }
 
-      // No AMD found — try Maven POM and translate in memory
+      // Neither AMD nor POM found via alternatives — try loadPOM directly
+      // (handles non-semantic version fallback which uses a different version directory)
       POM pom = loadPOM(artifact);
       if (pom != null) {
         return translatePOM(pom);
@@ -138,25 +151,25 @@ public class Workflow {
    */
   public Path fetchSource(Artifact artifact) throws ProcessFailureException, MD5Exception {
     try {
-      // Try Savant-style source (-src.jar)
-      ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactSourceFile());
+      // Try Savant-style source (-src.jar) with Maven-style alternative (-sources.jar)
+      ResolvableItem item = new ResolvableItem(
+          artifact.id.group, artifact.id.project, artifact.id.name,
+          artifact.version.toString(), artifact.getArtifactSourceFile(),
+          List.of(artifact.getArtifactAlternativeSourceFile())
+      );
       FetchResult result = fetchWorkflow.fetchItem(item, publishWorkflow);
 
-      // Try Maven-style source (-sources.jar) — no renaming
-      if (result == null) {
-        item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactAlternativeSourceFile());
-        result = fetchWorkflow.fetchItem(item, publishWorkflow);
-      }
-
-      // Try non-semantic version (-sources.jar with original version) — no renaming
+      // Try non-semantic version (-sources.jar with original version) — different version directory
       if (result == null && artifact.nonSemanticVersion != null) {
-        item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.nonSemanticVersion, artifact.getArtifactNonSemanticAlternativeSourceFile());
+        item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name,
+            artifact.nonSemanticVersion, artifact.getArtifactNonSemanticAlternativeSourceFile());
         result = fetchWorkflow.fetchItem(item, publishWorkflow);
       }
 
       // Negative cache if not found
       if (result == null) {
-        item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactSourceFile());
+        item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name,
+            artifact.version.toString(), artifact.getArtifactSourceFile());
         publishWorkflow.publishNegative(item, ItemSource.SAVANT);
       }
 
@@ -175,6 +188,27 @@ public class Workflow {
       return cached;
     }
 
+    Path file = fetchPOMFile(artifact);
+    if (file == null) {
+      return null;
+    }
+
+    return processPOM(artifact, cacheKey, file);
+  }
+
+  /**
+   * Called from fetchMetaData when POM was found as an alternative to AMD.
+   */
+  private POM loadPOM(Artifact artifact, Path preloadedFile) {
+    String cacheKey = artifact.id.group + ":" + artifact.id.project + ":" + artifact.version;
+    POM cached = pomCache.get(cacheKey);
+    if (cached != null) {
+      return cached;
+    }
+    return processPOM(artifact, cacheKey, preloadedFile);
+  }
+
+  private Path fetchPOMFile(Artifact artifact) {
     // Maven doesn't use artifact names (via classifiers) when resolving POMs. Therefore, we need to use the project id twice for the item
     ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.project, artifact.version.toString(), artifact.getArtifactPOMFile());
     FetchResult result = fetchWorkflow.fetchItem(item, publishWorkflow);
@@ -188,10 +222,10 @@ public class Workflow {
       file = result != null ? result.file() : null;
     }
 
-    if (file == null) {
-      return null;
-    }
+    return file;
+  }
 
+  private POM processPOM(Artifact artifact, String cacheKey, Path file) {
     POM pom = MavenTools.parsePOM(file, output);
     pom.replaceKnownVariablesAndFillInDependencies();
     pom.replaceRangeValuesWithMappings(rangeMappings);
