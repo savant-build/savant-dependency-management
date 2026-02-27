@@ -50,7 +50,7 @@ public class URLProcessTest extends BaseUnitTest {
     Artifact artifact = new ReifiedArtifact("org.savantbuild.test:" + name + ":" + name + ":" + version + ":jar", License.Licenses.get("ApacheV2_0"));
     URLProcess ufp = new URLProcess(output, url, null, null);
     ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile());
-    FetchResult fetchResult = ufp.fetch(item, new PublishWorkflow(new CacheProcess(output, cache.toString())));
+    FetchResult fetchResult = ufp.fetch(item, new PublishWorkflow(new CacheProcess(output, cache.toString(), null)));
     assertNotNull(fetchResult);
 
     assertEquals((Object) fetchResult.file().toAbsolutePath(), Paths.get(result).toAbsolutePath());
@@ -72,7 +72,7 @@ public class URLProcessTest extends BaseUnitTest {
 
     Artifact artifact = new ReifiedArtifact("org.savantbuild.test:multiple-versions:multiple-versions:1.0.0:jar", License.Licenses.get("ApacheV2_0"));
 
-    CacheProcess process = new CacheProcess(output, cache.toString());
+    CacheProcess process = new CacheProcess(output, cache.toString(), null);
     PublishWorkflow pw = new PublishWorkflow();
     pw.getProcesses().add(process);
 
@@ -88,7 +88,7 @@ public class URLProcessTest extends BaseUnitTest {
 
     Artifact artifact = new ReifiedArtifact("org.savantbuild.test:missing-item:missing-item:1.0.0:jar", License.Licenses.get("ApacheV2_0"));
 
-    CacheProcess process = new CacheProcess(output, cache.toString());
+    CacheProcess process = new CacheProcess(output, cache.toString(), null);
     PublishWorkflow pw = new PublishWorkflow();
     pw.getProcesses().add(process);
 
@@ -104,7 +104,7 @@ public class URLProcessTest extends BaseUnitTest {
 
     Artifact artifact = new ReifiedArtifact("org.savantbuild.test:missing-item:missing-item:1.0.0:jar", License.Licenses.get("ApacheV2_0"));
 
-    CacheProcess process = new CacheProcess(output, cache.toString());
+    CacheProcess process = new CacheProcess(output, cache.toString(), null);
     PublishWorkflow pw = new PublishWorkflow();
     pw.getProcesses().add(process);
 
@@ -120,7 +120,7 @@ public class URLProcessTest extends BaseUnitTest {
 
     Artifact artifact = new ReifiedArtifact("org.savantbuild.test:missing-md5:missing-md5:1.0.0:jar", License.Licenses.get("ApacheV2_0"));
 
-    CacheProcess process = new CacheProcess(output, cache.toString());
+    CacheProcess process = new CacheProcess(output, cache.toString(), null);
     PublishWorkflow pw = new PublishWorkflow();
     pw.getProcesses().add(process);
 

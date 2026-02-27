@@ -25,31 +25,31 @@ import org.savantbuild.dep.workflow.PublishWorkflow;
 import org.savantbuild.output.Output;
 
 /**
- * This is an implementation of the Process that uses a local cache to fetch and publish artifacts.
+ * This is an implementation of the Process that uses local caches to fetch and publish artifacts.
+ * It manages two cache directories: one for Savant-sourced artifacts and one for Maven-sourced artifacts.
+ * Either directory can be null to disable that cache.
  *
  * @author Brian Pontarelli
  */
 public class CacheProcess implements Process {
-  public final String dir;
+  public final String mavenDir;
 
   public final Output output;
 
-  protected final ItemSource itemSource;
+  public final String savantDir;
 
   private record CacheHit(Path file, String matchedItem) {}
 
-  public CacheProcess(Output output, String dir) {
-    this(output, dir, ItemSource.SAVANT);
-  }
-
-  protected CacheProcess(Output output, String dir, ItemSource itemSource) {
+  public CacheProcess(Output output, String savantDir, String mavenDir) {
     this.output = output;
-    this.dir = dir != null ? dir : System.getProperty("user.home") + "/.savant/cache";
-    this.itemSource = itemSource;
+    this.savantDir = savantDir;
+    this.mavenDir = mavenDir;
   }
 
   /**
-   * Checks the cache directory for the item. If it exists it is returned. If not, null is returned.
+   * Checks the cache directories for the item. Tries the Savant cache first (tagging hits as SAVANT),
+   * then the Maven cache (tagging hits as MAVEN). If found in either, the result is returned.
+   * If not found in either, null is returned.
    *
    * @param item            The item being fetched.
    * @param publishWorkflow The PublishWorkflow that is used to store the item if it can be found.
@@ -59,17 +59,31 @@ public class CacheProcess implements Process {
    */
   @Override
   public FetchResult fetch(ResolvableItem item, PublishWorkflow publishWorkflow) throws NegativeCacheException {
-    CacheHit hit = tryFetchCandidate(item, dir);
-    if (hit == null) {
-      return null;
+    // Try Savant cache first
+    if (savantDir != null) {
+      CacheHit hit = tryFetchCandidate(item, savantDir);
+      if (hit != null) {
+        ResolvableItem matchedItem = hit.matchedItem.equals(item.item) ? item : new ResolvableItem(item, hit.matchedItem);
+        return new FetchResult(hit.file, ItemSource.SAVANT, matchedItem);
+      }
     }
-    ResolvableItem matchedItem = hit.matchedItem.equals(item.item) ? item : new ResolvableItem(item, hit.matchedItem);
-    return new FetchResult(hit.file, itemSource, matchedItem);
+
+    // Try Maven cache second
+    if (mavenDir != null) {
+      CacheHit hit = tryFetchCandidate(item, mavenDir);
+      if (hit != null) {
+        ResolvableItem matchedItem = hit.matchedItem.equals(item.item) ? item : new ResolvableItem(item, hit.matchedItem);
+        return new FetchResult(hit.file, ItemSource.MAVEN, matchedItem);
+      }
+    }
+
+    return null;
   }
 
   /**
-   * Publishes the given artifact item into the cache. Items are only accepted if their source matches this cache's
-   * itemSource (e.g. CacheProcess only accepts SAVANT, MavenCacheProcess only accepts MAVEN).
+   * Publishes the given artifact item into the appropriate cache. Items are routed based on the
+   * FetchResult's source: SAVANT items go to savantDir, MAVEN items go to mavenDir. Returns null
+   * if the relevant directory is null or the source doesn't match either cache.
    *
    * @param fetchResult The fetch result containing the item, file, and source.
    * @return The path to the published file, or null if the source doesn't match.
@@ -77,7 +91,16 @@ public class CacheProcess implements Process {
    */
   @Override
   public Path publish(FetchResult fetchResult) throws ProcessFailureException {
-    if (fetchResult.source() != itemSource) {
+    String dir;
+    if (fetchResult.source() == ItemSource.SAVANT) {
+      dir = savantDir;
+    } else if (fetchResult.source() == ItemSource.MAVEN) {
+      dir = mavenDir;
+    } else {
+      return null;
+    }
+
+    if (dir == null) {
       return null;
     }
 
@@ -126,7 +149,7 @@ public class CacheProcess implements Process {
 
   @Override
   public String toString() {
-    return "Cache(" + dir + ")";
+    return "Cache(savant=" + savantDir + ", maven=" + mavenDir + ")";
   }
 
   private CacheHit tryFetchCandidate(ResolvableItem item, String cacheDir) {

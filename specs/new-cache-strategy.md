@@ -92,11 +92,11 @@ Everything else in `.savant/cache` (JARs, POMs, source JARs, MD5s) is a duplicat
 A single fetch chain and a single publish chain handle all artifact types. **Publish routing** is driven by `FetchResult` metadata — each publish process inspects the `ItemSource` on the `FetchResult` and decides whether to accept or reject the item.
 
 ```
-Fetch:   CacheProcess(~/.savant/cache) -> MavenCacheProcess(~/.m2) -> URLProcess(savantbuild.org) -> MavenProcess(maven central)
-Publish: CacheProcess(~/.savant/cache) + MavenCacheProcess(~/.m2)   [each decides based on FetchResult.source]
+Fetch:   CacheProcess(~/.savant/cache, ~/.m2) -> URLProcess(savantbuild.org) -> MavenProcess(maven central)
+Publish: CacheProcess(~/.savant/cache, ~/.m2)   [routes based on FetchResult.source]
 ```
 
-When a remote process downloads an item, it wraps the result in a `FetchResult` tagged with its `ItemSource` (SAVANT for URLProcess, MAVEN for MavenProcess). The publish workflow passes this `FetchResult` to every publish process. `CacheProcess` accepts items with source=SAVANT and rejects source=MAVEN. `MavenCacheProcess` does the opposite. This ensures artifacts are routed to the correct global cache without any explicit routing logic in the Workflow class.
+When a remote process downloads an item, it wraps the result in a `FetchResult` tagged with its `ItemSource` (SAVANT for URLProcess, MAVEN for MavenProcess). The publish workflow passes this `FetchResult` to every publish process. `CacheProcess` manages both directories and routes SAVANT items to `savantDir` and MAVEN items to `mavenDir`. This ensures artifacts are routed to the correct global cache without any explicit routing logic in the Workflow class.
 
 On cold builds, the full fetch chain is tried for all item types — URLProcess may 404 on Maven-sourced JARs and MavenProcess may 404 on Savant-sourced AMDs. This is an acceptable tradeoff for code simplicity since it only affects the first build with empty caches.
 
@@ -295,17 +295,12 @@ public Path publish(FetchResult fetchResult) {
 
 All `Process.fetch()` implementations support alternative items (see Section 2.5.1a). Each tries the primary `item` first, then iterates `item.alternativeItems`. When an alternative matches, the `FetchResult` contains a `ResolvableItem` copy with the matched item name.
 
-**`CacheProcess`** (`~/.savant/cache`):
+**`CacheProcess`** (manages both `~/.savant/cache` and `~/.m2/repository`):
 
-- `fetch()`: Checks the local Savant cache for the primary item. If not found, checks for a `.neg` marker (throws `NegativeCacheException` if found — negative markers are only checked for the primary item). Then iterates `item.alternativeItems`, checking each in the cache. Returns a `FetchResult` with the matched item name, or `null` if none found. Uses an internal `CacheHit` record to bundle the file path and matched item name from `_fetch()`.
-- `publish()`: Checks `fetchResult.source()` — if `MAVEN`, returns `null` (rejects). Otherwise copies the file to `~/.savant/cache` and returns the cached path.
-- **Default `dir` changes** from `.savant/cache` (project-level) to `~/.savant/cache` (global). This is an intentional **breaking change**. Projects using the default `CacheProcess()` constructor will now read/write from the global Savant cache instead of a project-local directory. The `integrationDir` field is no longer needed since both regular and integration builds use the same global directory.
-
-**`MavenCacheProcess`** (`~/.m2/repository`):
-
-- Extends `CacheProcess` — inherits alternative item checking automatically.
-- `fetch()`: Checks the local Maven cache. Returns `FetchResult(path, ItemSource.MAVEN, item)` if found; `null` if not.
-- `publish()`: Checks `fetchResult.source()` — if `SAVANT`, returns `null` (rejects). Otherwise copies the file to `~/.m2/repository` and returns the cached path.
+- Constructor: `CacheProcess(Output output, String savantDir, String mavenDir)` — either directory can be null to disable that cache.
+- `fetch()`: Tries `savantDir` first, tagging hits as `SAVANT`. If not found, tries `mavenDir`, tagging hits as `MAVEN`. Each directory check looks for the primary item, then checks for a `.neg` marker (throws `NegativeCacheException` if found), then iterates `item.alternativeItems`. Returns a `FetchResult` with the matched item name, or `null` if none found. Uses an internal `CacheHit` record to bundle the file path and matched item name.
+- `publish()`: Routes based on `fetchResult.source()` — uses `savantDir` for `SAVANT`, `mavenDir` for `MAVEN`. Returns `null` if the relevant directory is null.
+- `MavenCacheProcess` has been removed — its functionality is unified into `CacheProcess`.
 
 **`URLProcess`** (Savant remote repositories):
 
@@ -356,15 +351,16 @@ Update the `standard()` method to configure the fetch and publish chains with th
 
 ```java
 public void standard() {
-    // Fetch: Savant global cache, then Maven cache, then remote Savant repo, then Maven Central
-    workflow.fetchWorkflow.processes.add(new CacheProcess(output, null, null));
-    workflow.fetchWorkflow.processes.add(new MavenCacheProcess(output, null, null));
+    String savantCache = System.getProperty("user.home") + "/.savant/cache";
+    String mavenCache = System.getProperty("user.home") + "/.m2/repository";
+
+    // Fetch: unified cache (Savant + Maven), then remote Savant repo, then Maven Central
+    workflow.fetchWorkflow.processes.add(new CacheProcess(output, savantCache, mavenCache));
     workflow.fetchWorkflow.processes.add(new URLProcess(output, "https://repository.savantbuild.org", null, null));
     workflow.fetchWorkflow.processes.add(new MavenProcess(output, "https://repo1.maven.org/maven2", null, null));
 
-    // Publish: each process inspects FetchResult.source() and decides whether to accept
-    workflow.publishWorkflow.processes.add(new CacheProcess(output, null, null));
-    workflow.publishWorkflow.processes.add(new MavenCacheProcess(output, null, null));
+    // Publish: unified cache routes based on FetchResult.source()
+    workflow.publishWorkflow.processes.add(new CacheProcess(output, savantCache, mavenCache));
 }
 ```
 
