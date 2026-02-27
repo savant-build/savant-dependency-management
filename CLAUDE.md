@@ -22,6 +22,10 @@ sb release          # Full release (depends on clean + test)
 
 Java 17 is required. Test framework is TestNG 6.8.7.
 
+## Project Context
+
+This is a **library** used by the Savant build runtime (`savant-core`, `dependency-plugin`, etc.) — not a standalone tool. All sibling Savant projects live one directory up at `/Users/bpontarelli/dev/os/savant/`.
+
 ## Architecture
 
 This library handles Java dependency resolution for the Savant build system. The resolution process has three phases:
@@ -39,14 +43,13 @@ Artifact fetching and publishing use a chain-of-responsibility pattern:
 - **`Workflow`** — Orchestrates a `FetchWorkflow` + `PublishWorkflow`. Contains `fetchMetaData`, `fetchArtifact`, `fetchSource`, and `loadPOM` methods.
 - **`FetchWorkflow`** — Ordered list of `Process` instances. Tries each in order until one returns a non-null `FetchResult`.
 - **`PublishWorkflow`** — Ordered list of `Process` instances. Publishes to all processes in the chain.
-- **`Process`** interface — Implemented by `CacheProcess`, `MavenCacheProcess`, `URLProcess`, `MavenProcess`, `SVNProcess`.
+- **`Process`** interface — Implemented by `CacheProcess`, `URLProcess`, `MavenProcess`, `SVNProcess`.
 
 ### Cache Routing via FetchResult
 
 Each fetched artifact is tagged with an `ItemSource` (SAVANT or MAVEN) via a `FetchResult` record. This controls publish routing:
 
-- `CacheProcess` (Savant cache, `~/.savant/cache`) — Only accepts `ItemSource.SAVANT`
-- `MavenCacheProcess` (Maven cache, `~/.m2/repository`) — Only accepts `ItemSource.MAVEN`
+- `CacheProcess(output, savantDir, mavenDir)` — Manages both Savant and Maven caches. Fetch tries savantDir first (SAVANT), then mavenDir (MAVEN). Publish routes SAVANT items to savantDir, MAVEN items to mavenDir. Either dir can be null.
 - `URLProcess` tags items as `SAVANT`; `MavenProcess` tags items as `MAVEN`
 
 Maven POMs are translated to `ArtifactMetaData` in-memory (no AMD files written for Maven-sourced artifacts).
