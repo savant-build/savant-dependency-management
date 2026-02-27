@@ -29,6 +29,7 @@ import org.testng.annotations.Test;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.fail;
 
 /**
  * This class is the test for the MavenCacheProcess.
@@ -63,5 +64,45 @@ public class MavenCacheProcessTest extends BaseUnitTest {
     Path result = process.publish(new FetchResult(artFile, ItemSource.MAVEN, item));
     assertNotNull(result);
     assertTrue(Files.isRegularFile(result));
+  }
+
+  @Test
+  public void fetch_negativeCache() throws Exception {
+    // When a .neg marker exists for the item, NegativeCacheException is thrown
+    Path mavenCache = projectDir.resolve("build/test/maven-deps");
+    PathTools.prune(mavenCache);
+
+    MavenCacheProcess process = new MavenCacheProcess(output, mavenCache.toString());
+    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:multiple-versions:multiple-versions:1.0.0:jar", License.Licenses.get("ApacheV2_0"));
+
+    // Create the directory and .neg marker
+    Path negFile = mavenCache.resolve("org/savantbuild/test/multiple-versions/1.0.0/multiple-versions-1.0.0-src.jar.neg");
+    Files.createDirectories(negFile.getParent());
+    Files.createFile(negFile);
+    try {
+      ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name,
+          artifact.version.toString(), artifact.getArtifactSourceFile());
+      process.fetch(item, null);
+      fail("Expected NegativeCacheException");
+    } catch (NegativeCacheException e) {
+      // Expected
+    } finally {
+      PathTools.prune(mavenCache);
+    }
+  }
+
+  @Test
+  public void fetch_noNegativeCache() throws Exception {
+    // When no .neg marker exists and the item is missing, null is returned (not an exception)
+    Path mavenCache = projectDir.resolve("build/test/maven-deps");
+    PathTools.prune(mavenCache);
+
+    MavenCacheProcess process = new MavenCacheProcess(output, mavenCache.toString());
+    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:multiple-versions:multiple-versions:1.0.0:jar", License.Licenses.get("ApacheV2_0"));
+
+    ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name,
+        artifact.version.toString(), artifact.getArtifactSourceFile());
+    FetchResult result = process.fetch(item, null);
+    assertNull(result);
   }
 }

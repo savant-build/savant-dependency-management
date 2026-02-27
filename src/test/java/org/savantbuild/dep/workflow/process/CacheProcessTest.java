@@ -31,6 +31,7 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.fail;
 
 /**
  * This class is the test for the CacheProcess.
@@ -140,26 +141,66 @@ public class CacheProcessTest extends BaseUnitTest {
     assertTrue(Files.isRegularFile(result.file()));
   }
 
-  @Test(expectedExceptions = NegativeCacheException.class)
-  public void fetch_withAlternative_negativeCache() {
-    // When negative cache marker exists for primary, NegativeCacheException is thrown before checking alternatives
-    CacheProcess process = new CacheProcess(output, projectDir.resolve("test-deps/savant").toString());
-    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:multiple-versions:multiple-versions:1.1.0:jar", License.Licenses.get("ApacheV2_0"));
-
-    // multiple-versions-1.1.0-src.jar.neg exists in test fixtures
-    ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name,
-        artifact.version.toString(), artifact.getArtifactSourceFile(),
-        List.of(artifact.getArtifactAlternativeSourceFile()));
-    process.fetch(item, null);
-  }
-
   @Test
-  public void fetch_withAlternative_noneFound() {
-    // When neither primary nor alternative exists, null is returned
+  public void fetch_negativeCache() throws Exception {
+    // When a .neg marker exists for the item, NegativeCacheException is thrown
     CacheProcess process = new CacheProcess(output, projectDir.resolve("test-deps/savant").toString());
     Artifact artifact = new ReifiedArtifact("org.savantbuild.test:multiple-versions:multiple-versions:1.0.0:jar", License.Licenses.get("ApacheV2_0"));
 
-    // Use item names that don't exist in test fixtures
+    Path negFile = projectDir.resolve("test-deps/savant/org/savantbuild/test/multiple-versions/1.0.0/multiple-versions-1.0.0-src.jar.neg");
+    Files.createFile(negFile);
+    try {
+      ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name,
+          artifact.version.toString(), artifact.getArtifactSourceFile());
+      process.fetch(item, null);
+      fail("Expected NegativeCacheException");
+    } catch (NegativeCacheException e) {
+      // Expected
+    } finally {
+      Files.deleteIfExists(negFile);
+    }
+  }
+
+  @Test
+  public void fetch_noNegativeCache() {
+    // When no .neg marker exists and the item is missing, null is returned (not an exception)
+    CacheProcess process = new CacheProcess(output, projectDir.resolve("test-deps/savant").toString());
+    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:multiple-versions:multiple-versions:1.0.0:jar", License.Licenses.get("ApacheV2_0"));
+
+    ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name,
+        artifact.version.toString(), artifact.getArtifactSourceFile());
+    FetchResult result = process.fetch(item, null);
+    assertNull(result);
+  }
+
+  @Test
+  public void fetch_withAlternative_negativeCache() throws Exception {
+    // When a .neg marker exists for the primary item, NegativeCacheException is thrown before checking alternatives
+    CacheProcess process = new CacheProcess(output, projectDir.resolve("test-deps/savant").toString());
+    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:multiple-versions:multiple-versions:1.1.0:jar", License.Licenses.get("ApacheV2_0"));
+
+    Path negFile = projectDir.resolve("test-deps/savant/org/savantbuild/test/multiple-versions/1.1.0/multiple-versions-1.1.0-src.jar.neg");
+    Files.createDirectories(negFile.getParent());
+    Files.createFile(negFile);
+    try {
+      ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name,
+          artifact.version.toString(), artifact.getArtifactSourceFile(),
+          List.of(artifact.getArtifactAlternativeSourceFile()));
+      process.fetch(item, null);
+      fail("Expected NegativeCacheException");
+    } catch (NegativeCacheException e) {
+      // Expected
+    } finally {
+      Files.deleteIfExists(negFile);
+    }
+  }
+
+  @Test
+  public void fetch_withAlternative_noNegativeCache() {
+    // When no .neg marker exists, primary is missing, and alternative is missing, null is returned
+    CacheProcess process = new CacheProcess(output, projectDir.resolve("test-deps/savant").toString());
+    Artifact artifact = new ReifiedArtifact("org.savantbuild.test:multiple-versions:multiple-versions:1.0.0:jar", License.Licenses.get("ApacheV2_0"));
+
     ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name,
         artifact.version.toString(), "nonexistent-1.0.0-src.jar",
         List.of("nonexistent-1.0.0-sources.jar"));
