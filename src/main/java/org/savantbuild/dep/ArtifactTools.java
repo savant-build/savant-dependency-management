@@ -296,8 +296,10 @@ public class ArtifactTools {
           dependencyId = new ArtifactID(group, project, name, type);
           try {
             dependencyVersion = new Version(version);
-            dependencyNonSemanticVersion = version; // This is a fallback just for Maven
+            dependencyNonSemanticVersion = null;
           } catch (VersionException e) {
+            // Non-semantic version (e.g., "4.1.126.Final") — store the original version string
+            // so fetch/publish can use the real version on disk and in remote repositories
             dependencyNonSemanticVersion = version;
 
             ArtifactSpec spec = new ArtifactSpec(group + ":" + project + ":" + name + ":" + version + ":" + type);

@@ -297,7 +297,7 @@ All `Process.fetch()` implementations support alternative items (see Section 2.5
 
 **`CacheProcess`** (manages both `~/.savant/cache` and `~/.m2/repository`):
 
-- Constructor: `CacheProcess(Output output, String savantDir, String mavenDir)` — either directory can be null to disable that cache.
+- Constructor: `CacheProcess(Output output, String savantDir, String integrationDir, String mavenDir)` — any directory can be null to disable that cache. Integration-version artifacts (version ending in `{integration}`) are routed to `integrationDir`.
 - `fetch()`: Tries `savantDir` first, tagging hits as `SAVANT`. If not found, tries `mavenDir`, tagging hits as `MAVEN`. Each directory check looks for the primary item, then checks for a `.neg` marker (throws `NegativeCacheException` if found), then iterates `item.alternativeItems`. Returns a `FetchResult` with the matched item name, or `null` if none found. Uses an internal `CacheHit` record to bundle the file path and matched item name.
 - `publish()`: Routes based on `fetchResult.source()` — uses `savantDir` for `SAVANT`, `mavenDir` for `MAVEN`. Returns `null` if the relevant directory is null.
 - `MavenCacheProcess` has been removed — its functionality is unified into `CacheProcess`.
@@ -355,12 +355,12 @@ public void standard() {
     String mavenCache = System.getProperty("user.home") + "/.m2/repository";
 
     // Fetch: unified cache (Savant + Maven), then remote Savant repo, then Maven Central
-    workflow.fetchWorkflow.processes.add(new CacheProcess(output, savantCache, mavenCache));
+    workflow.fetchWorkflow.processes.add(new CacheProcess(output, savantCache, null, mavenCache));
     workflow.fetchWorkflow.processes.add(new URLProcess(output, "https://repository.savantbuild.org", null, null));
     workflow.fetchWorkflow.processes.add(new MavenProcess(output, "https://repo1.maven.org/maven2", null, null));
 
     // Publish: unified cache routes based on FetchResult.source()
-    workflow.publishWorkflow.processes.add(new CacheProcess(output, savantCache, mavenCache));
+    workflow.publishWorkflow.processes.add(new CacheProcess(output, savantCache, null, mavenCache));
 }
 ```
 

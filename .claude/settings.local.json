@@ -6,7 +6,9 @@
       "Bash(sb test:*)",
       "Bash(sb compile:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(sb clean compile:*)",
+      "Bash(sb int:*)"
     ]
   }
 }

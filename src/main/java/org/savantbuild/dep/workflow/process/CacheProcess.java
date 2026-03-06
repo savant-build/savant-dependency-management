@@ -22,16 +22,19 @@ import java.nio.file.Paths;
 
 import org.savantbuild.dep.domain.ResolvableItem;
 import org.savantbuild.dep.workflow.PublishWorkflow;
+import org.savantbuild.domain.Version;
 import org.savantbuild.output.Output;
 
 /**
  * This is an implementation of the Process that uses local caches to fetch and publish artifacts.
- * It manages two cache directories: one for Savant-sourced artifacts and one for Maven-sourced artifacts.
- * Either directory can be null to disable that cache.
+ * It manages up to three cache directories: one for Savant-sourced artifacts, one for integration-version
+ * artifacts, and one for Maven-sourced artifacts. Any directory can be null to disable that cache.
  *
  * @author Brian Pontarelli
  */
 public class CacheProcess implements Process {
+  public final String integrationDir;
+
   public final String mavenDir;
 
   public final Output output;
@@ -40,9 +43,10 @@ public class CacheProcess implements Process {
 
   private record CacheHit(Path file, String matchedItem) {}
 
-  public CacheProcess(Output output, String savantDir, String mavenDir) {
+  public CacheProcess(Output output, String savantDir, String integrationDir, String mavenDir) {
     this.output = output;
     this.savantDir = savantDir;
+    this.integrationDir = integrationDir;
     this.mavenDir = mavenDir;
   }
 
@@ -59,7 +63,16 @@ public class CacheProcess implements Process {
    */
   @Override
   public FetchResult fetch(ResolvableItem item, PublishWorkflow publishWorkflow) throws NegativeCacheException {
-    // Try Savant cache first
+    // Try integration cache first for integration versions
+    if (integrationDir != null && item.version.endsWith(Version.INTEGRATION)) {
+      CacheHit hit = tryFetchCandidate(item, integrationDir);
+      if (hit != null) {
+        ResolvableItem matchedItem = hit.matchedItem.equals(item.item) ? item : new ResolvableItem(item, hit.matchedItem);
+        return new FetchResult(hit.file, ItemSource.SAVANT, matchedItem);
+      }
+    }
+
+    // Try Savant cache for non-integration versions
     if (savantDir != null) {
       CacheHit hit = tryFetchCandidate(item, savantDir);
       if (hit != null) {
@@ -68,7 +81,7 @@ public class CacheProcess implements Process {
       }
     }
 
-    // Try Maven cache second
+    // Try Maven cache
     if (mavenDir != null) {
       CacheHit hit = tryFetchCandidate(item, mavenDir);
       if (hit != null) {
@@ -92,7 +105,10 @@ public class CacheProcess implements Process {
   @Override
   public Path publish(FetchResult fetchResult) throws ProcessFailureException {
     String dir;
-    if (fetchResult.source() == ItemSource.SAVANT) {
+    ResolvableItem item = fetchResult.item();
+    if (integrationDir != null && item.version.endsWith(Version.INTEGRATION)) {
+      dir = integrationDir;
+    } else if (fetchResult.source() == ItemSource.SAVANT) {
       dir = savantDir;
     } else if (fetchResult.source() == ItemSource.MAVEN) {
       dir = mavenDir;
@@ -103,8 +119,6 @@ public class CacheProcess implements Process {
     if (dir == null) {
       return null;
     }
-
-    ResolvableItem item = fetchResult.item();
     Path itemFile = fetchResult.file();
 
     String cachePath = String.join("/", dir, item.group.replace('.', '/'), item.project, item.version, item.item);
@@ -149,7 +163,7 @@ public class CacheProcess implements Process {
 
   @Override
   public String toString() {
-    return "Cache(savant=" + savantDir + ", maven=" + mavenDir + ")";
+    return "Cache(savant=" + savantDir + ", integration=" + integrationDir + ", maven=" + mavenDir + ")";
   }
 
   private CacheHit tryFetchCandidate(ResolvableItem item, String cacheDir) {

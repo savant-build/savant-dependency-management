@@ -6,6 +6,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Never delete existing comments when modifying code. If method signatures change, update the comment parameters accordingly rather than removing the comment.
 
+## Versioning
+
+When building a new version of a project, **always bump the version in `build.savant`** before running `sb int`. Use semantic versioning:
+- **Patch** (e.g., `2.0.2` → `2.0.3`): Bug fixes only
+- **Minor** (e.g., `2.0.2` → `2.1.0`): New features (e.g., adding new cache routing behavior)
+- **Major** (e.g., `2.0.2` → `3.0.0`): Breaking API changes with no backward compatibility
+
+When this library's version changes, also update the dependency version in downstream projects (e.g., `savant-core/build.savant` and its `idea.settings.moduleMap`). When using `sb int` to publish an integration build, downstream projects must reference the **integration version** (e.g., `2.1.0-{integration}`) in their `build.savant` dependency declaration — not the bare version (e.g., `2.1.0`).
+
 ## Build Commands
 
 This project uses the Savant build system. The CLI command is `sb`.

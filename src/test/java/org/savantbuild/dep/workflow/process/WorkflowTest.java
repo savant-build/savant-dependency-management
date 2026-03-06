@@ -59,7 +59,7 @@ public class WorkflowTest extends BaseUnitTest {
     Workflow workflow = new Workflow(
         new FetchWorkflow(
             output,
-            new CacheProcess(output, cache.toString(), mvnCache.toString()),
+            new CacheProcess(output, cache.toString(), null, mvnCache.toString()),
             new MavenProcess(output, "https://repo1.maven.org/maven2", null, null)
         ),
         new PublishWorkflow(
@@ -87,11 +87,11 @@ public class WorkflowTest extends BaseUnitTest {
     Workflow workflow = new Workflow(
         new FetchWorkflow(
             output,
-            new CacheProcess(output, cache.toString(), mvnCache.toString()),
+            new CacheProcess(output, cache.toString(), null, mvnCache.toString()),
             new MavenProcess(output, "https://repo1.maven.org/maven2", null, null)
         ),
         new PublishWorkflow(
-            new CacheProcess(output, cache.toString(), mvnCache.toString())
+            new CacheProcess(output, cache.toString(), null, mvnCache.toString())
         ),
         output
     );
@@ -117,11 +117,11 @@ public class WorkflowTest extends BaseUnitTest {
     Workflow workflow = new Workflow(
         new FetchWorkflow(
             output,
-            new CacheProcess(output, cache.toString(), mvnCache.toString()),
+            new CacheProcess(output, cache.toString(), null, mvnCache.toString()),
             new MavenProcess(output, "https://repo1.maven.org/maven2", null, null)
         ),
         new PublishWorkflow(
-            new CacheProcess(output, cache.toString(), mvnCache.toString())
+            new CacheProcess(output, cache.toString(), null, mvnCache.toString())
         ),
         output
     );
@@ -149,11 +149,11 @@ public class WorkflowTest extends BaseUnitTest {
     Workflow workflow = new Workflow(
         new FetchWorkflow(
             output,
-            new CacheProcess(output, cache.toString(), mvnCache.toString()),
+            new CacheProcess(output, cache.toString(), null, mvnCache.toString()),
             new MavenProcess(output, "https://repo1.maven.org/maven2", null, null)
         ),
         new PublishWorkflow(
-            new CacheProcess(output, cache.toString(), mvnCache.toString())
+            new CacheProcess(output, cache.toString(), null, mvnCache.toString())
         ),
         output
     );
@@ -185,11 +185,11 @@ public class WorkflowTest extends BaseUnitTest {
     Workflow workflow = new Workflow(
         new FetchWorkflow(
             output,
-            new CacheProcess(output, cache.toString(), mvnCache.toString()),
+            new CacheProcess(output, cache.toString(), null, mvnCache.toString()),
             new MavenProcess(output, "https://repo1.maven.org/maven2", null, null)
         ),
         new PublishWorkflow(
-            new CacheProcess(output, cache.toString(), mvnCache.toString())
+            new CacheProcess(output, cache.toString(), null, mvnCache.toString())
         ),
         output
     );

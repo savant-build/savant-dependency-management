@@ -78,6 +78,7 @@ public class DefaultDependencyService implements DependencyService {
   @Override
   public DependencyGraph buildGraph(ReifiedArtifact project, Dependencies dependencies, Workflow workflow)
       throws ArtifactMetaDataMissingException, ProcessFailureException, MD5Exception {
+    output.infoln("Building dependency graph");
     output.debugln("Building DependencyGraph with a root of [%s]", project);
     DependencyGraph graph = new DependencyGraph(project);
     populateGraph(graph, project, dependencies, workflow, new HashSet<>(), new LinkedList<>());

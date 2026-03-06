@@ -76,11 +76,16 @@ public class Workflow {
    * @throws MD5Exception If the item's MD5 file did not match the item.
    */
   public Path fetchArtifact(Artifact artifact) throws ArtifactMissingException, ProcessFailureException, MD5Exception {
-    ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile());
-    FetchResult result = fetchWorkflow.fetchItem(item, publishWorkflow);
-    // Try the non-semantic version
-    if (result == null && artifact.nonSemanticVersion != null) {
-      item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.nonSemanticVersion, artifact.getArtifactNonSemanticFile());
+    // Try the non-semantic version first since it is the real version on disk and in remote repositories
+    FetchResult result = null;
+    if (artifact.nonSemanticVersion != null) {
+      ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.nonSemanticVersion, artifact.getArtifactNonSemanticFile());
+      result = fetchWorkflow.fetchItem(item, publishWorkflow);
+    }
+
+    // Fall back to the semantic version
+    if (result == null) {
+      ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile());
       result = fetchWorkflow.fetchItem(item, publishWorkflow);
     }
 
@@ -104,13 +109,40 @@ public class Workflow {
    * @throws MD5Exception If the item's MD5 file did not match the item.
    */
   public ArtifactMetaData fetchMetaData(Artifact artifact) throws ArtifactMetaDataMissingException, ProcessFailureException, MD5Exception {
-    // Try AMD (primary) with POM as alternative — both live in the same group/project/version/ directory
+    // Try the non-semantic version first since the POM lives under the real version directory on disk
+    // (AMD files don't exist under non-semantic version directories since AMD is a Savant concept)
     ResolvableItem item = new ResolvableItem(
         artifact.id.group, artifact.id.project, artifact.id.name,
         artifact.version.toString(), artifact.getArtifactMetaDataFile(),
         List.of(artifact.getArtifactPOMFile())
     );
     try {
+      if (artifact.nonSemanticVersion != null) {
+        ResolvableItem nonSemanticItem = new ResolvableItem(
+            artifact.id.group, artifact.id.project, artifact.id.project,
+            artifact.nonSemanticVersion, artifact.getArtifactNonSemanticPOMFile()
+        );
+        FetchResult result = fetchWorkflow.fetchItem(nonSemanticItem, publishWorkflow);
+        if (result != null) {
+          try {
+            POM pom = loadPOM(artifact, result.file());
+            if (pom != null) {
+              return translatePOM(pom);
+            }
+          } catch (Exception e) {
+            // POM processing failed (e.g. range dependencies without mappings, missing imports).
+            // Fall through to semantic AMD/POM lookup which may have an AMD file without these issues.
+            output.debugln("Non-semantic POM processing failed for [%s], falling back to semantic lookup: %s", artifact, e.getMessage());
+          }
+        }
+      }
+
+      // Fall back to semantic version — try AMD (primary) with POM as alternative
+      item = new ResolvableItem(
+          artifact.id.group, artifact.id.project, artifact.id.name,
+          artifact.version.toString(), artifact.getArtifactMetaDataFile(),
+          List.of(artifact.getArtifactPOMFile())
+      );
       FetchResult result = fetchWorkflow.fetchItem(item, publishWorkflow);
       if (result != null) {
         if (result.item().item.endsWith(".amd")) {
@@ -124,8 +156,7 @@ public class Workflow {
         }
       }
 
-      // Neither AMD nor POM found via alternatives — try loadPOM directly
-      // (handles non-semantic version fallback which uses a different version directory)
+      // Neither AMD nor POM found — try loadPOM directly as last resort
       POM pom = loadPOM(artifact);
       if (pom != null) {
         return translatePOM(pom);
@@ -151,26 +182,29 @@ public class Workflow {
    */
   public Path fetchSource(Artifact artifact) throws ProcessFailureException, MD5Exception {
     try {
-      // Try Savant-style source (-src.jar) with Maven-style alternative (-sources.jar)
-      ResolvableItem item = new ResolvableItem(
-          artifact.id.group, artifact.id.project, artifact.id.name,
-          artifact.version.toString(), artifact.getArtifactSourceFile(),
-          List.of(artifact.getArtifactAlternativeSourceFile())
-      );
-      FetchResult result = fetchWorkflow.fetchItem(item, publishWorkflow);
-
-      // Try non-semantic version (-sources.jar with original version) — different version directory
-      if (result == null && artifact.nonSemanticVersion != null) {
-        item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name,
+      // Try non-semantic version first (-sources.jar with original version) since it is the real version on disk
+      FetchResult result = null;
+      if (artifact.nonSemanticVersion != null) {
+        ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name,
             artifact.nonSemanticVersion, artifact.getArtifactNonSemanticAlternativeSourceFile());
+        result = fetchWorkflow.fetchItem(item, publishWorkflow);
+      }
+
+      // Fall back to Savant-style source (-src.jar) with Maven-style alternative (-sources.jar)
+      if (result == null) {
+        ResolvableItem item = new ResolvableItem(
+            artifact.id.group, artifact.id.project, artifact.id.name,
+            artifact.version.toString(), artifact.getArtifactSourceFile(),
+            List.of(artifact.getArtifactAlternativeSourceFile())
+        );
         result = fetchWorkflow.fetchItem(item, publishWorkflow);
       }
 
       // Negative cache if not found
       if (result == null) {
-        item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name,
+        ResolvableItem negItem = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name,
             artifact.version.toString(), artifact.getArtifactSourceFile());
-        publishWorkflow.publishNegative(item, ItemSource.SAVANT);
+        publishWorkflow.publishNegative(negItem, ItemSource.SAVANT);
       }
 
       return result != null ? result.file() : null;
@@ -210,19 +244,21 @@ public class Workflow {
 
   private Path fetchPOMFile(Artifact artifact) {
     // Maven doesn't use artifact names (via classifiers) when resolving POMs. Therefore, we need to use the project id twice for the item
-    ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.project, artifact.version.toString(), artifact.getArtifactPOMFile());
-    FetchResult result = fetchWorkflow.fetchItem(item, publishWorkflow);
-    Path file = result != null ? result.file() : null;
-
-    // Try the POM with the non-semantic (bad) version
-    if (file == null && artifact.nonSemanticVersion != null) {
+    // Try the non-semantic version first since it is the real version on disk and in remote repositories
+    FetchResult result = null;
+    if (artifact.nonSemanticVersion != null) {
       output.debugln("[Looking for POM using non-semantic version]");
-      item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.project, artifact.nonSemanticVersion, artifact.getArtifactNonSemanticPOMFile());
+      ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.project, artifact.nonSemanticVersion, artifact.getArtifactNonSemanticPOMFile());
       result = fetchWorkflow.fetchItem(item, publishWorkflow);
-      file = result != null ? result.file() : null;
     }
 
-    return file;
+    // Fall back to the semantic version
+    if (result == null) {
+      ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.project, artifact.version.toString(), artifact.getArtifactPOMFile());
+      result = fetchWorkflow.fetchItem(item, publishWorkflow);
+    }
+
+    return result != null ? result.file() : null;
   }
 
   private POM processPOM(Artifact artifact, String cacheKey, Path file) {

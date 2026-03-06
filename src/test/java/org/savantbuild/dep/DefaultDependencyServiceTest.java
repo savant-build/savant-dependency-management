@@ -210,12 +210,11 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     workflow = new Workflow(
         new FetchWorkflow(
             output,
-            new CacheProcess(output, cache.toString(), null),
-            new CacheProcess(output, integration.toString(), null),
+            new CacheProcess(output, cache.toString(), integration.toString(), null),
             new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null)
         ),
         new PublishWorkflow(
-            new CacheProcess(output, cache.toString(), null)
+            new CacheProcess(output, cache.toString(), integration.toString(), null)
         ),
         output
     );
@@ -318,11 +317,11 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     workflow = new Workflow(
         new FetchWorkflow(
             output,
-            new CacheProcess(output, cache.toString(), mavenCache.toString()),
+            new CacheProcess(output, cache.toString(), null, mavenCache.toString()),
             new MavenProcess(output, "https://repo1.maven.org/maven2", null, null)
         ),
         new PublishWorkflow(
-            new CacheProcess(output, cache.toString(), mavenCache.toString())
+            new CacheProcess(output, cache.toString(), null, mavenCache.toString())
         ),
         output
     );
@@ -343,12 +342,12 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     workflow = new Workflow(
         new FetchWorkflow(
             output,
-            new CacheProcess(output, cache.toString(), mavenCache.toString()),
+            new CacheProcess(output, cache.toString(), null, mavenCache.toString()),
             new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null),
             new MavenProcess(output, "https://repo1.maven.org/maven2", null, null)
         ),
         new PublishWorkflow(
-            new CacheProcess(output, cache.toString(), mavenCache.toString())
+            new CacheProcess(output, cache.toString(), null, mavenCache.toString())
         ),
         output
     );
@@ -401,12 +400,12 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     workflow = new Workflow(
         new FetchWorkflow(
             output,
-            new CacheProcess(output, cache.toString(), mavenCache.toString()),
+            new CacheProcess(output, cache.toString(), null, mavenCache.toString()),
             new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null),
             new MavenProcess(output, "http://localhost:7042/test-deps/maven", null, null)
         ),
         new PublishWorkflow(
-            new CacheProcess(output, cache.toString(), mavenCache.toString())
+            new CacheProcess(output, cache.toString(), null, mavenCache.toString())
         ),
         output
     );
@@ -445,13 +444,12 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     workflow = new Workflow(
         new FetchWorkflow(
             output,
-            new CacheProcess(output, cache.toString(), mavenCache.toString()),
-            new CacheProcess(output, integration.toString(), null),
+            new CacheProcess(output, cache.toString(), integration.toString(), mavenCache.toString()),
             new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null),
             new MavenProcess(output, "http://localhost:7042/test-deps/maven", null, null)
         ),
         new PublishWorkflow(
-            new CacheProcess(output, cache.toString(), mavenCache.toString())
+            new CacheProcess(output, cache.toString(), integration.toString(), mavenCache.toString())
         ),
         output
     );
@@ -497,13 +495,12 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     workflow = new Workflow(
         new FetchWorkflow(
             output,
-            new CacheProcess(output, cache.toString(), mavenCache.toString()),
-            new CacheProcess(output, integration.toString(), null),
+            new CacheProcess(output, cache.toString(), integration.toString(), mavenCache.toString()),
             new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null),
             new MavenProcess(output, "http://localhost:7042/test-deps/maven", null, null)
         ),
         new PublishWorkflow(
-            new CacheProcess(output, cache.toString(), mavenCache.toString())
+            new CacheProcess(output, cache.toString(), integration.toString(), mavenCache.toString())
         ),
         output
     );
@@ -524,7 +521,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     ArtifactMetaData amd = new ArtifactMetaData(dependencies, License.Licenses.get("BSD_2_Clause"));
     Publication publication = new Publication(artifact, amd, projectDir.resolve("MissingFile.txt"), null);
     Path cache = projectDir.resolve("build/test/publish");
-    PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, cache.toString(), null));
+    PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, cache.toString(), null, null));
     try {
       service.publish(publication, workflow);
     } catch (PublishException e) {
@@ -538,7 +535,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     ArtifactMetaData amd = new ArtifactMetaData(dependencies, License.Licenses.get("BSD_2_Clause"));
     Publication publication = new Publication(artifact, amd, projectDir.resolve("src/test/java/org/savantbuild/dep/TestFile.txt"), Paths.get("MissingFile.txt"));
     Path cache = projectDir.resolve("build/test/publish");
-    PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, cache.toString(), null));
+    PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, cache.toString(), null, null));
     try {
       service.publish(publication, workflow);
     } catch (PublishException e) {
@@ -560,7 +557,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     Artifact artifact = new Artifact("org.savantbuild.test:publication-with-source:1.0.0");
     ArtifactMetaData amd = new ArtifactMetaData(dependencies, License.Licenses.get("BSD_2_Clause"));
     Publication publication = new Publication(artifact, amd, projectDir.resolve("src/test/java/org/savantbuild/dep/TestFile.txt"), projectDir.resolve("src/test/java/org/savantbuild/dep/TestFile.txt"));
-    PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, cache.toString(), null));
+    PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, cache.toString(), null, null));
     service.publish(publication, workflow);
 
     Path amdFile = projectDir.resolve("build/test/publish/org/savantbuild/test/publication-with-source/1.0.0/publication-with-source-1.0.0.jar.amd");
@@ -592,7 +589,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     Artifact artifact = new Artifact("org.savantbuild.test:publication-with-source:1.0.0");
     ArtifactMetaData amd = new ArtifactMetaData(dependencies, License.Licenses.get("BSD_2_Clause"));
     Publication publication = new Publication(artifact, amd, projectDir.resolve("src/test/java/org/savantbuild/dep/TestFile.txt"), projectDir.resolve("src/test/java/org/savantbuild/dep/TestFile.txt"));
-    PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, cache.toString(), null));
+    PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, cache.toString(), null, null));
     service.publish(publication, workflow);
 
     assertTrue(Files.isRegularFile(projectDir.resolve("build/test/publish/org/savantbuild/test/publication-with-source/1.0.0/publication-with-source-1.0.0.jar.amd.md5")));
@@ -616,7 +613,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     Artifact artifact = new Artifact("org.savantbuild.test:publication-without-source:1.0.0");
     ArtifactMetaData amd = new ArtifactMetaData(dependencies, License.Licenses.get("BSD_2_Clause"));
     Publication publication = new Publication(artifact, amd, projectDir.resolve("src/test/java/org/savantbuild/dep/TestFile.txt"), null);
-    PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, cache.toString(), null));
+    PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, cache.toString(), null, null));
     service.publish(publication, workflow);
 
     assertTrue(Files.isRegularFile(projectDir.resolve("build/test/publish/org/savantbuild/test/publication-without-source/1.0.0/publication-without-source-1.0.0.jar.amd.md5")));
@@ -1161,12 +1158,12 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     workflow = new Workflow(
         new FetchWorkflow(
             output,
-            new CacheProcess(output, cache.toString(), mavenCache.toString()),
+            new CacheProcess(output, cache.toString(), null, mavenCache.toString()),
             new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null),
             new MavenProcess(output, "http://localhost:7042/test-deps/maven", null, null)
         ),
         new PublishWorkflow(
-            new CacheProcess(output, cache.toString(), mavenCache.toString())
+            new CacheProcess(output, cache.toString(), null, mavenCache.toString())
         ),
         output
     );
@@ -1201,12 +1198,12 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     workflow = new Workflow(
         new FetchWorkflow(
             output,
-            new CacheProcess(output, cache.toString(), mavenCache.toString()),
+            new CacheProcess(output, cache.toString(), null, mavenCache.toString()),
             new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null),
             new MavenProcess(output, "http://localhost:7042/test-deps/maven", null, null)
         ),
         new PublishWorkflow(
-            new CacheProcess(output, cache.toString(), mavenCache.toString())
+            new CacheProcess(output, cache.toString(), null, mavenCache.toString())
         ),
         output
     );
@@ -1239,12 +1236,12 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     workflow = new Workflow(
         new FetchWorkflow(
             output,
-            new CacheProcess(output, cache.toString(), mavenCache.toString()),
+            new CacheProcess(output, cache.toString(), null, mavenCache.toString()),
             new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null),
             new MavenProcess(output, "http://localhost:7042/test-deps/maven", null, null)
         ),
         new PublishWorkflow(
-            new CacheProcess(output, cache.toString(), mavenCache.toString())
+            new CacheProcess(output, cache.toString(), null, mavenCache.toString())
         ),
         output
     );
