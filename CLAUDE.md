@@ -2,42 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Code Style
-
-Never delete existing comments when modifying code. If method signatures change, update the comment parameters accordingly rather than removing the comment.
-
-## Versioning
-
-When building a new version of a project, **always bump the version in `build.savant`** before running `sb int`. Use semantic versioning:
-- **Patch** (e.g., `2.0.2` → `2.0.3`): Bug fixes only
-- **Minor** (e.g., `2.0.2` → `2.1.0`): New features (e.g., adding new cache routing behavior)
-- **Major** (e.g., `2.0.2` → `3.0.0`): Breaking API changes with no backward compatibility
-
-When this library's version changes, also update the dependency version in downstream projects (e.g., `savant-core/build.savant` and its `idea.settings.moduleMap`). When using `sb int` to publish an integration build, downstream projects must reference the **integration version** (e.g., `2.1.0-{integration}`) in their `build.savant` dependency declaration — not the bare version (e.g., `2.1.0`).
-
-## Build Commands
-
-This project uses the Savant build system. The CLI command is `sb`.
-
-```bash
-sb compile          # Compile Java sources
-sb test             # Run all tests (depends on jar)
-sb test --test=CacheProcessTest   # Run a single test class
-sb jar              # Build JAR (depends on compile)
-sb clean            # Clean build output
-sb int              # Integration build (depends on test)
-sb release          # Full release (depends on clean + test)
-```
-
-Java 17 is required. Test framework is TestNG 6.8.7.
-
-## Project Context
-
-This is a **library** used by the Savant build runtime (`savant-core`, `dependency-plugin`, etc.) — not a standalone tool. All sibling Savant projects live one directory up at `/Users/bpontarelli/dev/os/savant/`.
+> **Work from the parent project.** Claude Code should be run from `../savant-ij/` which contains the top-level CLAUDE.md with build commands, dependency chain, versioning workflow, and other shared guidance.
 
 ## Architecture
 
-This library handles Java dependency resolution for the Savant build system. The resolution process has three phases:
+This library handles dependency resolution for the Savant build system. The resolution process has three phases:
 
 1. **Build DependencyGraph** (`DependencyService.buildGraph`) — Recursively fetches ArtifactMetaData (AMD) files and Maven POMs to construct a raw dependency graph. Multiple versions of the same artifact can exist in the graph.
 
