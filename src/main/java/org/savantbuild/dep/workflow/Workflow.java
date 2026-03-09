@@ -109,13 +109,15 @@ public class Workflow {
    * @throws MD5Exception If the item's MD5 file did not match the item.
    */
   public ArtifactMetaData fetchMetaData(Artifact artifact) throws ArtifactMetaDataMissingException, ProcessFailureException, MD5Exception {
-    // Try the non-semantic version first since the POM lives under the real version directory on disk
-    // (AMD files don't exist under non-semantic version directories since AMD is a Savant concept)
+    // Defined here in case an exception is thrown in the catch block below
     ResolvableItem item = new ResolvableItem(
         artifact.id.group, artifact.id.project, artifact.id.name,
         artifact.version.toString(), artifact.getArtifactMetaDataFile(),
         List.of(artifact.getArtifactPOMFile())
     );
+
+    // Try the non-semantic version first since the POM lives under the real version directory on disk
+    // (AMD files don't exist under non-semantic version directories since AMD is a Savant concept)
     try {
       if (artifact.nonSemanticVersion != null) {
         ResolvableItem nonSemanticItem = new ResolvableItem(
@@ -126,9 +128,7 @@ public class Workflow {
         if (result != null) {
           try {
             POM pom = loadPOM(artifact, result.file());
-            if (pom != null) {
-              return translatePOM(pom);
-            }
+            return translatePOM(pom);
           } catch (Exception e) {
             // POM processing failed (e.g. range dependencies without mappings, missing imports).
             // Fall through to semantic AMD/POM lookup which may have an AMD file without these issues.
@@ -138,11 +138,6 @@ public class Workflow {
       }
 
       // Fall back to semantic version — try AMD (primary) with POM as alternative
-      item = new ResolvableItem(
-          artifact.id.group, artifact.id.project, artifact.id.name,
-          artifact.version.toString(), artifact.getArtifactMetaDataFile(),
-          List.of(artifact.getArtifactPOMFile())
-      );
       FetchResult result = fetchWorkflow.fetchItem(item, publishWorkflow);
       if (result != null) {
         if (result.item().item.endsWith(".amd")) {
@@ -150,9 +145,7 @@ public class Workflow {
         } else {
           // POM was found as alternative — process it through the POM pipeline
           POM pom = loadPOM(artifact, result.file());
-          if (pom != null) {
-            return translatePOM(pom);
-          }
+          return translatePOM(pom);
         }
       }
 
@@ -227,7 +220,7 @@ public class Workflow {
       return null;
     }
 
-    return processPOM(artifact, cacheKey, file);
+    return processPOM(cacheKey, file);
   }
 
   /**
@@ -239,7 +232,7 @@ public class Workflow {
     if (cached != null) {
       return cached;
     }
-    return processPOM(artifact, cacheKey, preloadedFile);
+    return processPOM(cacheKey, preloadedFile);
   }
 
   private Path fetchPOMFile(Artifact artifact) {
@@ -261,7 +254,7 @@ public class Workflow {
     return result != null ? result.file() : null;
   }
 
-  private POM processPOM(Artifact artifact, String cacheKey, Path file) {
+  private POM processPOM(String cacheKey, Path file) {
     POM pom = MavenTools.parsePOM(file, output);
     pom.replaceKnownVariablesAndFillInDependencies();
     pom.replaceRangeValuesWithMappings(rangeMappings);
