@@ -36,10 +36,11 @@ public interface Process {
    * @param item            The item being fetched. This item name should include the necessary information so that the
    *                        process can locate the item.
    * @param publishWorkflow The PublishWorkflow that is used to store the item if it can be found.
-   * @return The Path to the item on the local disk or null if the item does not exist and there were no failures.
+   * @return A FetchResult containing the Path to the item on the local disk and its source, or null if the item does
+   *     not exist and there were no failures.
    * @throws ProcessFailureException If the process failed when fetching the artifact.
    */
-  Path fetch(ResolvableItem item, PublishWorkflow publishWorkflow) throws ProcessFailureException;
+  FetchResult fetch(ResolvableItem item, PublishWorkflow publishWorkflow) throws ProcessFailureException;
 
   /**
    * Attempts to publish the given item. The item is normally associated with the artifact, but might be associated with
@@ -49,11 +50,10 @@ public interface Process {
    * If the item is published in a manner that a file can be returned, that file should be returned as it might be used
    * to create paths or other constructs.
    *
-   * @param item     The item to publish.
-   * @param itemFile The path to the item stored on disk (which could be a temporary file that it was downloaded to).
+   * @param fetchResult The fetch result containing the item, file, and source.
    * @return The file if the publish process stored the given file locally (local cache for example). Otherwise, this
    *     should return null.
    * @throws ProcessFailureException If there was any issue publishing.
    */
-  Path publish(ResolvableItem item, Path itemFile) throws ProcessFailureException;
+  Path publish(FetchResult fetchResult) throws ProcessFailureException;
 }

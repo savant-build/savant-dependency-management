@@ -23,6 +23,8 @@ import java.util.Collections;
 import java.util.List;
 
 import org.savantbuild.dep.domain.ResolvableItem;
+import org.savantbuild.dep.workflow.process.FetchResult;
+import org.savantbuild.dep.workflow.process.ItemSource;
 import org.savantbuild.dep.workflow.process.Process;
 import org.savantbuild.dep.workflow.process.ProcessFailureException;
 
@@ -50,15 +52,14 @@ public class PublishWorkflow {
   /**
    * Publishes the item using the processes in this workflow.
    *
-   * @param item The item being published.
-   * @param file The file that is the item contents.
+   * @param fetchResult The fetch result containing the item, file, and source.
    * @return A file that can be used to reference the artifact for paths and other constructs.
    * @throws ProcessFailureException If the artifact could not be published for any reason.
    */
-  public Path publish(ResolvableItem item, Path file) throws ProcessFailureException {
+  public Path publish(FetchResult fetchResult) throws ProcessFailureException {
     Path result = null;
     for (Process process : processes) {
-      Path temp = process.publish(item, file);
+      Path temp = process.publish(fetchResult);
       if (result == null) {
         result = temp;
       }
@@ -71,9 +72,10 @@ public class PublishWorkflow {
    * Publishes a negative file for the item. This file is empty, but signals Savant not to attempt to fetch that
    * specific item again, since it doesn't exist.
    *
-   * @param item The item that the negative is being published for.
+   * @param item   The item that the negative is being published for.
+   * @param source The source to tag the negative marker with.
    */
-  public void publishNegative(ResolvableItem item) {
+  public void publishNegative(ResolvableItem item, ItemSource source) {
     Path itemFile;
     try {
       File tempFile = File.createTempFile("savant-item", "neg");
@@ -88,7 +90,7 @@ public class PublishWorkflow {
     for (Process process : processes) {
       try {
         ResolvableItem negItem = new ResolvableItem(item, item.item + ".neg");
-        process.publish(negItem, itemFile);
+        process.publish(new FetchResult(itemFile, source, negItem));
       } catch (ProcessFailureException e) {
         // Continue since this is okay.
       }

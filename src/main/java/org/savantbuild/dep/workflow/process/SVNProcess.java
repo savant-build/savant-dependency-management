@@ -65,15 +65,34 @@ public class SVNProcess implements Process {
    *
    * @param item            The item to fetch.
    * @param publishWorkflow The publish workflow used to publish the artifact after it has been successfully fetched.
-   * @return The File or null if it doesn't exist.
+   * @return The FetchResult or null if it doesn't exist.
    * @throws ProcessFailureException If the SVN fetch failed.
    */
   @Override
-  public Path fetch(ResolvableItem item, PublishWorkflow publishWorkflow)
+  public FetchResult fetch(ResolvableItem item, PublishWorkflow publishWorkflow)
+      throws ProcessFailureException {
+    // Try primary item first
+    FetchResult result = tryFetchCandidate(item, item.item, publishWorkflow);
+    if (result != null) {
+      return result;
+    }
+
+    // Try alternatives
+    for (String alt : item.alternativeItems) {
+      result = tryFetchCandidate(item, alt, publishWorkflow);
+      if (result != null) {
+        return result;
+      }
+    }
+
+    return null;
+  }
+
+  private FetchResult tryFetchCandidate(ResolvableItem item, String candidateItem, PublishWorkflow publishWorkflow)
       throws ProcessFailureException {
     try {
       Path md5File = PathTools.createTempPath("savant-svn-process", "export", true);
-      URI md5URI = NetTools.build(repository, item.group.replace('.', '/'), item.project, item.version, item.item + ".md5");
+      URI md5URI = NetTools.build(repository, item.group.replace('.', '/'), item.project, item.version, candidateItem + ".md5");
       if (!export(md5URI, md5File)) {
         return null;
       }
@@ -87,7 +106,7 @@ public class SVNProcess implements Process {
       }
 
       Path itemFile = PathTools.createTempPath("savant-svn-process", "export", true);
-      URI itemURI = NetTools.build(repository, item.group.replace('.', '/'), item.project, item.version, item.item);
+      URI itemURI = NetTools.build(repository, item.group.replace('.', '/'), item.project, item.version, candidateItem);
       output.debugln("      - Download [" + itemURI + "]");
       if (!export(itemURI, itemFile)) {
         output.debugln("      - Not found [" + itemURI + "]");
@@ -101,16 +120,15 @@ public class SVNProcess implements Process {
 
       output.infoln("Downloaded from SubVersion at [%s]", itemURI);
 
-      ResolvableItem md5Item = new ResolvableItem(item, item.item + ".md5");
-      md5File = publishWorkflow.publish(md5Item, md5File);
+      ResolvableItem matchedItem = candidateItem.equals(item.item) ? item : new ResolvableItem(item, candidateItem);
+      ResolvableItem md5Item = new ResolvableItem(item, candidateItem + ".md5");
+      publishWorkflow.publish(new FetchResult(md5File, ItemSource.SAVANT, md5Item));
       try {
-        itemFile = publishWorkflow.publish(item, itemFile);
+        Path publishedFile = publishWorkflow.publish(new FetchResult(itemFile, ItemSource.SAVANT, matchedItem));
+        return new FetchResult(publishedFile != null ? publishedFile : itemFile, ItemSource.SAVANT, matchedItem);
       } catch (ProcessFailureException e) {
-        Files.delete(md5File);
         throw new ProcessFailureException(item, e);
       }
-
-      return itemFile;
     } catch (IOException | InterruptedException e) {
       throw new ProcessFailureException(item, e);
     }
@@ -119,13 +137,14 @@ public class SVNProcess implements Process {
   /**
    * Publishes the given artifact item into the SubVersion repository.
    *
-   * @param item     The item to publish.
-   * @param itemFile The file that is the item.
+   * @param fetchResult The fetch result containing the item and file.
    * @return Always null.
    * @throws ProcessFailureException If the publish fails.
    */
   @Override
-  public Path publish(ResolvableItem item, Path itemFile) throws ProcessFailureException {
+  public Path publish(FetchResult fetchResult) throws ProcessFailureException {
+    ResolvableItem item = fetchResult.item();
+    Path itemFile = fetchResult.file();
     try {
       URI uri = NetTools.build(repository, item.group.replace('.', '/'), item.project, item.version, item.item);
       if (!imprt(uri, itemFile)) {

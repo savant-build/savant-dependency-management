@@ -17,7 +17,6 @@ package org.savantbuild.dep.workflow;
 
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
@@ -30,13 +29,13 @@ import org.savantbuild.dep.domain.ResolvableItem;
 import org.savantbuild.dep.maven.MavenDependency;
 import org.savantbuild.dep.maven.MavenTools;
 import org.savantbuild.dep.maven.POM;
-import org.savantbuild.dep.workflow.process.DoNotPublishProcess;
+import org.savantbuild.dep.workflow.process.FetchResult;
+import org.savantbuild.dep.workflow.process.ItemSource;
 import org.savantbuild.dep.workflow.process.NegativeCacheException;
 import org.savantbuild.dep.workflow.process.ProcessFailureException;
 import org.savantbuild.domain.Version;
 import org.savantbuild.domain.VersionException;
 import org.savantbuild.output.Output;
-import org.savantbuild.security.MD5;
 import org.savantbuild.security.MD5Exception;
 import org.xml.sax.SAXException;
 
@@ -55,6 +54,8 @@ public class Workflow {
   public final PublishWorkflow publishWorkflow;
 
   public final Map<String, String> rangeMappings = new HashMap<>();
+
+  private final Map<String, POM> pomCache = new HashMap<>();
 
   public Workflow(FetchWorkflow fetchWorkflow, PublishWorkflow publishWorkflow, Output output) {
     this.fetchWorkflow = fetchWorkflow;
@@ -75,25 +76,24 @@ public class Workflow {
    * @throws MD5Exception If the item's MD5 file did not match the item.
    */
   public Path fetchArtifact(Artifact artifact) throws ArtifactMissingException, ProcessFailureException, MD5Exception {
-    ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile());
-    Path file = fetchWorkflow.fetchItem(item, publishWorkflow);
-    if (file == null && artifact.nonSemanticVersion != null) {
-      // Try the bad version
-      item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.nonSemanticVersion, artifact.getArtifactNonSemanticFile());
-      // Don't write out non-semantic versioned artifacts, we will re-publish below using the semantic version
-      file = fetchWorkflow.fetchItem(item, new PublishWorkflow(new DoNotPublishProcess()));
-      // Publish the Savant named JAR to prevent going back out to remote repositories next time we want to load JARs
-      if (file != null) {
-        item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile());
-        file = publishWorkflow.publish(item, file);
-      }
+    // Try the non-semantic version first since it is the real version on disk and in remote repositories
+    FetchResult result = null;
+    if (artifact.nonSemanticVersion != null) {
+      ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.nonSemanticVersion, artifact.getArtifactNonSemanticFile());
+      result = fetchWorkflow.fetchItem(item, publishWorkflow);
     }
 
-    if (file == null) {
+    // Fall back to the semantic version
+    if (result == null) {
+      ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactFile());
+      result = fetchWorkflow.fetchItem(item, publishWorkflow);
+    }
+
+    if (result == null) {
       throw new ArtifactMissingException(artifact);
     }
 
-    return file;
+    return result.file();
   }
 
   /**
@@ -109,31 +109,53 @@ public class Workflow {
    * @throws MD5Exception If the item's MD5 file did not match the item.
    */
   public ArtifactMetaData fetchMetaData(Artifact artifact) throws ArtifactMetaDataMissingException, ProcessFailureException, MD5Exception {
-    ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactMetaDataFile());
-    try {
-      Path file = fetchWorkflow.fetchItem(item, publishWorkflow);
-      if (file == null) {
-        POM pom = loadPOM(artifact);
-        if (pom != null) {
-          ArtifactMetaData amd = translatePOM(pom);
-          Path amdFile = ArtifactTools.generateXML(amd);
-          file = publishWorkflow.publish(item, amdFile);
+    // Defined here in case an exception is thrown in the catch block below
+    ResolvableItem item = new ResolvableItem(
+        artifact.id.group, artifact.id.project, artifact.id.name,
+        artifact.version.toString(), artifact.getArtifactMetaDataFile(),
+        List.of(artifact.getArtifactPOMFile())
+    );
 
-          // Write the MD5
-          MD5 amdMD5 = MD5.forPath(amdFile);
-          Path amdMD5File = Files.createTempFile("savant", "amd-md5");
-          MD5.writeMD5(amdMD5, amdMD5File);
-          ResolvableItem md5Item = new ResolvableItem(item, item.item + ".md5");
-          publishWorkflow.publish(md5Item, amdMD5File);
-          Files.delete(amdMD5File);
+    // Try the non-semantic version first since the POM lives under the real version directory on disk
+    // (AMD files don't exist under non-semantic version directories since AMD is a Savant concept)
+    try {
+      if (artifact.nonSemanticVersion != null) {
+        ResolvableItem nonSemanticItem = new ResolvableItem(
+            artifact.id.group, artifact.id.project, artifact.id.project,
+            artifact.nonSemanticVersion, artifact.getArtifactNonSemanticPOMFile()
+        );
+        FetchResult result = fetchWorkflow.fetchItem(nonSemanticItem, publishWorkflow);
+        if (result != null) {
+          try {
+            POM pom = loadPOM(artifact, result.file());
+            return translatePOM(pom);
+          } catch (Exception e) {
+            // POM processing failed (e.g. range dependencies without mappings, missing imports).
+            // Fall through to semantic AMD/POM lookup which may have an AMD file without these issues.
+            output.debugln("Non-semantic POM processing failed for [%s], falling back to semantic lookup: %s", artifact, e.getMessage());
+          }
         }
       }
 
-      if (file == null) {
-        throw new ArtifactMetaDataMissingException(artifact);
+      // Fall back to semantic version — try AMD (primary) with POM as alternative
+      FetchResult result = fetchWorkflow.fetchItem(item, publishWorkflow);
+      if (result != null) {
+        if (result.item().item.endsWith(".amd")) {
+          return ArtifactTools.parseArtifactMetaData(result.file(), mappings);
+        } else {
+          // POM was found as alternative — process it through the POM pipeline
+          POM pom = loadPOM(artifact, result.file());
+          return translatePOM(pom);
+        }
       }
 
-      return ArtifactTools.parseArtifactMetaData(file, mappings);
+      // Neither AMD nor POM found — try loadPOM directly as last resort
+      POM pom = loadPOM(artifact);
+      if (pom != null) {
+        return translatePOM(pom);
+      }
+
+      throw new ArtifactMetaDataMissingException(artifact);
     } catch (IllegalArgumentException | NullPointerException | SAXException | ParserConfigurationException |
              IOException | VersionException e) {
       throw new ProcessFailureException(item, e);
@@ -153,38 +175,32 @@ public class Workflow {
    */
   public Path fetchSource(Artifact artifact) throws ProcessFailureException, MD5Exception {
     try {
-      ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactSourceFile());
-      Path file = fetchWorkflow.fetchItem(item, publishWorkflow);
-      if (file == null) {
-        item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactAlternativeSourceFile());
-        file = fetchWorkflow.fetchItem(item, publishWorkflow);
-
-        // Publish the Savant named source JAR to prevent going back out to remote repositories next time we want to load source JARs
-        if (file != null) {
-          item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactSourceFile());
-          // we should be returning our locally cached/published source path, not the remote source path
-          file = publishWorkflow.publish(item, file);
-        }
+      // Try non-semantic version first (-sources.jar with original version) since it is the real version on disk
+      FetchResult result = null;
+      if (artifact.nonSemanticVersion != null) {
+        ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name,
+            artifact.nonSemanticVersion, artifact.getArtifactNonSemanticAlternativeSourceFile());
+        result = fetchWorkflow.fetchItem(item, publishWorkflow);
       }
 
-      if (file == null && artifact.nonSemanticVersion != null) {
-        item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.nonSemanticVersion, artifact.getArtifactNonSemanticAlternativeSourceFile());
-        // Don't write out non-semantic versioned source artifacts, we will re-publish below using the semantic version
-        file = fetchWorkflow.fetchItem(item, new PublishWorkflow(new DoNotPublishProcess()));
-
-        // Publish the Savant named source JAR to prevent going back out to remote repositories next time we want to load source JARs
-        if (file != null) {
-          item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactSourceFile());
-          file = publishWorkflow.publish(item, file);
-        }
+      // Fall back to Savant-style source (-src.jar) with Maven-style alternative (-sources.jar)
+      if (result == null) {
+        ResolvableItem item = new ResolvableItem(
+            artifact.id.group, artifact.id.project, artifact.id.name,
+            artifact.version.toString(), artifact.getArtifactSourceFile(),
+            List.of(artifact.getArtifactAlternativeSourceFile())
+        );
+        result = fetchWorkflow.fetchItem(item, publishWorkflow);
       }
 
-      if (file == null) {
-        item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name, artifact.version.toString(), artifact.getArtifactSourceFile());
-        publishWorkflow.publishNegative(item);
+      // Negative cache if not found
+      if (result == null) {
+        ResolvableItem negItem = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.name,
+            artifact.version.toString(), artifact.getArtifactSourceFile());
+        publishWorkflow.publishNegative(negItem, ItemSource.SAVANT);
       }
 
-      return file;
+      return result != null ? result.file() : null;
     } catch (NegativeCacheException e) {
       // This is a short-circuit exit from the workflow. It is only thrown by the CacheProcess and indicates that the
       // search for the source JAR should stop immediately.
@@ -193,21 +209,52 @@ public class Workflow {
   }
 
   private POM loadPOM(Artifact artifact) {
-    // Maven doesn't use artifact names (via classifiers) when resolving POMs. Therefore, we need to use the project id twice for the item
-    ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.project, artifact.version.toString(), artifact.getArtifactPOMFile());
-    Path file = fetchWorkflow.fetchItem(item, publishWorkflow);
-
-    // Try the POM with the non-semantic (bad) version
-    if (file == null && artifact.nonSemanticVersion != null) {
-      output.debugln("[Looking for POM using non-semantic version]");
-      item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.project, artifact.nonSemanticVersion, artifact.getArtifactNonSemanticPOMFile());
-      file = fetchWorkflow.fetchItem(item, publishWorkflow);
+    String cacheKey = artifact.id.group + ":" + artifact.id.project + ":" + artifact.version;
+    POM cached = pomCache.get(cacheKey);
+    if (cached != null) {
+      return cached;
     }
 
+    Path file = fetchPOMFile(artifact);
     if (file == null) {
       return null;
     }
 
+    return processPOM(cacheKey, file);
+  }
+
+  /**
+   * Called from fetchMetaData when POM was found as an alternative to AMD.
+   */
+  private POM loadPOM(Artifact artifact, Path preloadedFile) {
+    String cacheKey = artifact.id.group + ":" + artifact.id.project + ":" + artifact.version;
+    POM cached = pomCache.get(cacheKey);
+    if (cached != null) {
+      return cached;
+    }
+    return processPOM(cacheKey, preloadedFile);
+  }
+
+  private Path fetchPOMFile(Artifact artifact) {
+    // Maven doesn't use artifact names (via classifiers) when resolving POMs. Therefore, we need to use the project id twice for the item
+    // Try the non-semantic version first since it is the real version on disk and in remote repositories
+    FetchResult result = null;
+    if (artifact.nonSemanticVersion != null) {
+      output.debugln("[Looking for POM using non-semantic version]");
+      ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.project, artifact.nonSemanticVersion, artifact.getArtifactNonSemanticPOMFile());
+      result = fetchWorkflow.fetchItem(item, publishWorkflow);
+    }
+
+    // Fall back to the semantic version
+    if (result == null) {
+      ResolvableItem item = new ResolvableItem(artifact.id.group, artifact.id.project, artifact.id.project, artifact.version.toString(), artifact.getArtifactPOMFile());
+      result = fetchWorkflow.fetchItem(item, publishWorkflow);
+    }
+
+    return result != null ? result.file() : null;
+  }
+
+  private POM processPOM(String cacheKey, Path file) {
     POM pom = MavenTools.parsePOM(file, output);
     pom.replaceKnownVariablesAndFillInDependencies();
     pom.replaceRangeValuesWithMappings(rangeMappings);
@@ -249,6 +296,7 @@ public class Workflow {
     pom.replaceKnownVariablesAndFillInDependencies();
     pom.replaceRangeValuesWithMappings(rangeMappings);
 
+    pomCache.put(cacheKey, pom);
     return pom;
   }
 

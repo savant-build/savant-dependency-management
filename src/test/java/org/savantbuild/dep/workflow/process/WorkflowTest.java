@@ -38,8 +38,8 @@ import org.savantbuild.domain.Version;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 
 /**
@@ -49,15 +49,17 @@ import static org.testng.Assert.assertTrue;
  */
 public class WorkflowTest extends BaseUnitTest {
   @Test
-  public void fetchSource_publish_source_file_does_not_exist() throws Exception {
-    // arrange
+  public void fetchSource_empty_publish_workflow() throws Exception {
+    // arrange — publish workflow is empty, so fetched files won't be cached
     Path cache = projectDir.resolve("build/test/cache");
+    Path mvnCache = projectDir.resolve("build/test/maven-cache");
     PathTools.prune(cache);
+    PathTools.prune(mvnCache);
 
     Workflow workflow = new Workflow(
         new FetchWorkflow(
             output,
-            new CacheProcess(output, cache.toString(), cache.toString()),
+            new CacheProcess(output, cache.toString(), null, mvnCache.toString()),
             new MavenProcess(output, "https://repo1.maven.org/maven2", null, null)
         ),
         new PublishWorkflow(
@@ -70,24 +72,26 @@ public class WorkflowTest extends BaseUnitTest {
     // act
     var sourcePath = workflow.fetchSource(artifact);
 
-    // assert
-    assertNull(sourcePath);
+    // assert — source is found from Maven Central even though it can't be cached
+    assertNotNull(sourcePath);
   }
 
   @Test
   public void fetchSource_publish_source_file_exists() throws Exception {
     // arrange
     Path cache = projectDir.resolve("build/test/cache");
+    Path mvnCache = projectDir.resolve("build/test/maven-cache");
     PathTools.prune(cache);
+    PathTools.prune(mvnCache);
 
     Workflow workflow = new Workflow(
         new FetchWorkflow(
             output,
-            new CacheProcess(output, cache.toString(), cache.toString()),
+            new CacheProcess(output, cache.toString(), null, mvnCache.toString()),
             new MavenProcess(output, "https://repo1.maven.org/maven2", null, null)
         ),
         new PublishWorkflow(
-            new CacheProcess(output, cache.toString(), cache.toString())
+            new CacheProcess(output, cache.toString(), null, mvnCache.toString())
         ),
         output
     );
@@ -98,25 +102,26 @@ public class WorkflowTest extends BaseUnitTest {
     var sourcePath = workflow.fetchSource(artifact);
 
     // assert
-    // expect src, not sources, because src is what will get published to the cache
-    // and that will result in less noisy output for things like the IDEA plugin
-    assertEquals(sourcePath.toString(), "../savant-dependency-management/build/test/cache/org/apache/groovy/groovy/4.0.5/groovy-4.0.5-src.jar");
+    // Source file is fetched from Maven (tagged MAVEN) and published to the Maven cache — no renaming
+    assertEquals(sourcePath.toString(), "../savant-dependency-management/build/test/maven-cache/org/apache/groovy/groovy/4.0.5/groovy-4.0.5-sources.jar");
   }
 
   @Test
   public void fetchSource_publish_source_file_semantic_mapping_exists() throws IOException {
     // arrange
     Path cache = projectDir.resolve("build/test/cache");
+    Path mvnCache = projectDir.resolve("build/test/maven-cache");
     PathTools.prune(cache);
+    PathTools.prune(mvnCache);
 
     Workflow workflow = new Workflow(
         new FetchWorkflow(
             output,
-            new CacheProcess(output, cache.toString(), cache.toString()),
+            new CacheProcess(output, cache.toString(), null, mvnCache.toString()),
             new MavenProcess(output, "https://repo1.maven.org/maven2", null, null)
         ),
         new PublishWorkflow(
-            new CacheProcess(output, cache.toString(), cache.toString())
+            new CacheProcess(output, cache.toString(), null, mvnCache.toString())
         ),
         output
     );
@@ -130,24 +135,25 @@ public class WorkflowTest extends BaseUnitTest {
     var sourcePath = workflow.fetchSource(artifact);
 
     // assert
-    // expect src, not sources, because src is what will get published to the cache
-    // and that will result in less noisy output for things like the IDEA plugin
-    assertEquals(sourcePath.toString(), "../savant-dependency-management/build/test/cache/org/xerial/snappy/snappy-java/1.1.10+5/snappy-java-1.1.10+5-src.jar");
+    // Source file is fetched from Maven using non-semantic version — no renaming
+    assertEquals(sourcePath.toString(), "../savant-dependency-management/build/test/maven-cache/org/xerial/snappy/snappy-java/1.1.10.5/snappy-java-1.1.10.5-sources.jar");
   }
 
   @Test
   public void mavenCentral() throws Exception {
     Path cache = projectDir.resolve("build/test/cache");
+    Path mvnCache = projectDir.resolve("build/test/maven-cache");
     PathTools.prune(cache);
+    PathTools.prune(mvnCache);
 
     Workflow workflow = new Workflow(
         new FetchWorkflow(
             output,
-            new CacheProcess(output, cache.toString(), cache.toString()),
+            new CacheProcess(output, cache.toString(), null, mvnCache.toString()),
             new MavenProcess(output, "https://repo1.maven.org/maven2", null, null)
         ),
         new PublishWorkflow(
-            new CacheProcess(output, cache.toString(), cache.toString())
+            new CacheProcess(output, cache.toString(), null, mvnCache.toString())
         ),
         output
     );
@@ -160,27 +166,30 @@ public class WorkflowTest extends BaseUnitTest {
     Dependencies expected = new Dependencies();
     assertEquals(amd.dependencies, expected);
 
-    assertTrue(Files.isRegularFile(Paths.get("build/test/cache/org/apache/groovy/groovy/4.0.5/groovy-4.0.5.pom")));
-    assertTrue(Files.isRegularFile(Paths.get("build/test/cache/org/apache/groovy/groovy/4.0.5/groovy-4.0.5.pom.md5")));
+    // POMs are Maven-sourced and go to the Maven cache
+    assertTrue(Files.isRegularFile(mvnCache.resolve("org/apache/groovy/groovy/4.0.5/groovy-4.0.5.pom")));
+    assertTrue(Files.isRegularFile(mvnCache.resolve("org/apache/groovy/groovy/4.0.5/groovy-4.0.5.pom.md5")));
 
-    // AMDs are written to the cache when POMs are translated
-    assertTrue(Files.isRegularFile(Paths.get("build/test/cache/org/apache/groovy/groovy/4.0.5/groovy-4.0.5.jar.amd")));
-    assertTrue(Files.isRegularFile(Paths.get("build/test/cache/org/apache/groovy/groovy/4.0.5/groovy-4.0.5.jar.amd.md5")));
+    // AMDs are no longer written to disk — POM is translated in memory
+    assertFalse(Files.exists(cache.resolve("org/apache/groovy/groovy/4.0.5/groovy-4.0.5.jar.amd")));
+    assertFalse(Files.exists(cache.resolve("org/apache/groovy/groovy/4.0.5/groovy-4.0.5.jar.amd.md5")));
   }
 
   @Test
   public void mavenCentralMapping() throws Exception {
     Path cache = projectDir.resolve("build/test/cache");
+    Path mvnCache = projectDir.resolve("build/test/maven-cache");
     PathTools.prune(cache);
+    PathTools.prune(mvnCache);
 
     Workflow workflow = new Workflow(
         new FetchWorkflow(
             output,
-            new CacheProcess(output, cache.toString(), cache.toString()),
+            new CacheProcess(output, cache.toString(), null, mvnCache.toString()),
             new MavenProcess(output, "https://repo1.maven.org/maven2", null, null)
         ),
         new PublishWorkflow(
-            new CacheProcess(output, cache.toString(), cache.toString())
+            new CacheProcess(output, cache.toString(), null, mvnCache.toString())
         ),
         output
     );
@@ -219,11 +228,12 @@ public class WorkflowTest extends BaseUnitTest {
     );
     assertEquals(amd.dependencies, expected);
 
-    assertTrue(Files.isRegularFile(Paths.get("build/test/cache/io/vertx/vertx-core/3.9.8/vertx-core-3.9.8.pom")));
-    assertTrue(Files.isRegularFile(Paths.get("build/test/cache/io/vertx/vertx-core/3.9.8/vertx-core-3.9.8.pom.md5")));
+    // POMs are Maven-sourced and go to the Maven cache
+    assertTrue(Files.isRegularFile(mvnCache.resolve("io/vertx/vertx-core/3.9.8/vertx-core-3.9.8.pom")));
+    assertTrue(Files.isRegularFile(mvnCache.resolve("io/vertx/vertx-core/3.9.8/vertx-core-3.9.8.pom.md5")));
 
-    // AMDs are written to the cache when the POMs are translated
-    assertTrue(Files.isRegularFile(Paths.get("build/test/cache/io/vertx/vertx-core/3.9.8/vertx-core-3.9.8.jar.amd")));
-    assertTrue(Files.isRegularFile(Paths.get("build/test/cache/io/vertx/vertx-core/3.9.8/vertx-core-3.9.8.jar.amd.md5")));
+    // AMDs are no longer written to disk — POM is translated in memory
+    assertFalse(Files.exists(cache.resolve("io/vertx/vertx-core/3.9.8/vertx-core-3.9.8.jar.amd")));
+    assertFalse(Files.exists(cache.resolve("io/vertx/vertx-core/3.9.8/vertx-core-3.9.8.jar.amd.md5")));
   }
 }

@@ -15,13 +15,13 @@
  */
 package org.savantbuild.dep.workflow;
 
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
 import org.savantbuild.dep.domain.ResolvableItem;
+import org.savantbuild.dep.workflow.process.FetchResult;
 import org.savantbuild.dep.workflow.process.Process;
 import org.savantbuild.dep.workflow.process.ProcessFailureException;
 import org.savantbuild.output.Output;
@@ -50,11 +50,11 @@ public class FetchWorkflow {
    * @param item            The item being fetched. This item name should include the necessary information to locate
    *                        the item.
    * @param publishWorkflow The PublishWorkflow that is used to store the item if it can be found.
-   * @return A file that contains the item contents or null if the item was not found.
+   * @return A FetchResult that contains the item file and source, or null if the item was not found.
    * @throws ProcessFailureException If any of the processes failed while attempting to fetch the artifact.
    * @throws MD5Exception If the item's MD5 file did not match the item.
    */
-  public Path fetchItem(ResolvableItem item, PublishWorkflow publishWorkflow)
+  public FetchResult fetchItem(ResolvableItem item, PublishWorkflow publishWorkflow)
       throws ProcessFailureException, MD5Exception {
     output.debugln("\nFetching [" + item + "]");
     return processes.stream()

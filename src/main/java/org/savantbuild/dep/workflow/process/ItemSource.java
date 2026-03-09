@@ -15,24 +15,7 @@
  */
 package org.savantbuild.dep.workflow.process;
 
-import java.nio.file.Path;
-
-import org.savantbuild.dep.domain.ResolvableItem;
-import org.savantbuild.dep.workflow.PublishWorkflow;
-
-/**
- * Do not publish just return the provided item.
- *
- * @author Daniel DeGroff
- */
-public class DoNotPublishProcess implements Process {
-  @Override
-  public Path fetch(ResolvableItem item, PublishWorkflow publishWorkflow) throws ProcessFailureException {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public Path publish(ResolvableItem item, Path itemFile) throws ProcessFailureException {
-    return itemFile;
-  }
+public enum ItemSource {
+  SAVANT,
+  MAVEN
 }

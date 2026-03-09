@@ -28,7 +28,7 @@ import org.savantbuild.output.Output;
  */
 public class MavenProcess extends URLProcess {
   public MavenProcess(Output output, String url, String username, String password) {
-    super(output, url, username, password);
+    super(output, url, username, password, ItemSource.MAVEN);
   }
 
   @Override

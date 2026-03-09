@@ -26,53 +26,102 @@ import org.savantbuild.domain.Version;
 import org.savantbuild.output.Output;
 
 /**
- * This is an implementation of the Process that uses a local cache to fetch and publish artifacts.
+ * This is an implementation of the Process that uses local caches to fetch and publish artifacts.
+ * It manages up to three cache directories: one for Savant-sourced artifacts, one for integration-version
+ * artifacts, and one for Maven-sourced artifacts. Any directory can be null to disable that cache.
  *
  * @author Brian Pontarelli
  */
 public class CacheProcess implements Process {
-  public final String dir;
-
   public final String integrationDir;
+
+  public final String mavenDir;
 
   public final Output output;
 
-  public CacheProcess(Output output, String dir, String integrationDir) {
+  public final String savantDir;
+
+  private record CacheHit(Path file, String matchedItem) {}
+
+  public CacheProcess(Output output, String savantDir, String integrationDir, String mavenDir) {
     this.output = output;
-    this.dir = dir != null ? dir : ".savant/cache";
-    this.integrationDir = integrationDir != null ? integrationDir : System.getProperty("user.home") + "/.savant/cache";
+    this.savantDir = savantDir;
+    this.integrationDir = integrationDir;
+    this.mavenDir = mavenDir;
   }
 
   /**
-   * Checks the cache directory for the item. If it exists it is returned. If not, null is returned.
+   * Checks the cache directories for the item. Tries the Savant cache first (tagging hits as SAVANT),
+   * then the Maven cache (tagging hits as MAVEN). If found in either, the result is returned.
+   * If not found in either, null is returned.
    *
    * @param item            The item being fetched.
    * @param publishWorkflow The PublishWorkflow that is used to store the item if it can be found.
-   * @return The File from the cache or null if it doesn't exist.
+   * @return The FetchResult from the cache or null if it doesn't exist.
    * @throws NegativeCacheException If there is a negative cache record of the file, meaning it doesn't exist
    *     anywhere in the world.
    */
   @Override
-  public Path fetch(ResolvableItem item, PublishWorkflow publishWorkflow) throws NegativeCacheException {
-    return (item.version.endsWith(Version.INTEGRATION)) ? _fetch(item, integrationDir) : _fetch(item, dir);
+  public FetchResult fetch(ResolvableItem item, PublishWorkflow publishWorkflow) throws NegativeCacheException {
+    // Try integration cache first for integration versions
+    if (integrationDir != null && item.version.endsWith(Version.INTEGRATION)) {
+      CacheHit hit = tryFetchCandidate(item, integrationDir);
+      if (hit != null) {
+        ResolvableItem matchedItem = hit.matchedItem.equals(item.item) ? item : new ResolvableItem(item, hit.matchedItem);
+        return new FetchResult(hit.file, ItemSource.SAVANT, matchedItem);
+      }
+    }
+
+    // Try Savant cache for non-integration versions
+    if (savantDir != null) {
+      CacheHit hit = tryFetchCandidate(item, savantDir);
+      if (hit != null) {
+        ResolvableItem matchedItem = hit.matchedItem.equals(item.item) ? item : new ResolvableItem(item, hit.matchedItem);
+        return new FetchResult(hit.file, ItemSource.SAVANT, matchedItem);
+      }
+    }
+
+    // Try Maven cache
+    if (mavenDir != null) {
+      CacheHit hit = tryFetchCandidate(item, mavenDir);
+      if (hit != null) {
+        ResolvableItem matchedItem = hit.matchedItem.equals(item.item) ? item : new ResolvableItem(item, hit.matchedItem);
+        return new FetchResult(hit.file, ItemSource.MAVEN, matchedItem);
+      }
+    }
+
+    return null;
   }
 
   /**
-   * Publishes the given artifact item into the cache.
+   * Publishes the given artifact item into the appropriate cache. Items are routed based on the
+   * FetchResult's source: SAVANT items go to savantDir, MAVEN items go to mavenDir. Returns null
+   * if the relevant directory is null or the source doesn't match either cache.
    *
-   * @param item     The item to publish.
-   * @param itemFile The path to the item.
-   * @return Always null.
+   * @param fetchResult The fetch result containing the item, file, and source.
+   * @return The path to the published file, or null if the source doesn't match.
    * @throws ProcessFailureException If the publish fails.
    */
   @Override
-  public Path publish(ResolvableItem item, Path itemFile) throws ProcessFailureException {
-    String cacheDir = dir;
-    if (item.version.endsWith(Version.INTEGRATION)) {
-      cacheDir = integrationDir;
+  public Path publish(FetchResult fetchResult) throws ProcessFailureException {
+    String dir;
+    ResolvableItem item = fetchResult.item();
+    if (integrationDir != null && item.version.endsWith(Version.INTEGRATION)) {
+      dir = integrationDir;
+    } else if (fetchResult.source() == ItemSource.SAVANT) {
+      dir = savantDir;
+    } else if (fetchResult.source() == ItemSource.MAVEN) {
+      dir = mavenDir;
+    } else {
+      return null;
     }
 
-    String cachePath = String.join("/", cacheDir, item.group.replace('.', '/'), item.project, item.version, item.item);
+    if (dir == null) {
+      return null;
+    }
+    Path itemFile = fetchResult.file();
+
+    String cachePath = String.join("/", dir, item.group.replace('.', '/'), item.project, item.version, item.item);
     Path cacheFile = Paths.get(cachePath);
     if (Files.isDirectory(cacheFile)) {
       throw new ProcessFailureException("Your local artifact cache location is a directory [" + cacheFile.toAbsolutePath() + "]");
@@ -114,28 +163,38 @@ public class CacheProcess implements Process {
 
   @Override
   public String toString() {
-    return "Cache(" + dir + ")";
+    return "Cache(savant=" + savantDir + ", integration=" + integrationDir + ", maven=" + mavenDir + ")";
   }
 
-  private Path _fetch(ResolvableItem item, String cacheDir) {
+  private CacheHit tryFetchCandidate(ResolvableItem item, String cacheDir) {
+    // Try primary item
     String path = String.join("/", cacheDir, item.group.replace('.', '/'), item.project, item.version, item.item);
     output.debugln("      - File [" + path + "]");
     Path file = Paths.get(path);
-    if (!Files.isRegularFile(file)) {
-      file = Paths.get(path + ".neg");
-      if (Files.isRegularFile(file)) {
-        output.debugln("      - Found negative marker");
-        throw new NegativeCacheException(item);
-      } else {
-        output.debugln("      - Not found");
-        file = null;
+    if (Files.isRegularFile(file)) {
+      output.debugln("      - Found");
+      return new CacheHit(file, item.item);
+    }
+
+    // Check negative cache marker (only for primary item)
+    Path negFile = Paths.get(path + ".neg");
+    if (Files.isRegularFile(negFile)) {
+      output.debugln("      - Found negative marker");
+      throw new NegativeCacheException(item);
+    }
+
+    // Try alternative items
+    for (String alt : item.alternativeItems) {
+      String altPath = String.join("/", cacheDir, item.group.replace('.', '/'), item.project, item.version, alt);
+      output.debugln("      - File [" + altPath + "] (alternative)");
+      Path altFile = Paths.get(altPath);
+      if (Files.isRegularFile(altFile)) {
+        output.debugln("      - Found (alternative)");
+        return new CacheHit(altFile, alt);
       }
     }
 
-    if (file != null) {
-      output.debugln("      - Found");
-    }
-
-    return file;
+    output.debugln("      - Not found");
+    return null;
   }
 }

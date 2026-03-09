@@ -50,7 +50,6 @@ import org.savantbuild.dep.workflow.FetchWorkflow;
 import org.savantbuild.dep.workflow.PublishWorkflow;
 import org.savantbuild.dep.workflow.Workflow;
 import org.savantbuild.dep.workflow.process.CacheProcess;
-import org.savantbuild.dep.workflow.process.MavenCacheProcess;
 import org.savantbuild.dep.workflow.process.MavenProcess;
 import org.savantbuild.dep.workflow.process.URLProcess;
 import org.savantbuild.domain.Version;
@@ -206,6 +205,19 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     PathTools.prune(mavenCache);
     assertFalse(Files.isDirectory(cache));
     assertFalse(Files.isDirectory(mavenCache));
+
+    // Reset workflow to the default (some tests override it and it's static)
+    workflow = new Workflow(
+        new FetchWorkflow(
+            output,
+            new CacheProcess(output, cache.toString(), integration.toString(), null),
+            new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null)
+        ),
+        new PublishWorkflow(
+            new CacheProcess(output, cache.toString(), integration.toString(), null)
+        ),
+        output
+    );
   }
 
   @Test
@@ -305,11 +317,11 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     workflow = new Workflow(
         new FetchWorkflow(
             output,
-            new MavenCacheProcess(output, mavenCache.toString(), mavenCache.toString()),
+            new CacheProcess(output, cache.toString(), null, mavenCache.toString()),
             new MavenProcess(output, "https://repo1.maven.org/maven2", null, null)
         ),
         new PublishWorkflow(
-            new MavenCacheProcess(output, mavenCache.toString(), mavenCache.toString())
+            new CacheProcess(output, cache.toString(), null, mavenCache.toString())
         ),
         output
     );
@@ -330,14 +342,12 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     workflow = new Workflow(
         new FetchWorkflow(
             output,
-            new CacheProcess(output, cache.toString(), integration.toString()),
-            new MavenCacheProcess(output, mavenCache.toString(), null),
+            new CacheProcess(output, cache.toString(), null, mavenCache.toString()),
             new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null),
             new MavenProcess(output, "https://repo1.maven.org/maven2", null, null)
         ),
         new PublishWorkflow(
-            new CacheProcess(output, cache.toString(), integration.toString()),
-            new MavenCacheProcess(output, mavenCache.toString(), null)
+            new CacheProcess(output, cache.toString(), null, mavenCache.toString())
         ),
         output
     );
@@ -390,14 +400,12 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     workflow = new Workflow(
         new FetchWorkflow(
             output,
-            new CacheProcess(output, cache.toString(), integration.toString()),
-            new MavenCacheProcess(output, mavenCache.toString(), null),
+            new CacheProcess(output, cache.toString(), null, mavenCache.toString()),
             new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null),
             new MavenProcess(output, "http://localhost:7042/test-deps/maven", null, null)
         ),
         new PublishWorkflow(
-            new CacheProcess(output, cache.toString(), integration.toString()),
-            new MavenCacheProcess(output, mavenCache.toString(), null)
+            new CacheProcess(output, cache.toString(), null, mavenCache.toString())
         ),
         output
     );
@@ -422,12 +430,98 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
   }
 
   @Test
+  public void nonSemanticVersions_publishRouting() {
+    // Resolves the same mixed Savant + Maven dependency tree as nonSemanticVersions,
+    // then verifies publish routing: Maven-sourced items only in maven cache,
+    // Savant-sourced items only in savant cache, no re-published semantic-version copies.
+
+    dependencies = new Dependencies(
+        new DependencyGroup("compile", true,
+            new Artifact("org.savantbuild.test:has-non-semantic-versioned-dep:1.0.0")
+        )
+    );
+
+    workflow = new Workflow(
+        new FetchWorkflow(
+            output,
+            new CacheProcess(output, cache.toString(), integration.toString(), mavenCache.toString()),
+            new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null),
+            new MavenProcess(output, "http://localhost:7042/test-deps/maven", null, null)
+        ),
+        new PublishWorkflow(
+            new CacheProcess(output, cache.toString(), integration.toString(), mavenCache.toString())
+        ),
+        output
+    );
+    workflow.mappings.put("org.savantbuild.test:badver:1.0.0.Final", new Version("1.0.0"));
+
+    buildAndResolve();
+
+    // Maven-sourced "badver" JAR and POM should be in maven cache only
+    assertTrue(Files.isRegularFile(mavenCache.resolve("org/savantbuild/test/badver/1.0.0.Final/badver-1.0.0.Final.jar")));
+    assertTrue(Files.isRegularFile(mavenCache.resolve("org/savantbuild/test/badver/1.0.0.Final/badver-1.0.0.Final.pom")));
+    // No re-published copy at the semantic version path
+    assertFalse(Files.exists(mavenCache.resolve("org/savantbuild/test/badver/1.0.0/badver-1.0.0.jar")));
+    assertFalse(Files.exists(cache.resolve("org/savantbuild/test/badver/1.0.0/badver-1.0.0.jar")));
+    // Maven-sourced items should NOT be in savant cache
+    assertFalse(Files.exists(cache.resolve("org/savantbuild/test/badver/1.0.0.Final/badver-1.0.0.Final.jar")));
+    assertFalse(Files.exists(cache.resolve("org/savantbuild/test/badver/1.0.0.Final/badver-1.0.0.Final.pom")));
+
+    // Savant-sourced "has-non-semantic-versioned-dep" should be in savant cache only
+    assertTrue(Files.isRegularFile(cache.resolve("org/savantbuild/test/has-non-semantic-versioned-dep/1.0.0/has-non-semantic-versioned-dep-1.0.0.jar")));
+    assertTrue(Files.isRegularFile(cache.resolve("org/savantbuild/test/has-non-semantic-versioned-dep/1.0.0/has-non-semantic-versioned-dep-1.0.0.jar.amd")));
+    assertFalse(Files.exists(mavenCache.resolve("org/savantbuild/test/has-non-semantic-versioned-dep/1.0.0/has-non-semantic-versioned-dep-1.0.0.jar")));
+
+    // Savant-sourced "leaf1" should be in savant cache only
+    assertTrue(Files.isRegularFile(cache.resolve("org/savantbuild/test/leaf1/1.0.0/leaf1-1.0.0.jar")));
+    assertFalse(Files.exists(mavenCache.resolve("org/savantbuild/test/leaf1/1.0.0/leaf1-1.0.0.jar")));
+
+    // No AMD files generated for Maven-sourced "badver"
+    assertFalse(Files.exists(cache.resolve("org/savantbuild/test/badver/1.0.0/badver-1.0.0.jar.amd")));
+    assertFalse(Files.exists(mavenCache.resolve("org/savantbuild/test/badver/1.0.0.Final/badver-1.0.0.Final.jar.amd")));
+  }
+
+  @Test
+  public void publishRouting_savantOnly() {
+    // Resolves a Savant-only dependency tree and verifies all items go to savant cache,
+    // nothing goes to maven cache.
+
+    dependencies = new Dependencies(
+        new DependencyGroup("compile", true,
+            new Artifact("org.savantbuild.test:leaf1:1.0.0")
+        )
+    );
+
+    workflow = new Workflow(
+        new FetchWorkflow(
+            output,
+            new CacheProcess(output, cache.toString(), integration.toString(), mavenCache.toString()),
+            new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null),
+            new MavenProcess(output, "http://localhost:7042/test-deps/maven", null, null)
+        ),
+        new PublishWorkflow(
+            new CacheProcess(output, cache.toString(), integration.toString(), mavenCache.toString())
+        ),
+        output
+    );
+
+    buildAndResolve();
+
+    // Savant-sourced items in savant cache
+    assertTrue(Files.isRegularFile(cache.resolve("org/savantbuild/test/leaf1/1.0.0/leaf1-1.0.0.jar")));
+    assertTrue(Files.isRegularFile(cache.resolve("org/savantbuild/test/leaf1/1.0.0/leaf1-1.0.0.jar.amd")));
+    // Nothing in maven cache
+    assertFalse(Files.exists(mavenCache.resolve("org/savantbuild/test/leaf1/1.0.0/leaf1-1.0.0.jar")));
+    assertFalse(Files.exists(mavenCache.resolve("org/savantbuild/test/leaf1/1.0.0/leaf1-1.0.0.jar.amd")));
+  }
+
+  @Test
   public void publishMissingFile() {
     Artifact artifact = new Artifact("org.savantbuild.test:publication-with-source:1.0.0");
     ArtifactMetaData amd = new ArtifactMetaData(dependencies, License.Licenses.get("BSD_2_Clause"));
     Publication publication = new Publication(artifact, amd, projectDir.resolve("MissingFile.txt"), null);
     Path cache = projectDir.resolve("build/test/publish");
-    PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, cache.toString(), cache.toString()));
+    PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, cache.toString(), null, null));
     try {
       service.publish(publication, workflow);
     } catch (PublishException e) {
@@ -441,7 +535,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     ArtifactMetaData amd = new ArtifactMetaData(dependencies, License.Licenses.get("BSD_2_Clause"));
     Publication publication = new Publication(artifact, amd, projectDir.resolve("src/test/java/org/savantbuild/dep/TestFile.txt"), Paths.get("MissingFile.txt"));
     Path cache = projectDir.resolve("build/test/publish");
-    PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, cache.toString(), cache.toString()));
+    PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, cache.toString(), null, null));
     try {
       service.publish(publication, workflow);
     } catch (PublishException e) {
@@ -463,7 +557,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     Artifact artifact = new Artifact("org.savantbuild.test:publication-with-source:1.0.0");
     ArtifactMetaData amd = new ArtifactMetaData(dependencies, License.Licenses.get("BSD_2_Clause"));
     Publication publication = new Publication(artifact, amd, projectDir.resolve("src/test/java/org/savantbuild/dep/TestFile.txt"), projectDir.resolve("src/test/java/org/savantbuild/dep/TestFile.txt"));
-    PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, cache.toString(), cache.toString()));
+    PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, cache.toString(), null, null));
     service.publish(publication, workflow);
 
     Path amdFile = projectDir.resolve("build/test/publish/org/savantbuild/test/publication-with-source/1.0.0/publication-with-source-1.0.0.jar.amd");
@@ -495,7 +589,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     Artifact artifact = new Artifact("org.savantbuild.test:publication-with-source:1.0.0");
     ArtifactMetaData amd = new ArtifactMetaData(dependencies, License.Licenses.get("BSD_2_Clause"));
     Publication publication = new Publication(artifact, amd, projectDir.resolve("src/test/java/org/savantbuild/dep/TestFile.txt"), projectDir.resolve("src/test/java/org/savantbuild/dep/TestFile.txt"));
-    PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, cache.toString(), cache.toString()));
+    PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, cache.toString(), null, null));
     service.publish(publication, workflow);
 
     assertTrue(Files.isRegularFile(projectDir.resolve("build/test/publish/org/savantbuild/test/publication-with-source/1.0.0/publication-with-source-1.0.0.jar.amd.md5")));
@@ -519,7 +613,7 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     Artifact artifact = new Artifact("org.savantbuild.test:publication-without-source:1.0.0");
     ArtifactMetaData amd = new ArtifactMetaData(dependencies, License.Licenses.get("BSD_2_Clause"));
     Publication publication = new Publication(artifact, amd, projectDir.resolve("src/test/java/org/savantbuild/dep/TestFile.txt"), null);
-    PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, cache.toString(), cache.toString()));
+    PublishWorkflow workflow = new PublishWorkflow(new CacheProcess(output, cache.toString(), null, null));
     service.publish(publication, workflow);
 
     assertTrue(Files.isRegularFile(projectDir.resolve("build/test/publish/org/savantbuild/test/publication-without-source/1.0.0/publication-without-source-1.0.0.jar.amd.md5")));
@@ -1064,14 +1158,12 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     workflow = new Workflow(
         new FetchWorkflow(
             output,
-            new CacheProcess(output, cache.toString(), integration.toString()),
-            new MavenCacheProcess(output, mavenCache.toString(), null),
+            new CacheProcess(output, cache.toString(), null, mavenCache.toString()),
             new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null),
             new MavenProcess(output, "http://localhost:7042/test-deps/maven", null, null)
         ),
         new PublishWorkflow(
-            new CacheProcess(output, cache.toString(), integration.toString()),
-            new MavenCacheProcess(output, mavenCache.toString(), null)
+            new CacheProcess(output, cache.toString(), null, mavenCache.toString())
         ),
         output
     );
@@ -1106,14 +1198,12 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     workflow = new Workflow(
         new FetchWorkflow(
             output,
-            new CacheProcess(output, cache.toString(), integration.toString()),
-            new MavenCacheProcess(output, mavenCache.toString(), null),
+            new CacheProcess(output, cache.toString(), null, mavenCache.toString()),
             new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null),
             new MavenProcess(output, "http://localhost:7042/test-deps/maven", null, null)
         ),
         new PublishWorkflow(
-            new CacheProcess(output, cache.toString(), integration.toString()),
-            new MavenCacheProcess(output, mavenCache.toString(), null)
+            new CacheProcess(output, cache.toString(), null, mavenCache.toString())
         ),
         output
     );
@@ -1146,14 +1236,12 @@ public class DefaultDependencyServiceTest extends BaseUnitTest {
     workflow = new Workflow(
         new FetchWorkflow(
             output,
-            new CacheProcess(output, cache.toString(), integration.toString()),
-            new MavenCacheProcess(output, mavenCache.toString(), null),
+            new CacheProcess(output, cache.toString(), null, mavenCache.toString()),
             new URLProcess(output, "http://localhost:7042/test-deps/savant", null, null),
             new MavenProcess(output, "http://localhost:7042/test-deps/maven", null, null)
         ),
         new PublishWorkflow(
-            new CacheProcess(output, cache.toString(), integration.toString()),
-            new MavenCacheProcess(output, mavenCache.toString(), null)
+            new CacheProcess(output, cache.toString(), null, mavenCache.toString())
         ),
         output
     );

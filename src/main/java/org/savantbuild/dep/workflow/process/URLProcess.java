@@ -48,7 +48,13 @@ public class URLProcess implements Process {
 
   public final String username;
 
+  protected final ItemSource itemSource;
+
   public URLProcess(Output output, String url, String username, String password) {
+    this(output, url, username, password, ItemSource.SAVANT);
+  }
+
+  protected URLProcess(Output output, String url, String username, String password, ItemSource itemSource) {
     this.output = output;
 
     Objects.requireNonNull(url, "The [url] attribute is required for the [url] workflow process");
@@ -60,6 +66,7 @@ public class URLProcess implements Process {
     this.url = url;
     this.username = username;
     this.password = password;
+    this.itemSource = itemSource;
   }
 
   /**
@@ -68,12 +75,31 @@ public class URLProcess implements Process {
    *
    * @param item            The item to fetch.
    * @param publishWorkflow The publishWorkflow to publish the artifact if found.
-   * @return The File of the artifact after it has been published.
+   * @return The FetchResult of the artifact after it has been published, or null if not found.
    */
   @Override
-  public Path fetch(ResolvableItem item, PublishWorkflow publishWorkflow) throws ProcessFailureException {
+  public FetchResult fetch(ResolvableItem item, PublishWorkflow publishWorkflow) throws ProcessFailureException {
+    // Try primary item first
+    FetchResult result = tryFetchCandidate(item, item.item, publishWorkflow);
+    if (result != null) {
+      return result;
+    }
+
+    // Try alternatives
+    for (String alt : item.alternativeItems) {
+      result = tryFetchCandidate(item, alt, publishWorkflow);
+      if (result != null) {
+        return result;
+      }
+    }
+
+    return null;
+  }
+
+  private FetchResult tryFetchCandidate(ResolvableItem item, String candidateItem, PublishWorkflow publishWorkflow)
+      throws ProcessFailureException {
     try {
-      URI md5URI = NetTools.build(url, item.group.replace('.', '/'), item.project, item.version, item.item + ".md5");
+      URI md5URI = NetTools.build(url, item.group.replace('.', '/'), item.project, item.version, candidateItem + ".md5");
       output.debugln("      - Download [" + md5URI + "]");
       Path md5File = downloadToPath(md5URI, username, password, null);
       if (md5File == null) {
@@ -89,7 +115,7 @@ public class URLProcess implements Process {
         throw new ProcessFailureException(item, e);
       }
 
-      URI itemURI = NetTools.build(url, item.group.replace('.', '/'), item.project, item.version, item.item);
+      URI itemURI = NetTools.build(url, item.group.replace('.', '/'), item.project, item.version, candidateItem);
       output.debugln("      - Download [" + itemURI + "]");
       Path itemFile;
       try {
@@ -100,19 +126,20 @@ public class URLProcess implements Process {
 
       if (itemFile != null) {
         output.infoln("Downloaded [%s]", itemURI);
-        ResolvableItem md5Item = new ResolvableItem(item, item.item + ".md5");
-        md5File = publishWorkflow.publish(md5Item, md5File);
+        ResolvableItem matchedItem = candidateItem.equals(item.item) ? item : new ResolvableItem(item, candidateItem);
+        ResolvableItem md5Item = new ResolvableItem(item, candidateItem + ".md5");
+        publishWorkflow.publish(new FetchResult(md5File, itemSource, md5Item));
         try {
-          itemFile = publishWorkflow.publish(item, itemFile);
+          Path publishedFile = publishWorkflow.publish(new FetchResult(itemFile, itemSource, matchedItem));
+          return new FetchResult(publishedFile != null ? publishedFile : itemFile, itemSource, matchedItem);
         } catch (ProcessFailureException e) {
-          Files.delete(md5File);
           throw new ProcessFailureException(item, e);
         }
       } else {
         output.debugln("      - Not found");
       }
 
-      return itemFile;
+      return null;
     } catch (FileNotFoundException e) {
       // Special case for file:// URLs
       return null;
@@ -125,7 +152,7 @@ public class URLProcess implements Process {
    * Throws an exception. This isn't supported yet.
    */
   @Override
-  public Path publish(ResolvableItem item, Path file) throws ProcessFailureException {
+  public Path publish(FetchResult fetchResult) throws ProcessFailureException {
     throw new ProcessFailureException("The [url] process doesn't allow publishing.");
   }
 

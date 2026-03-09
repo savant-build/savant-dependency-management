@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Inversoft Inc., All Rights Reserved
+ * Copyright (c) 2025, Inversoft Inc., All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,20 +15,8 @@
  */
 package org.savantbuild.dep.workflow.process;
 
-import org.savantbuild.output.Output;
+import java.nio.file.Path;
 
-/**
- * This is an implementation of the Process that uses a local cache to fetch and publish artifacts.
- *
- * @author Brian Pontarelli
- */
-public class MavenCacheProcess extends CacheProcess {
-  public MavenCacheProcess(Output output, String dir, String integrationDir) {
-    super(output, dir != null ? dir : System.getProperty("user.home") + "/.m2/repository", integrationDir);
-  }
+import org.savantbuild.dep.domain.ResolvableItem;
 
-  @Override
-  public String toString() {
-    return "MavenCache(" + dir + ")";
-  }
-}
+public record FetchResult(Path file, ItemSource source, ResolvableItem item) {}
