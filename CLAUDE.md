@@ -27,7 +27,7 @@ Artifact fetching and publishing use a chain-of-responsibility pattern:
 
 Each fetched artifact is tagged with an `ItemSource` (SAVANT or MAVEN) via a `FetchResult` record. This controls publish routing:
 
-- `CacheProcess(output, savantDir, mavenDir)` — Manages both Savant and Maven caches. Fetch tries savantDir first (SAVANT), then mavenDir (MAVEN). Publish routes SAVANT items to savantDir, MAVEN items to mavenDir. Either dir can be null.
+- `CacheProcess(output, savantDir, integrationDir, mavenDir)` — Manages Savant, integration, and Maven caches. Fetch tries integrationDir first for integration versions, then savantDir (SAVANT), then mavenDir (MAVEN). Publish routes integration items to integrationDir, SAVANT items to savantDir, MAVEN items to mavenDir. Any dir can be null.
 - `URLProcess` tags items as `SAVANT`; `MavenProcess` tags items as `MAVEN`
 
 Maven POMs are translated to `ArtifactMetaData` in-memory (no AMD files written for Maven-sourced artifacts).
